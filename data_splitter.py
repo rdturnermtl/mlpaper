@@ -109,7 +109,7 @@ SPLITTER_LIB = {RANDOM: random_split_series,
 def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
     assert(len(splits) > 0)
     assert(len(df) > 0)  # It is not hard to get working with len 0, but why.
-    assert(INDEX not in df) # None repr for INDEX as col name is reserved here.
+    assert(INDEX not in df)  # None repr for INDEX, col name is reserved here.
 
     train_series = pd.Series(index=df.index, data=True)
     test_series = pd.Series(index=df.index, data=True)

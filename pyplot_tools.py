@@ -44,7 +44,7 @@ def plot_perf_table(perf_tbl, bar=True, figsize_inches=None, grid='on',
         fig_dict[metric_name], ax = plt.subplots()
         # Keep y-ticks as default, but force to index for x-ticks. Default
         # legend placement sucks so we set to false and do outside.
-        xticks = None if bar or simple else mu.index  # pyplot confused in bar case.
+        xticks = None if bar or simple else mu.index  # pyplot confused for bar
         mu.plot(yerr=EB, kind=kind, ax=ax, figsize=figsize_inches, grid=grid,
                 legend=False, style=style, xticks=xticks, fontsize=fontsize,
                 **kwds)

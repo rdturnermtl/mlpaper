@@ -82,7 +82,7 @@ def test_splitter(seed0, seed1):
 
     np.random.seed(seed1)
     df_train, df_test, df_unused = ds.split_df(df, splits,
-                                            assume_unique=u_list)
+                                               assume_unique=u_list)
 
     # Make index a normal column and see if split gives same result
     df.reset_index(drop=False, inplace=True)

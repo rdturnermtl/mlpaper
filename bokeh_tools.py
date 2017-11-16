@@ -11,19 +11,6 @@ from bokeh.models import HoverTool
 from bokeh.models.sources import ColumnDataSource
 from bokeh.palettes import Category10, Category20
 
-# TODO mirror pyplot tools, based on api in:
-# https://bokeh.pydata.org/en/latest/docs/user_guide/annotations.html
-# https://github.com/bokeh/bokeh/issues/2352
-# http://bokeh.pydata.org/en/0.11.0/docs/user_guide/charts.html
-# http://bokeh.pydata.org/en/0.9.3/docs/user_guide/charts.html
-# https://bokeh.pydata.org/en/latest/docs/user_guide/styling.html
-# https://bokeh.pydata.org/en/latest/docs/user_guide/styling.html#labels
-
-# dfh = df.xs('mean',axis=1,level='stat')
-# df_flat=dfh.stack().reset_index(drop=False)
-# df.xs('mean',axis=1,level='stat').stack(level='dataset').reset_index(drop=False)
-# p=Bar(df_flat,label='method',values='ff',group='dataset',color=Category10,ylabel='ff',xlabel=METHOD,palette=Category10[3])
-
 DEFAULT_NAME = 'benchmark run'
 PM_CHAR = u'\u00B1'
 FNAME_FMT = '%s_%s.html'
