@@ -20,6 +20,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
+
 h = 0.02  # step size in the mesh
 
 classifiers = \
@@ -43,8 +44,7 @@ linearly_separable = (X, y)
 
 datasets = [make_moons(noise=0.3, random_state=0),
             make_circles(noise=0.2, factor=0.5, random_state=1),
-            linearly_separable
-            ]
+            linearly_separable]
 
 figure = plt.figure(figsize=(27, 9))
 i = 1
