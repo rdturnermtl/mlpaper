@@ -23,17 +23,17 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 h = 0.02  # step size in the mesh
 
 classifiers = \
-    {"Nearest Neighbors": KNeighborsClassifier(3),
-     "Linear SVM": SVC(kernel="linear", C=0.025),
-     "RBF SVM": SVC(gamma=2, C=1),
-     "Gaussian Process": GaussianProcessClassifier(1.0 * RBF(1.0)),
-     "Decision Tree": DecisionTreeClassifier(max_depth=5),
-     "Random Forest": RandomForestClassifier(max_depth=5, n_estimators=10,
+    {'Nearest Neighbors': KNeighborsClassifier(3),
+     'Linear SVM': SVC(kernel='linear', C=0.025),
+     'RBF SVM': SVC(gamma=2, C=1),
+     'Gaussian Process': GaussianProcessClassifier(1.0 * RBF(1.0)),
+     'Decision Tree': DecisionTreeClassifier(max_depth=5),
+     'Random Forest': RandomForestClassifier(max_depth=5, n_estimators=10,
                                              max_features=1),
-     "Neural Net": MLPClassifier(alpha=1),
-     "AdaBoost": AdaBoostClassifier(),
-     "Naive Bayes": GaussianNB(),
-     "QDA": QuadraticDiscriminantAnalysis()}
+     'Neural Net': MLPClassifier(alpha=1),
+     'AdaBoost': AdaBoostClassifier(),
+     'Naive Bayes': GaussianNB(),
+     'QDA': QuadraticDiscriminantAnalysis()}
 
 X, y = make_classification(n_features=2, n_redundant=0, n_informative=2,
                            random_state=1, n_clusters_per_class=1)
@@ -66,7 +66,7 @@ for ds_cnt, ds in enumerate(datasets):
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
     ax = plt.subplot(len(datasets), len(classifiers) + 1, i)
     if ds_cnt == 0:
-        ax.set_title("Input data")
+        ax.set_title('Input data')
     # Plot the training points
     ax.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=cm_bright,
                edgecolors='k')
@@ -87,7 +87,7 @@ for ds_cnt, ds in enumerate(datasets):
 
         # Plot the decision boundary. For that, we will assign a color to each
         # point in the mesh [x_min, x_max]x[y_min, y_max].
-        if hasattr(clf, "decision_function"):
+        if hasattr(clf, 'decision_function'):
             Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
         else:
             Z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
