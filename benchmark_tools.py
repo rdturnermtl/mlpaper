@@ -564,7 +564,7 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
                    methods, loss_dict, curve_dict, ref_method,
                    min_pred_log_prob=-np.inf):
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
-                                 methods, min_pred_log_prob=min_pred_log_prob)
+                                 methods, min_log_prob=min_pred_log_prob)
     full_tbl, dump = summary_table(pred_tbl, y_test, loss_dict, curve_dict,
                                    ref_method)
     return full_tbl, dump

@@ -19,14 +19,16 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-
+import benchmark_tools as bt
+from benchmark_tools import STD_BINARY_LOSS, STD_BINARY_CURVES
+import sciprint as sp
 
 h = 0.02  # step size in the mesh
 
 classifiers = \
     {'Nearest Neighbors': KNeighborsClassifier(3),
-     'Linear SVM': SVC(kernel='linear', C=0.025),
-     'RBF SVM': SVC(gamma=2, C=1),
+     'Linear SVM': SVC(kernel='linear', C=0.025, probability=True),
+     'RBF SVM': SVC(gamma=2, C=1, probability=True),
      'Gaussian Process': GaussianProcessClassifier(1.0 * RBF(1.0)),
      'Decision Tree': DecisionTreeClassifier(max_depth=5),
      'Random Forest': RandomForestClassifier(max_depth=5, n_estimators=10,
@@ -35,6 +37,8 @@ classifiers = \
      'AdaBoost': AdaBoostClassifier(),
      'Naive Bayes': GaussianNB(),
      'QDA': QuadraticDiscriminantAnalysis()}
+ref_method = 'Neural Net'
+min_pred_log_prob = np.log(1e-6)
 
 X, y = make_classification(n_features=2, n_redundant=0, n_informative=2,
                            random_state=1, n_clusters_per_class=1)
@@ -79,10 +83,24 @@ for ds_cnt, ds in enumerate(datasets):
     ax.set_yticks(())
     i += 1
 
+    full_tbl, dump = \
+        bt.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
+                          STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method,
+                          min_pred_log_prob=min_pred_log_prob)
+    print 'DATASET %d' % ds_cnt
+    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+                            crap_limit_min={'AUPRG': -1},
+                            crap_limit_max={'zero_one': -1},
+                            EB_limit={'AUPRG': -1},
+                            non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True)
+    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+                            crap_limit_min={'AUPRG': -1},
+                            crap_limit_max={'zero_one': -1},
+                            non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
+
     # iterate over classifiers
     for name, clf in classifiers.iteritems():
         ax = plt.subplot(len(datasets), len(classifiers) + 1, i)
-        clf.fit(X_train, y_train)
         score = clf.score(X_test, y_test)
 
         # Plot the decision boundary. For that, we will assign a color to each
