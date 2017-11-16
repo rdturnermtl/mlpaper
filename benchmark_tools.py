@@ -538,8 +538,6 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
     @memory.cache
     def train_predict(method_obj, X_train, y_train, X_test):
-        print 'not cached!'  # TODO remove
-
         method_obj.fit(X_train, y_train)
         try:
             pred_log_prob = method_obj.predict_log_proba(X_test)

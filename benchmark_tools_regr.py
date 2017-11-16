@@ -6,7 +6,6 @@ import scipy.stats as ss
 from constants import METHOD, METRIC
 from benchmark_tools import loss_summary_table
 
-# TODO make mu and std constants
 MOMENT = 'moment'
 PKL_EXT = '.checkpoint'
 
@@ -16,11 +15,11 @@ PKL_EXT = '.checkpoint'
 
 
 def shape_and_validate(y, mu, std):
-    # Note: This does not check normalization
     N, = y.shape
     assert(N >= 1)  # Otherwise min and max confused
     assert(mu.shape == (N,) and std.shape == (N,))
-    # TODO assert std positive and all finite
+    assert(np.all(np.isfinite(mu)) and np.all(np.isfinite(std)))
+    assert(np.all(std > 0.0))
     return N
 
 # ============================================================================
@@ -52,7 +51,7 @@ def log_loss(y, mu, std):
 
 def loss_table(pred_tbl, y, metrics_dict):
     methods, moments = pred_tbl.columns.levels
-    # TODO validate moments list
+    assert('mu' in moments and 'std' in moments)
     N = len(pred_tbl)
     assert(y.shape == (N,))
     assert(N >= 1 and len(methods) >= 1)
@@ -85,9 +84,10 @@ class JustNoise:
         self.std = np.nan
 
     def fit(self, X_train, y_train):
-        # TODO control for what to do when N=1
+        assert(y_train.ndim == 1)
+        assert(len(y_train) >= 2)  # Require N >= 2 for std
         self.mu = np.mean(y_train)
-        self.std = np.std(y_train)
+        self.std = np.std(y_train, ddof=0)
 
     def predict(self, X_test, return_std=True):
         assert(return_std)
@@ -111,8 +111,6 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
     @memory.cache
     def train_predict(method_obj, X_train, y_train, X_test):
-        print 'not cached!'  # TODO remove
-
         method_obj.fit(X_train, y_train)
         mu, std = method_obj.predict(X_test, return_std=True)
         return mu, std
