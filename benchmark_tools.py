@@ -200,8 +200,13 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     FN_cost = 1.0
     thold = np.log(FP_cost / (FP_cost + FN_cost))
 
+    y_bool = y_bool.astype(bool)  # So we can use ~
     yhat = log_pred_prob[:, 1] >= thold
+    assert(y_bool.dtype.kind == 'b' and yhat.dtype.kind == 'b')
+
     loss = (~y_bool * yhat) * FP_cost + (y_bool * ~yhat) * FN_cost
+    print np.unique(loss)  # TODO remove
+    assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
     return loss
 
 
@@ -533,6 +538,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
     assert(y_train.dtype.kind in ('b', 'i'))
     assert(0 <= y_train.min() and y_train.max() < n_labels)
     assert(X_test.ndim == 2 and X_test.shape[1] == X_train.shape[1])
+    assert(min_log_prob < 0.0)  # Ensure is a log-prob
 
     memory = Memory(cachedir=checkpointdir, verbose=0)
 
