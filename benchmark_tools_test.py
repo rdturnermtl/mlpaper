@@ -200,7 +200,7 @@ def brier_loss_test():
     y = np.random.randint(low=0, high=n_labels, size=N)
     y_pred = bt.normalize(np.random.randn(N, n_labels))
 
-    loss = bt.brier_loss(y, y_pred)
+    loss = bt.brier_loss(y, y_pred, rescale=False)
     # sklearn learn is dumb and gets confused when only one class passed in
     if n_labels == 2 and np.std(y) >= 1e-8:
         loss2 = brier_score_loss(y == 1, np.exp(y_pred[:, 1]), pos_label=True)
@@ -208,7 +208,7 @@ def brier_loss_test():
 
     with np.errstate(invalid='ignore', divide='ignore'):
         pred = np.log(bt.one_hot(y, n_labels))
-    loss2 = bt.brier_loss(y, pred)
+    loss2 = bt.brier_loss(y, pred, rescale=False)
     assert(np.max(np.abs(loss2)) <= 1e-8)
 
 
@@ -219,7 +219,7 @@ def spherical_loss_test():
     y = np.random.randint(low=0, high=n_labels, size=N)
     y_pred = bt.normalize(np.random.randn(N, n_labels))
 
-    loss = bt.spherical_loss(y, y_pred)
+    loss = bt.spherical_loss(y, y_pred, rescale=False)
 
     # Check against the linear implementation
     pred_prob = np.exp(y_pred)
@@ -229,13 +229,13 @@ def spherical_loss_test():
 
     with np.errstate(invalid='ignore', divide='ignore'):
         pred = np.log(bt.one_hot(y, n_labels))
-    loss2 = bt.spherical_loss(y, pred)
+    loss2 = bt.spherical_loss(y, pred, rescale=False)
     assert(np.max(np.abs(loss2 + 1.0)) <= 1e-8)
 
     if n_labels >= 2:
         with np.errstate(invalid='ignore', divide='ignore'):
             pred_prob = bt.normalize(np.log(1.0 - bt.one_hot(y, n_labels)))
-        loss2 = bt.spherical_loss(y, pred_prob)
+        loss2 = bt.spherical_loss(y, pred_prob, rescale=False)
         assert(np.max(np.abs(loss2)) <= 1e-8)
 
 
@@ -267,7 +267,7 @@ def loss_summary_table_test():
         for method in methods:
             loss = metric_f(y, bt.normalize(tbl[method].values))
             assert(np.allclose(loss_tbl[(metric, method)].values, loss,
-                                        equal_nan=True))
+                               equal_nan=True))
 
             if pairwise_CI:
                 mu, EB = bt.get_mean_and_EB(loss, loss_ref, confidence)
