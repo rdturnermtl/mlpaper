@@ -53,6 +53,7 @@ datasets = [make_moons(noise=0.3, random_state=0),
 figure = plt.figure(figsize=(27, 9))
 i = 1
 # iterate over datasets
+curve_dumps = [None] * len(datasets)
 for ds_cnt, ds in enumerate(datasets):
     # preprocess dataset, split into training and test part
     X, y = ds
@@ -83,7 +84,7 @@ for ds_cnt, ds in enumerate(datasets):
     ax.set_yticks(())
     i += 1
 
-    full_tbl, dump = \
+    full_tbl, curve_dumps[ds_cnt] = \
         bt.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
                           STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method,
                           min_pred_log_prob=min_pred_log_prob)
@@ -92,6 +93,7 @@ for ds_cnt, ds in enumerate(datasets):
     print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
                             non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
+    print ''
     print 'DATASET %d Results in LaTeX' % ds_cnt
     print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
@@ -130,6 +132,26 @@ for ds_cnt, ds in enumerate(datasets):
         ax.text(xx.max() - .3, yy.min() + .3, ('%.2f' % score).lstrip('0'),
                 size=15, horizontalalignment='right')
         i += 1
-
 plt.tight_layout()
 plt.show()
+
+for metric in STD_BINARY_CURVES:
+    figure = plt.figure(figsize=(27, 9))
+    i = 1
+    for ds_cnt, dump in enumerate(curve_dumps):
+        for method in classifiers:
+            ax = plt.subplot(len(datasets), len(classifiers), i)
+            curve = dump[(method, metric)]
+            ax.fill_between(curve['xgrid'], curve['LB'], curve['UB'],
+                            color='b', alpha=0.5)
+            ax.plot(curve['xgrid'], curve['ygrid'], 'k-')
+            ax.set_xlim(-0.1, 1.1)
+            ax.set_ylim(-0.1, 1.1)
+            ax.set_xticklabels(())
+            ax.set_yticklabels(())
+            ax.grid()
+            if ds_cnt == 0:
+                ax.set_title('%s %s' % (method, metric))
+            i += 1
+    plt.tight_layout(pad=0.0)
+    plt.show()
