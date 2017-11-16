@@ -1,33 +1,9 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-"""
-=====================
-Classifier comparison
-=====================
-
-A comparison of a several classifiers in scikit-learn on synthetic datasets.
-The point of this example is to illustrate the nature of decision boundaries
-of different classifiers.
-This should be taken with a grain of salt, as the intuition conveyed by
-these examples does not necessarily carry over to real datasets.
-
-Particularly in high-dimensional spaces, data can more easily be separated
-linearly and the simplicity of classifiers such as naive Bayes and linear SVMs
-might lead to better generalization than is achieved by other classifiers.
-
-The plots show training points in solid colors and testing points
-semi-transparent. The lower right shows the classification accuracy on the test
-set.
-"""
-print(__doc__)
-
-
+# Ryan Turner (turnerry@iro.umontreal.ca)
+# Modification of sklearn plot_classifier_comparison.py by
 # Code source: Gael Varoquaux
 #              Andreas Muller
 # Modified for documentation by Jaques Grobler
 # License: BSD 3 clause
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
@@ -44,23 +20,20 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
-h = .02  # step size in the mesh
+h = 0.02  # step size in the mesh
 
-names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
-         "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
-         "Naive Bayes", "QDA"]
-
-classifiers = [
-    KNeighborsClassifier(3),
-    SVC(kernel="linear", C=0.025),
-    SVC(gamma=2, C=1),
-    GaussianProcessClassifier(1.0 * RBF(1.0)),
-    DecisionTreeClassifier(max_depth=5),
-    RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
-    MLPClassifier(alpha=1),
-    AdaBoostClassifier(),
-    GaussianNB(),
-    QuadraticDiscriminantAnalysis()]
+classifiers = \
+    {"Nearest Neighbors": KNeighborsClassifier(3),
+     "Linear SVM": SVC(kernel="linear", C=0.025),
+     "RBF SVM": SVC(gamma=2, C=1),
+     "Gaussian Process": GaussianProcessClassifier(1.0 * RBF(1.0)),
+     "Decision Tree": DecisionTreeClassifier(max_depth=5),
+     "Random Forest": RandomForestClassifier(max_depth=5, n_estimators=10,
+                                             max_features=1),
+     "Neural Net": MLPClassifier(alpha=1),
+     "AdaBoost": AdaBoostClassifier(),
+     "Naive Bayes": GaussianNB(),
+     "QDA": QuadraticDiscriminantAnalysis()}
 
 X, y = make_classification(n_features=2, n_redundant=0, n_informative=2,
                            random_state=1, n_clusters_per_class=1)
@@ -107,7 +80,7 @@ for ds_cnt, ds in enumerate(datasets):
     i += 1
 
     # iterate over classifiers
-    for name, clf in zip(names, classifiers):
+    for name, clf in classifiers.iteritems():
         ax = plt.subplot(len(datasets), len(classifiers) + 1, i)
         clf.fit(X_train, y_train)
         score = clf.score(X_test, y_test)
