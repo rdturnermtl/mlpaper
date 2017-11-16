@@ -205,7 +205,6 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     assert(y_bool.dtype.kind == 'b' and yhat.dtype.kind == 'b')
 
     loss = (~y_bool * yhat) * FP_cost + (y_bool * ~yhat) * FN_cost
-    print np.unique(loss)  # TODO remove
     assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
     return loss
 

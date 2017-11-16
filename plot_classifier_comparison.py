@@ -87,16 +87,16 @@ for ds_cnt, ds in enumerate(datasets):
         bt.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
                           STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method,
                           min_pred_log_prob=min_pred_log_prob)
-    print 'DATASET %d' % ds_cnt
+    print '-' * 20
+    print 'DATASET %d Results' % ds_cnt
     print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
-                            crap_limit_max={'zero_one': -1},
+                            non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
+    print 'DATASET %d Results in LaTeX' % ds_cnt
+    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+                            crap_limit_min={'AUPRG': -1},
                             EB_limit={'AUPRG': -1},
                             non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True)
-    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
-                            crap_limit_min={'AUPRG': -1},
-                            crap_limit_max={'zero_one': -1},
-                            non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
 
     # iterate over classifiers
     for name, clf in classifiers.iteritems():
