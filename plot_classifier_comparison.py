@@ -5,6 +5,8 @@
 # Modified for documentation by Jaques Grobler
 # License: BSD 3 clause
 import numpy as np
+from matplotlib import use
+use('pdf')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sklearn.model_selection import train_test_split
@@ -36,8 +38,9 @@ classifiers = \
      'Neural Net': MLPClassifier(alpha=1),
      'AdaBoost': AdaBoostClassifier(),
      'Naive Bayes': GaussianNB(),
-     'QDA': QuadraticDiscriminantAnalysis()}
-ref_method = 'Neural Net'
+     'QDA': QuadraticDiscriminantAnalysis(),
+     'iid': bt.JustNoise()}
+ref_method = 'iid'
 min_pred_log_prob = np.log(1e-6)
 
 X, y = make_classification(n_features=2, n_redundant=0, n_informative=2,
@@ -69,7 +72,7 @@ for ds_cnt, ds in enumerate(datasets):
     # just plot the dataset first
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(['#FF0000', '#0000FF'])
-    ax = plt.subplot(len(datasets), len(classifiers) + 1, i)
+    ax = plt.subplot(len(datasets), len(classifiers), i)
     if ds_cnt == 0:
         ax.set_title('Input data')
     # Plot the training points
@@ -102,15 +105,15 @@ for ds_cnt, ds in enumerate(datasets):
 
     # iterate over classifiers
     for name, clf in classifiers.iteritems():
-        ax = plt.subplot(len(datasets), len(classifiers) + 1, i)
+        if name == ref_method:
+            continue
+
+        ax = plt.subplot(len(datasets), len(classifiers), i)
         score = clf.score(X_test, y_test)
 
         # Plot the decision boundary. For that, we will assign a color to each
         # point in the mesh [x_min, x_max]x[y_min, y_max].
-        if hasattr(clf, 'decision_function'):
-            Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
-        else:
-            Z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
+        Z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
 
         # Put the result into a color plot
         Z = Z.reshape(xx.shape)
@@ -134,24 +137,32 @@ for ds_cnt, ds in enumerate(datasets):
         i += 1
 plt.tight_layout()
 plt.show()
+plt.savefig('output.png', format='png', dpi=300, pad=0)
 
 for metric in STD_BINARY_CURVES:
-    figure = plt.figure(figsize=(27, 9))
+    figure = plt.figure(figsize=(3 * (len(classifiers) - 1), 5))
     i = 1
     for ds_cnt, dump in enumerate(curve_dumps):
+        curve_ref = dump[(ref_method, metric)]
         for method in classifiers:
-            ax = plt.subplot(len(datasets), len(classifiers), i)
+            if method == ref_method:
+                continue
+
+            ax = plt.subplot(len(datasets), len(classifiers) - 1, i)
             curve = dump[(method, metric)]
             ax.fill_between(curve['xgrid'], curve['LB'], curve['UB'],
                             color='b', alpha=0.5)
             ax.plot(curve['xgrid'], curve['ygrid'], 'k-')
-            ax.set_xlim(-0.1, 1.1)
-            ax.set_ylim(-0.1, 1.1)
+            ax.set_xlim(-0.01, 1.01)
+            ax.set_ylim(-0.01, 1.01)
+            ax.set_xticks(np.linspace(0, 1, 11))
+            ax.set_yticks(np.linspace(0, 1, 11))
             ax.set_xticklabels(())
             ax.set_yticklabels(())
             ax.grid()
             if ds_cnt == 0:
-                ax.set_title('%s %s' % (method, metric))
+                ax.set_title(method)
             i += 1
     plt.tight_layout(pad=0.0)
     plt.show()
+    plt.savefig(metric + '.png', format='png', dpi=300, pad=0)
