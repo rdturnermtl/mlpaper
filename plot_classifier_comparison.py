@@ -95,6 +95,7 @@ for ds_cnt, ds in enumerate(datasets):
     print 'DATASET %d Results' % ds_cnt
     print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
+                            EB_limit={'AUPRG': -1},
                             non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
     print ''
     print 'DATASET %d Results in LaTeX' % ds_cnt
