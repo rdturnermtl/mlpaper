@@ -4,22 +4,22 @@ Easy benchmarking of machine learning models with sklearn interface with statist
 See `plot_classifier_comparison.py` for example usage. This extends the standard sklearn [classifier comparison](http://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html) but also demos the ease of benchmark tools to create a performance report.
 
 Pandas tables with the performance results of all the models can be built by:
-```
+```python
     performance_df, performance_curves_dict = \
         bt.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
                           STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method)
 ```
 This benchmarks all the models in classifiers on the data (`X_train`, `y_train`, `X_test`, `y_test`) for 2-class classification. It uses the loss function described in the dictionaries `STD_BINARY_LOSS`, and the curves (e.g., ROC, PR) in `STD_BINARY_CURVES`. `ref_method` defines the model that is the reference to compare against for assessing statistically significant performance gains.
 
-The sciprint module formats these tables for scientific presentation. The performance dictionaries can be converted to cleanly formatted tables: correct significant figures, shifting of exponent for compactness, thresholding huge/small results, and correct alignment of decimal points, units in headers, etc. Here we use:
-```
+The sciprint module formats these tables for scientific presentation. The performance dictionaries can be converted to cleanly formatted tables: correct significant figures, shifting of exponent for compactness, thresholding huge/small (crap limit) results, and correct alignment of decimal points, units in headers, etc. Here we use:
+```python
     print sp.just_format_it(performance_df, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
                             EB_limit={'AUPRG': -1},
                             non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
 ```
 to export the results in plain text, or for LaTeX we use:
-```
+```python
     print sp.just_format_it(performance_df, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
                             EB_limit={'AUPRG': -1},
@@ -142,4 +142,17 @@ iid               &  0.55(16)  &     {--} &  0.5(0)    &     {--} &  0(0)      &
 \bottomrule
 \end{tabular}
 ```
+
+### Sklearn output of classifiers
+![sklearn](doc/output.png)
+
+### ROC curves
+with errorbars from bootstrap analysis, which has been vectorized for speed.
+![ROC](doc/AUC.png)
+
+### Precision-recall curves
+![PR](doc/AP.png)
+
+### Precision-recall-gain curves
+![PRG](doc/AUPRG.png)
 
