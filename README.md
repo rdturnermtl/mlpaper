@@ -156,3 +156,38 @@ with errorbars from bootstrap analysis, which has been vectorized for speed.
 ### Precision-recall-gain curves
 ![PRG](doc/AUPRG.png)
 
+## Output from regression demo
+
+Benchmark tools can also be applied to a regression problem with:
+```python
+import benchmark_tools_regr as btr
+full_tbl = btr.just_benchmark(X_train, y_train, X_test, y_test,
+                              regressors, STD_REGR_LOSS, 'iid',
+                              pairwise_CI=True)
+```
+
+Here we have used `pairwise_CI=True` which makes the confidence intervals based on the uncertainty of the loss _difference_ to the reference method rather than a confidence interval on the actual loss.
+
+By extending the sklearn [regression demo](http://scikit-learn.org/stable/auto_examples/gaussian_process/plot_compare_gpr_krr.html#sphx-glr-auto-examples-gaussian-process-plot-compare-gpr-krr-py) we can make simple formatted tables:
+```
+             MAE       p          MSE        p   NLL (nats)        p
+BLR  0.96933(30)  0.0979  1.39881(67)   0.0665  1.58842(57)   0.9828
+GPR  0.75(13)     0.0009  0.75(28)     <0.0001  1.27(12)     <0.0001
+iid  0.96908         N/A  1.3982           N/A  1.5884           N/A
+```
+
+or in LaTeX:
+```
+\begin{tabular}{|l|Sr|Sr|Sr|}
+\toprule
+{}  &        {MAE} &     {p} &        {MSE} &      {p} & {NLL (nats)} &      {p} \\
+\midrule
+BLR &  0.96933(30) &  0.0979 &  1.39881(67) &   0.0665 &  1.58842(57) &   0.9828 \\
+GPR &  0.75(13)    &  0.0009 &  0.75(28)    &  <0.0001 &  1.27(12)    &  <0.0001 \\
+iid &  0.96908     &     N/A &  1.3982      &      N/A &  1.5884      &      N/A \\
+\bottomrule
+\end{tabular}
+```
+
+![regression demo](doc/regress.png)
+
