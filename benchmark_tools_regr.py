@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from constants import METHOD, METRIC
-from benchmark_tools import loss_summary_table
+from benchmark_tools import loss_summary_table, PAIRWISE_DEFAULT
 
 MOMENT = 'moment'
 PKL_EXT = '.checkpoint'
@@ -132,9 +132,11 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
 
 def just_benchmark(X_train, y_train, X_test, y_test,
-                   methods, loss_dict, ref_method, min_std=0.0):
+                   methods, loss_dict, ref_method, min_std=0.0,
+                   pairwise_CI=PAIRWISE_DEFAULT):
     pred_tbl = get_gauss_pred(X_train, y_train, X_test, methods,
                               min_std=min_std)
     loss_tbl = loss_table(pred_tbl, y_test, loss_dict)
-    loss_summary = loss_summary_table(loss_tbl, ref_method)
+    loss_summary = loss_summary_table(loss_tbl, ref_method,
+                                      pairwise_CI=pairwise_CI)
     return loss_summary
