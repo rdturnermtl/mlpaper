@@ -18,7 +18,22 @@ PKL_EXT = '.checkpoint'
 
 
 def one_hot(y, n_labels):
-    '''Equivalent to OneHotEncoder in sklearn but avoids extra dependency.'''
+    '''Same functionality sklearn.preprocessing.OneHotEncoder but avoids
+    extra dependency.
+    
+    Parameters
+    ----------
+    y : 1d np array of int type
+        Integers in range [0, n_labels) to be one-hot encoded.
+    n_labels : int
+        Number of labels, must be >= 1. This is not infered from y because some
+        labels may not be found in small data chunks.
+
+    Returns
+    -------
+    y_bin : 2d np array of bool type
+        One hot encoding of y, with size (len(y), n_labels)
+    '''
     N, = y.shape
     assert(n_labels >= 1)
     assert(y.dtype.kind == 'i')
@@ -30,6 +45,21 @@ def one_hot(y, n_labels):
 
 
 def normalize(log_pred_prob):
+    '''Normalize log probability distributions for classification.
+
+    Parameters
+    ----------
+    log_pred_prob : 2d np array
+        Each row corresponds to a categorical distribution with unnormalized
+        probabilities in log scale. Therefore, the number of columns must be at
+        least 1.
+
+    Returns
+    -------
+    log_pred_prob : 2d np array
+        A row-wise normalized (e.g., exp(log_pred_prob) sums to 1 on each row)
+        version of the input.
+    '''
     assert(log_pred_prob.ndim == 2)
     assert(log_pred_prob.shape[1] >= 1)  # Otherwise, can't make it sum to 1
 
@@ -39,8 +69,29 @@ def normalize(log_pred_prob):
 
 
 def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
+    '''Add a small amount of noise to a vector such that the output vector has
+    all unique values. The ordering of the resutiling vector remains the
+    same: argsort(output) = argsort(input) if the input has only unique values.
+
+    Parameters
+    ----------
+    x : 1d np array 
+        Input vector to be noise corrupted. Must have all finite values.
+    default_epsilon : float
+        Default noise to add for singleton lists, musts be > 0.0.
+    max_epsilon : float
+        Maximum amount of noise corruption regardless of scale found in x.
+
+    Returns
+    -------
+    x : 1d np array of float type
+        Noise correupted version of input. All values are unique with
+        probability 1. The ordering is the same as the input if the inputs
+        values are all unique.
+    '''
     assert(x.ndim == 1)
     assert(np.all(np.isfinite(x)))
+    # TODO cast as float in case someone passes in a bool array
 
     u_x = np.unique(x)
     delta = default_epsilon if len(u_x) <= 1 else np.min(np.diff(u_x))
@@ -53,6 +104,34 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
 
 def eval_step_func(x_grid, xp, yp, ival=None,
                    assume_sorted=False, skip_unique_chk=False):
+    '''Evaluate a stepwise function. Based on the ECDF class in statsmodels.
+    The function is assumed to cadlag (like a CDF function).
+
+    Parameters
+    ----------
+    x_grid : 1d np array
+        Values to evaluate the stepwise function at.
+    xp : 1d np array
+        Points at which the step function changes.
+    yp : 1d np array
+        The new values at each of the steps
+    ival : scalar or None
+        Initial value for step function, e.g., the value of the step function
+        at -inf. If None, we just require that all x_grid values are after
+        the first step.
+    assume_sorted : bool
+        Set to True is xp is alreaded sorted in increasing order. This skips
+        sorting for computational speed.
+    skip_unique_chk: bool
+        Assume all values in xp are sorted and unique. Setting to True skips
+        checking this condition for speed.
+
+    Returns
+    -------
+    y_grid : 1d np array
+        Step function defined by xp and yp evaluated at the points in x_grid.
+    '''
+    # TODO requires floats for input??
     assert(x_grid.ndim == 1)
     assert(xp.ndim == 1 and xp.shape == yp.shape)
 
@@ -76,7 +155,25 @@ def eval_step_func(x_grid, xp, yp, ival=None,
 
 
 def ttest1(x, nan_on_zero=False):
+    '''Perform a standard t-test to test if the values in x are sampled from
+    a distribution with a zero mean.
+
+    Parameters
+    ----------
+    x : 1d np array
+        array of data points to test.
+    nan_on_zero : bool
+        If True, return a p-value of NaN for samples with zero variances,
+        otherwise return a p-value of 1.0.
+
+    Returns
+    -------
+    pval : float
+        p-value (in [0,1]) from t-test on x.
+    '''
+    # TODO assert is 1d    
     assert(x.size > 0)
+
     if np.std(x) == 0.0:
         pval = np.nan if nan_on_zero else 1.0
     else:
@@ -85,7 +182,22 @@ def ttest1(x, nan_on_zero=False):
 
 
 def t_EB(x, confidence=0.95):
-    '''I assumed to support NaN then it became too much headache.'''
+    '''Get t statistic based error bars on mean of x.
+
+    Parameters
+    ----------
+    x : 1d np array
+        Data points to estimate mean. Must not be empty or contain NaNs.
+    confidence : float
+        Confidence probability (in (0, 1)) to construct confidence interval
+        from t statistic.
+
+    Returns
+    -------
+    EB : float
+        Size of error bar on mean (> 0). The confidence interval is
+        [mean(x) - EB, mean(x) + EB]. EB is inf when len(x) = 1.
+    '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.ndim(confidence) == 0)
     assert(0.0 < confidence and confidence < 1.0)
@@ -104,7 +216,7 @@ def t_EB(x, confidence=0.95):
 
 
 def bernstein_EB(x, lower, upper, confidence=0.95):
-    '''I assumed to support NaN then it became too much headache.'''
+    '''Bernstein version of t_EB, not yet used.'''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.all(lower <= x) and np.all(x <= upper))
     assert(np.ndim(confidence) == 0)
@@ -129,7 +241,7 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
 
 
 def boot_EB(x, confidence=0.95, n_boot=1000):
-    '''This CI is not designed to work with nans.'''
+    '''Bootstrap version of t_EB, not yet used.'''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     N = x.size
     if N == 0:
@@ -158,11 +270,43 @@ def boot_EB(x, confidence=0.95, n_boot=1000):
 
 def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
                     lower=-np.inf, upper=np.inf, method='t'):
+    '''Get mean loss and estimated error bar.
+
+    Parameters
+    ----------
+    loss : 1d np array
+        Array of loss value where each entry is an independent prediction.
+    loss_ref : scalar or 1d array
+        Reference values for losses. This may be the losses of another method
+        on the same datapoints. If 1d must be of same size as loss. The error
+        bars are constructed from loss - loss_ref (like a paired test) which
+        results in smaller error bars is the losses are positively correlated.
+    confidence : float
+        Confidence probability (in (0, 1)) to construct error bar.
+    min_EB : float
+        Minimum size of resulting error bar regardless of the data in loss.
+    lower : float
+        Theoretically lowest possible value in loss. Used for construction of
+        Bernstein bounds.
+    upper : float
+        Theoretically highest possible value in loss. Used for construction of
+        Bernstein bounds.
+    method : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+
+    Returns
+    -------
+    mu : float
+        Estimated mean loss.
+    EB : float
+        Size of error bar on mean loss (EB > 0). The confidence interval is
+        [mu - EB, mu + EB]. EB is inf when len(loss) = 1.
+    '''
     assert(loss.ndim == 1 and np.ndim(loss_ref) <= 1)
     assert(np.ndim(min_EB) == 0)
-    mu = np.nanmean(loss)
+    mu = np.nanmean(loss)  # TODO use mean, don't allow nan
 
-    delta = loss - loss_ref
+    delta = loss - loss_ref  # TODO check loss_ref dim <= 1
 
     # Note we are computing CI on delta to reference!
     if method == 't':
@@ -217,6 +361,31 @@ def hard_loss_decision(log_pred_prob, loss_mat):
 
 
 def hard_loss(y, log_pred_prob, loss_mat=None):
+    '''Loss function for making classification decisions from a loss matrix.
+
+    This function both computes the optimal action under the predictive
+    distribution and the loss matrix, and then scores that decision using the
+    loss matrix.
+
+    Parameters
+    ----------
+    y : 1d np array of type int or bool
+        True labels for each classication data point.
+    log_pred_prob : 2d np array
+        Array of shape (len(y), n_labels). Each row corresponds to a
+        categorical distribution with *normalized* probabilities in log scale.
+        Therefore, the number of columns must be at least 1.
+    loss_mat : 2d np array or None
+        Loss matrix to use for making decisions of size (n_labels, n_actions).
+        If None, the identity matrix is used for the 0-1 loss function. The
+        loss of taking action a when the true outcome (label) is y is found in
+        loss_mat[y, a].
+
+    Returns
+    -------
+    loss : 1d np array
+        Array of the resulting loss for the predictions on each point in y.
+    '''
     N, n_labels = shape_and_validate(y, log_pred_prob)
     loss_mat = (1.0 - np.eye(n_labels)) if loss_mat is None else loss_mat
     assert(np.ndim(loss_mat) == 2 and loss_mat.shape[0] == n_labels)
@@ -231,12 +400,48 @@ def hard_loss(y, log_pred_prob, loss_mat=None):
 
 
 def log_loss(y, log_pred_prob):
+    '''Compute log loss (e.g, negative log likelihood or cross-entropy).
+
+    Parameters
+    ----------
+    y : 1d np array of type int or bool
+        True labels for each classication data point.
+    log_pred_prob : 2d np array
+        Array of shape (len(y), n_labels). Each row corresponds to a
+        categorical distribution with *normalized* probabilities in log scale.
+        Therefore, the number of columns must be at least 1.
+
+    Returns
+    -------
+    loss : 1d np array
+        Array of the log loss for the predictions on each data point in y.
+    '''
     N, n_labels = shape_and_validate(y, log_pred_prob)
     nll = -log_pred_prob[np.arange(N), y.astype(int)]
     return nll
 
 
 def brier_loss(y, log_pred_prob, rescale=True):
+    '''Compute (rescaled) Brier loss.
+
+    Parameters
+    ----------
+    y : 1d np array of type int or bool
+        True labels for each classication data point.
+    log_pred_prob : 2d np array
+        Array of shape (len(y), n_labels). Each row corresponds to a
+        categorical distribution with *normalized* probabilities in log scale.
+        Therefore, the number of columns must be at least 1.
+    rescale : bool
+        If True, linearly rescales lost so perfect (P=1) predictions give 0.0
+        loss and a uniform prediction gives loss of 1.0. False gives the
+        standard Brier loss.
+
+    Returns
+    -------
+    loss : 1d np array
+        Array of the Brier loss for the predictions on each data point in y.
+    '''
     N, n_labels = shape_and_validate(y, log_pred_prob)
 
     y_bin = one_hot(y.astype(int), n_labels)
@@ -249,6 +454,26 @@ def brier_loss(y, log_pred_prob, rescale=True):
 
 
 def spherical_loss(y, log_pred_prob, rescale=True):
+    '''Compute (rescaled) spherical loss.
+
+    Parameters
+    ----------
+    y : 1d np array of type int or bool
+        True labels for each classication data point.
+    log_pred_prob : 2d np array
+        Array of shape (len(y), n_labels). Each row corresponds to a
+        categorical distribution with *normalized* probabilities in log scale.
+        Therefore, the number of columns must be at least 1.
+    rescale : bool
+        If True, linearly rescales lost so perfect (P=1) predictions give 0.0
+        loss and a uniform prediction gives loss of 1.0. False gives the
+        standard spherical loss, which is the negative spherical *score*.
+
+    Returns
+    -------
+    loss : 1d np array
+        Array of the spherical loss for the predictions on each point in y.
+    '''
     N, n_labels = shape_and_validate(y, log_pred_prob)
 
     log_normalizer = 0.5 * logsumexp(2.0 * log_pred_prob, axis=1)
@@ -267,6 +492,36 @@ def spherical_loss(y, log_pred_prob, rescale=True):
 
 
 def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
+    '''Compute loss table from table of probalistic predictions.
+
+    Parameters
+    ----------
+    log_pred_prob_table : Pandas DataFrame
+        DataFrame with predictive distributions. Each row is a data point.
+        The columns should be hierarchical index that is the cartesian product
+        of methods x labels. For exampe, log_pred_prob_table.loc[5, 'foo']
+        is the categorical distribution (in log scale) prediction that method\
+        foo places on y[5].
+    y : 1d np array of type int or bool
+        True labels for each classication data point. Must be of same length as
+        DataFrame log_pred_prob_table.
+    metrics_dict : dict of str to func
+        Dictionary mapping loss function name to function that computes loss,
+        e.g., log_loss, brier_loss, ...
+    assume_normalized : bool
+        If False, renormalize the predictive distributions to ensure there is
+        no cheating. If True, skips this step for speed.
+
+    Returns
+    -------
+    loss_tbl : Pandas DataFrame
+        DataFrame with loss of each method according to each loss function on
+        each data point. The rows are the data points in y (that is the index
+        matches log_pred_prob_table). The columns are a hierarchical index that
+        is the cartesian product of loss x method. That is, the loss of method
+        foo's prediction of y[5] according to loss function bar is stored in
+        loss_tbl.loc[5, ('bar', 'foo')]
+    '''
     methods, labels = log_pred_prob_table.columns.levels
     N, n_labels = len(log_pred_prob_table), len(labels)
     assert(y.shape == (N,))
@@ -277,6 +532,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
     loss_tbl = pd.DataFrame(index=log_pred_prob_table.index,
                             columns=col_names, dtype=float)
     for method in methods:
+        # TODO validate labels int??
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (N, n_labels))
         assert(not np.any(np.isnan(log_pred_prob)))  # Would let method cheat
