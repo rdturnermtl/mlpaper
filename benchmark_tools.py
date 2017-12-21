@@ -20,7 +20,7 @@ PKL_EXT = '.checkpoint'
 def one_hot(y, n_labels):
     '''Same functionality sklearn.preprocessing.OneHotEncoder but avoids
     extra dependency.
-    
+
     Parameters
     ----------
     y : 1d np array of int type
@@ -75,7 +75,7 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
 
     Parameters
     ----------
-    x : 1d np array 
+    x : 1d np array
         Input vector to be noise corrupted. Must have all finite values.
     default_epsilon : float
         Default noise to add for singleton lists, musts be > 0.0.
@@ -171,7 +171,7 @@ def ttest1(x, nan_on_zero=False):
     pval : float
         p-value (in [0,1]) from t-test on x.
     '''
-    # TODO assert is 1d    
+    # TODO assert is 1d
     assert(x.size > 0)
 
     if np.std(x) == 0.0:
