@@ -38,14 +38,54 @@ def str_print_len(x_str):
 
 
 def decimal_all_finite(x_dec_list):
+    '''Check if all elements in list of decimals are finite.
+
+    Parameters
+    ----------
+    x_dec_list : iterable of Decimal
+        List of decimal objects.
+
+    Returns
+    -------
+    y : bool
+        True if all elements are finite.
+    '''
     return all(x.is_finite() for x in x_dec_list)
 
 
 def decimal_from_tuple(signed, digits, expo):
+    '''Build `Decimal` objects from components of decimal tuple.
+
+    Parameters
+    ----------
+    signed : bool
+        True for negative values.
+    digits : tuple of ints
+        digits of value each in [0,10).
+    expo : int
+        exponent of decimal.
+
+    Returns
+    -------
+    y : Decimal
+        corresponding decimal object.
+    '''
     return decimal.Decimal(decimal.DecimalTuple(int(signed), digits, expo))
 
 
 def as_tuple_chk(x_dec):
+    '''Convert `Decimal` to `DecimalTuple` and check finite.
+
+    Parameters
+    ----------
+    x_dec : Decimal
+        Input value in decimal.
+
+    Returns
+    -------
+    x_tup : DecimalTuple
+        Input converted to `DecimalTuple`.
+    '''
     if not x_dec.is_finite():
         raise ValueError('only accepts finite input')
     x_tup = x_dec.as_tuple()
@@ -53,20 +93,48 @@ def as_tuple_chk(x_dec):
 
 
 def decimal_1ek(k, signed=False):
+    '''Return ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
+
+    Parameters
+    ----------
+    k : int
+        exponent for value.
+    signed : bool
+        If True, return negative.
+
+    Returns
+    -------
+    y : Decimal
+        ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
+    '''
     return decimal_from_tuple(signed, (1,), k)
 
 
 def decimal_eps(x_dec):
+    '''Analog of eps (`np.spacing`) for `Decimal` objects.
+
+    Parameters
+    ----------
+    x_dec : Decimal
+        Input value in decimal.
+
+    Returns
+    -------
+    y : Decimal
+        Smallest value that can be added to `x_dec`.
+    '''
     return decimal_1ek(x_dec.as_tuple().exponent)
 
 
 def decimal_left_digits(x_dec):
+    '''Not currently used, could be moved into test files.'''
     assert(decimal_to_dot(x_dec))  # Should make exception
     y = 1 + max(0, x_dec.adjusted())
     return y
 
 
 def decimal_right_digits(x_dec):
+    '''Not currently used, could be moved into test files.'''
     assert(decimal_to_dot(x_dec))  # Should make exception
     x_tup = as_tuple_chk(x_dec)
     y = max(0, -x_tup.exponent)
@@ -74,6 +142,7 @@ def decimal_right_digits(x_dec):
 
 
 def decimal_digits(x_dec):
+    '''Not currently used, could be moved into test files.'''
     assert(decimal_to_dot(x_dec))  # Should make exception
     x_tup = as_tuple_chk(x_dec)
     y = len(x_tup.digits) - min(0, x_dec.adjusted())
@@ -81,11 +150,13 @@ def decimal_digits(x_dec):
 
 
 def decimal_floor_log10_abs(x_dec):
+    '''Not currently used, could be moved into test files.'''
     assert(x_dec.is_finite() and x_dec != 0)  # Should make exception
     return x_dec.adjusted()
 
 
 def decimal_ceil_log10_abs(x_dec):
+    '''Not currently used, could be moved into test files.'''
     k = decimal_floor_log10_abs(x_dec)
     assert(abs(decimal_1ek(k)) <= abs(x_dec))
     y = k + int(decimal_1ek(k, signed=x_dec.is_signed()) != x_dec)
@@ -93,6 +164,7 @@ def decimal_ceil_log10_abs(x_dec):
 
 
 def decimal_next_pow10(x_dec):
+    '''Not currently used, could be moved into test files.'''
     if x_dec == 0:
         return x_dec  # Note: this keeps sign and precision of original 0.
     k = decimal_ceil_log10_abs(x_dec)
@@ -101,10 +173,49 @@ def decimal_next_pow10(x_dec):
 
 
 def decimal_to_dot(x_dec):
+    '''Test if `Decimal` value has enough precision that it is defined to dot,
+    i.e., its eps is <= 1.
+
+    Parameters
+    ----------
+    x_dec : Decimal
+        Input value in decimal.
+
+    Returns
+    -------
+    y : bool
+        True if `x_dec` defined to dot.
+
+    Examples
+    --------
+    >>> decimal_to_dot(Decimal('1.23E+1'))
+    True
+    >>> decimal_to_dot(Decimal('1.23E+2'))
+    True
+    >>> decimal_to_dot(Decimal('1.23E+3'))
+    False
+    '''
     return x_dec.is_finite() and (x_dec.as_tuple().exponent <= 0)
 
 
 def create_decimal(x, digits, rounding=decimal.ROUND_HALF_UP):
+    '''Create `Decimal` object from `float` with desired significant figures.
+
+    Parameters
+    ----------
+    x : float
+        Value to convert to decimal.
+    digits : int
+        Number of signficant figures to keep in `x`, must be >= 1.
+    rounding : str
+        Rounding mode, must be one of the rounding modes accepted as in
+        `decimal.Context.rounding`.
+
+    Returns
+    -------
+    y : Decimal
+        Conversion of `x` to `Decimal`.
+    '''
     assert(digits >= 1)  # Makes not sense otherwise
     with decimal.localcontext() as ctx:
         ctx.prec = digits
@@ -114,6 +225,18 @@ def create_decimal(x, digits, rounding=decimal.ROUND_HALF_UP):
 
 
 def digit_str(x_dec):
+    '''Decimal to string with only digits (no decimal point, exponent, sign).
+
+    Parameters
+    ----------
+    x_dec : Decimal
+        Input value in `Decimal`.
+
+    Returns
+    -------
+    y : str
+        String of digits in `x_dec`.
+    '''
     x_tup = as_tuple_chk(x_dec)
     return ''.join(str(digit) for digit in x_tup.digits)
 
@@ -124,6 +247,42 @@ def digit_str(x_dec):
 
 def decimalize(perf_tbl, err_digits=2, pval_digits=4, default_digits=5,
                EB_limit={}):
+    '''Convert a performance table from `float` entries to `Decimal`.
+
+    Parameters
+    ----------
+    perf_tbl : Pandas DataFrame
+        DataFrame with curve/loss summary of each method according to each
+        curve or loss function. The rows are the methods. The columns are a
+        hierarchical index that is the cartesian product of
+        metric x (summary, error bar, p-value), where metric can be a loss or
+        a curve summary: ``full_tbl.loc['foo', 'bar']`` is a pandas series
+        with (metric bar on foo, corresponding error bar, statistical sig).
+    err_digits : int
+        Number of digits of error to keep for rounding in `Decimal` conversion:
+        1.2345 +/- 0.0671 is rounded to 1.235 +/- 0.068 when ``err_digits=2``.
+        The error is always rounded up, and the summary is rounded up on half.
+        Must be >= 1.
+    pval_digits : int
+        Precision to keep in p-value when rounding to decimal:
+        0.001234 is rounded to 0.0013 when ``pval_digits=4``. The p-value is
+        always rounded up. Must be >= 1
+    default_digits : int
+        Number of digits to keep in estimate when error bar is 0, inf, nan, or
+        beyond the error bar limit. Must be >= 1.
+    EB_limit : dict of str to int
+        Error bar limit in log10 scale for each column. If the
+        ``error > 10 ** EB_limit`` then the error is treated as if
+        ``error = inf`` since it is too large to be useful. This dictionary is
+        optional. Can be positive or negative integer since in log10 scale.
+
+    Returns
+    -------
+    perf_tbl_dec : Pandas DataFrame
+        DataFrame with same rows and columns as `perf_tbl`, however the entires
+        are now Decimal objects that have been rounded in accordance with the
+        input options.
+    '''
     assert(pval_digits >= 1)
     assert(perf_tbl.columns.names == (METRIC, STAT))
     metrics, stats = perf_tbl.columns.levels
@@ -174,6 +333,46 @@ def decimalize(perf_tbl, err_digits=2, pval_digits=4, default_digits=5,
 def print_estimate(mu, EB, shift=0, min_clip=D_NINF, max_clip=D_INF,
                    below_fmt=BELOW_FMT, above_fmt=ABOVE_FMT,
                    non_finite_fmt={}):
+    '''Convert a mean and error bar pair in `Decimal` to a string.
+
+    Parameters
+    ----------
+    mu : Decimal
+        Value of estimate in `Decimal`. Mu must have enough precision to be
+        defined to dot after shifting. Can be inf or nan.
+    EB : Decimal
+        Error bar on estimate in `Decimal`. Must be non-negative. It must be
+        defined to same precision (quantum) as `mu` if `EB` is finite positive
+        and `mu` is positive.
+    shift : int
+        How many decimal points to shift `mu` for display purposes. If `mu`
+        is in meters and shift=3 than we display the result in mm, i.e., x1e3.
+    min_clip : Decimal
+        Lower limit clip value on estimate. If ``mu < min_clip`` then simply
+        return ``< min_clip`` for string. This is used for score metric where a
+        lower metric is simply on another order of magnitude to other methods.
+    max_clip : Decimal
+        Upper limit clip value on estimate. If ``mu > max_clip`` then simply
+        return ``> max_clip`` for string. This is used for loss metric where a
+        high metric is simply on another order of magnitude to other methods.
+    below_fmt : str (format string)
+        Format string to display when estimate is lower limit clipped, often:
+        '<{0:,f}'.
+    above_fmt : str (format string)
+        Format string to display when estimate is upper limit clipped, often:
+        '>{0:,f}'.
+    non_finite_fmt : dict of str to str
+        Display format when estimate is non-finite. For example, for latex
+        looking output, one could use:
+        ``{'inf': r'\infty', '-inf': r'-\infty', 'nan': '--'}``.
+
+    Returns
+    -------
+    std_str : str
+        String representation of `mu` and `EB`. This is in format 1.234(56)
+        for ``mu=1.234`` and ``EB=0.056`` unless there are non-finite values
+        or a value has been clipped.
+    '''
     assert(min_clip == D_NINF or min_clip.is_finite())
     assert(max_clip == D_INF or max_clip.is_finite())
     assert(min_clip < max_clip)
@@ -209,6 +408,24 @@ def print_estimate(mu, EB, shift=0, min_clip=D_NINF, max_clip=D_INF,
 
 
 def print_pval(pval, non_finite_fmt={}):
+    '''Convert decimal p-value into string representation.
+
+    Parameters
+    ----------
+    pval : Decimal
+        Decimal p-value to represent as string. Must be in [0,1] or nan.
+    non_finite_fmt : dict of str to str
+        Display format when estimate is non-finite. For example, for latex
+        looking output, one could use: ``{'nan': '--'}``.
+
+    Returns
+    -------
+    pval_str : str
+        String representation of p-value. If p-value is zero or minimum
+        Decimal value allowable in precision of pval. We simply return clipped
+        string, e.g. '<0.0001', as value.
+    '''
+    # TODO take below format as argument
     pval_eps = decimal_eps(pval)
     if pval.is_nan():
         pval_str = non_finite_fmt.get(NAN_STR, NAN_STR)
@@ -229,6 +446,35 @@ def print_pval(pval, non_finite_fmt={}):
 
 
 def get_shift_range(x_dec_list, shift_mod=1):
+    '''Helper function to `find_shift` that find upper and lower limits to
+    shift the estimates based on the constraints. This bounds the search space
+    for the optimal shift.
+
+    Attempts to fulful three constraints:
+    1) All estimates displayed to dot after shifting
+    2) At least one estimate is >= 1 after shift to avoid space waste with 0s.
+    3) ``shift % shift_mod == 0``
+    If not all 3 are possible then requirement 2 is violated.
+
+    Parameters
+    ----------
+    x_dec_list : array_like of Decimal
+        List of `Decimal` estimates to format. Assumes all non-finite and
+        clipped values are already removed.
+    shift_mod : int
+        Required modulus for output. This is usually 1 or 3. When an SI prefix
+        is desired on the shift then a modulus of 3 is used. Must be >= 1.
+
+    Returns
+    -------
+    min_shift : int
+        Minimum shift (inclusive) to consider to satisfy contraints.
+    max_shift : int
+        Maximum shift (inclusive) to consider to satisfy contraints.
+    all_small : bool
+        If True, it means constraint 2 needed to be violated. This could be
+        used to flag warning.
+    '''
     assert(len(x_dec_list) >= 1)
     assert(shift_mod >= 1)
     assert(all(x.is_finite() for x in x_dec_list))
@@ -258,8 +504,45 @@ def get_shift_range(x_dec_list, shift_mod=1):
 
 
 def find_shift(mean_list, err_list, shift_mod=1):
-    '''This function is fairly inefficient and could be done implicitly, but it
-    shouldn't be the bottleneck anyway for most usages.'''
+    '''Find optimal decimal point shift to display the numbers in `mean_list`
+    for display compactness.
+
+    Finds optimal shift of Decimal numbers with potentially varying significant
+    figures and varying magnitudes to limit the length of the longest resulting
+    string of all the numbers. This is to limit the length of the resulting
+    column which is determined by the longest number. This function assumes the
+    number will *not* be displayed in a fixed width font and hence the decimal
+    point only adds a neglible width. Assumes all clipped and non-finite values
+    have been removed from list.
+
+    Attempts to fulful three constraints:
+    1) All estimates displayed to dot after shifting
+    2) At least one estimate is >= 1 after shift to avoid space waste with 0s.
+    3) ``shift % shift_mod == 0``
+    If not all 3 are possible then requirement 2 is violated.
+
+    Parameters
+    ----------
+    mean_list : array_like of Decimal
+        List of `Decimal` estimates to format. Assumes all non-finite and
+        clipped values are already removed.
+    err_list : array_like of Decimal
+        List of `Decimal` error bars. Must be of same length as `mean_list`.
+    shift_mod : int
+        Required modulus for output. This is usually 1 or 3. When an SI prefix
+        is desired on the shift then a modulus of 3 is used. Must be >= 1.
+
+    Returns
+    -------
+    best_shift : int
+        Best shift of mean_list for compactness. This is number of digits
+        to move point to right, e.g. ``shift=3`` => change 1.2345 to 1234.5
+
+    Notes
+    -----
+    This function is fairly inefficient and could be done implicitly, but it
+    shouldn't be the bottleneck anyway for most usages.
+    '''
     assert(len(mean_list) == len(err_list))
     # Check all non-finite values for mean removed, but allow non-finite EB
     assert(all(x.is_finite() for x in mean_list))
@@ -293,6 +576,32 @@ def find_shift(mean_list, err_list, shift_mod=1):
 
 
 def find_last_dig(num_str):
+    '''Find index in string of number (possibly) with error bars immediately
+    before the decimal point.
+
+    Parameters
+    ----------
+    num_str : str
+        String representation of a float, possibly with error bars in parens.
+
+    Returns
+    -------
+    pos : int
+        String index of digit before decimal point.
+
+    Examples
+    --------
+    >>> find_last_dig('5.555')
+    0
+    >>> find_last_dig('-5.555')
+    1
+    >>> find_last_dig('-567.555')
+    3
+    >>> find_last_dig('-567.555(45)')
+    3
+    >>> find_last_dig('-567(45)')
+    3
+    '''
     pos = num_str.find('.')
     assert(pos != 0)
 
@@ -307,14 +616,78 @@ def find_last_dig(num_str):
 
 
 def pad_num_str(num_str_list, pad=' '):
+    '''Pad strings of formatted numbers so they are aligned at the decimal
+    point when displayed in a right aligned manner (which is typical for
+    numeric data).
+
+    Parameters
+    ----------
+    num_str_list : array_like of str
+        List of numbers already formatted as strings.
+    pad : str
+        Padding character, typically space. Must be length 1.
+
+    Returns
+    -------
+    L : list of str
+        List of padded strings.
+
+    Examples
+    --------
+    >>> sp.pad_num_str(['-55.5', '1.12(34)', '0'], pad='~')
+    ['-55.5~~~~~', '1.12(34)', '0~~~~~~~']
+    '''
     max_right = max(len(ss) - find_last_dig(ss) for ss in num_str_list)
-    L = [ss + ' ' * (max_right - (len(ss) - find_last_dig(ss)))
+    L = [ss + pad * (max_right - (len(ss) - find_last_dig(ss)))
          for ss in num_str_list]
     return L
 
 
 def format_table(perf_tbl_dec, shift_mod=None, pad=True,
                  crap_limit_max={}, crap_limit_min={}, non_finite_fmt={}):
+    '''Format a performance table that is already in decimal form to one that
+    is formatted with entries in string type.
+
+    Parameters
+    ----------
+    perf_tbl_dec : Pandas DataFrame
+        DataFrame with curve/loss summary of each method according to each
+        curve or loss function. The rows are the methods. The columns are a
+        hierarchical index that is the cartesian product of
+        metric x (summary, error bar, p-value), where metric can be a loss or
+        a curve summary: ``full_tbl.loc['foo', 'bar']`` is a pandas series
+        with (metric bar on foo, corresponding error bar, statistical sig).
+        All entries *must* be of type `Decimal`.
+    shift_mod : int
+        Required modulus for output. This is usually 1 or 3. When an SI prefix
+        is desired on the shift then a modulus of 3 is used. Must be >= 1.
+        Use None for no shifting at all.
+    pad : bool
+        If True, pad resulting strings with spaces to make the decimal points
+        align. If the resulting strings are TeX source, this will make the
+        source more readable but not effect the appearence of the compiled TeX.
+    crap_limit_max : dict of str to int
+        Dictionary with the log10 max_clip for each column. This is optional.
+    crap_limit_min : dict of str to int
+        Dictionary with the log10 min_clip for each column. This is optional.
+    non_finite_fmt : dict of str to str
+        Display format when estimate is non-finite. For example, for latex
+        looking output, one could use:
+        ``{'inf': r'\infty', '-inf': r'-\infty', 'nan': '--'}``.
+
+    Returns
+    -------
+    perf_tbl_str : Pandas DataFrame
+        DataFrame with summary string of each method according to each
+        curve or loss function. The rows are the methods. The columns are a
+        hierarchical index that is the cartesian product of
+        metric x (estimate with error, p-value), where metric can be a loss or
+        a curve summary: ``full_tbl.loc['foo', 'bar']`` is a pandas series
+        with (metric bar on foo with error bar, statistical sig).
+        All entries are of type string.
+    shifts : dict of str to int
+        The used shift in log10 scale for each metric.
+    '''
     # For now, require perf_tbl to be all finite, might relax later.
     assert(perf_tbl_dec.columns.names == (METRIC, STAT))
     metrics, stats = perf_tbl_dec.columns.levels
@@ -380,6 +753,29 @@ def format_table(perf_tbl_dec, shift_mod=None, pad=True,
 
 
 def adjust_headers(headers, shifts, unit_dict, use_prefix=True, use_tex=False):
+    '''Adjust the headers of a table generated by format_table to reflect the
+    shift.
+
+    Parameters
+    ----------
+    headers : array_like of str
+        List of metrics to adjust
+    shifts : dict of str to int
+        The used shift in log10 scale for each metric.
+    unit_dict : dict or str to str
+        Dictionary from metric name to associated unit symbol. Treat as
+        unitless if entry is missing for a metric.
+    use_prefix : bool
+        If True, attempt to apply SI prefix to unit symbol for shift.
+    use_tex : bool
+        If True, adjust headers with TeX based formatting.
+
+    Returns
+    -------
+    headers : list of str
+        New header strings in same order as headers.
+    '''
+    # TODO comment why headers is not redundant with shifts dict
     prefix_dict = _PREFIX_TEX if use_tex else _PREFIX
     fmt_shift = '%s $\times 10^{%d}$' if use_tex else '%s x 1e%d'
     fmt_unit = '%s (%s)'
@@ -420,6 +816,40 @@ def adjust_headers(headers, shifts, unit_dict, use_prefix=True, use_tex=False):
 
 
 def table_to_latex(perf_tbl_str, shifts, unit_dict, use_prefix=True):
+    r'''Export performance table already converted to string entries to a
+    single string of LaTeX source.
+
+    This function includes adjustement of headers to reflect shift and display
+    units.
+
+    Parameters
+    ----------
+    perf_tbl_str : Pandas DataFrame
+        DataFrame with summary string of each method according to each
+        curve or loss function. The rows are the methods. The columns are a
+        hierarchical index that is the cartesian product of
+        metric x (estimate with error, p-value), where metric can be a loss or
+        a curve summary: ``full_tbl.loc['foo', 'bar']`` is a pandas series
+        with (metric bar on foo with error bar, statistical sig).
+        All entries must be of type string.
+    shifts : dict of str to int
+        The used shift in log10 scale for each metric.
+    unit_dict : dict or str to str
+        Dictionary from metric name to associated unit symbol. Treat as
+        unitless if entry is missing for a metric.
+    use_prefix : bool
+        If True, attempt to apply SI prefix to unit symbol for shift.
+
+    Returns
+    -------
+    latex_str : str
+        String containing LaTeX export of perf_tbl_str.
+
+    Notes
+    -----
+    Pandas LaTeX export requires ``\usepackage{booktabs}`` and proper aligning
+    of the decimal point requires ``\usepackage{siunitx}``.
+    '''
     assert(perf_tbl_str.columns.names == [METRIC, STAT])
     n_metrics, rem = divmod(len(perf_tbl_str.columns), 2)
     assert(rem == 0)
@@ -438,6 +868,35 @@ def table_to_latex(perf_tbl_str, shifts, unit_dict, use_prefix=True):
 
 
 def table_to_string(perf_tbl_str, shifts, unit_dict, use_prefix=True):
+    '''Export performance table already converted to string entries to a single
+    string of nicely formatted output in human readable form.
+
+    This function includes adjustement of headers to reflect shift and display
+    units.
+
+    Parameters
+    ----------
+    perf_tbl_str : Pandas DataFrame
+        DataFrame with summary string of each method according to each
+        curve or loss function. The rows are the methods. The columns are a
+        hierarchical index that is the cartesian product of
+        metric x (estimate with error, p-value), where metric can be a loss or
+        a curve summary: ``full_tbl.loc['foo', 'bar']`` is a pandas series
+        with (metric bar on foo with error bar, statistical sig).
+        All entries must be of type string.
+    shifts : dict of str to int
+        The used shift in log10 scale for each metric.
+    unit_dict : dict or str to str
+        Dictionary from metric name to associated unit symbol. Treat as
+        unitless if entry is missing for a metric.
+    use_prefix : bool
+        If True, attempt to apply SI prefix to unit symbol for shift.
+
+    Returns
+    -------
+    latex_str : str
+        String containing nicely formatted output in human readable form.
+    '''
     assert(perf_tbl_str.columns.names == [METRIC, STAT])
 
     new_headers = adjust_headers(perf_tbl_str.columns, shifts, unit_dict,
@@ -452,6 +911,55 @@ def table_to_string(perf_tbl_str, shifts, unit_dict, use_prefix=True):
 def just_format_it(perf_tbl_fp, unit_dict={}, shift_mod=None,
                    crap_limit_max={}, crap_limit_min={}, EB_limit={},
                    non_finite_fmt={}, use_tex=False, use_prefix=True):
+    '''One stop function call to format a results table and get the output as
+    a string in readable human plain text or as LaTeX source.
+
+    Parameters
+    ----------
+    perf_tbl_fp : Pandas DataFrame
+        DataFrame with curve/loss summary of each method according to each
+        curve or loss function. The rows are the methods. The columns are a
+        hierarchical index that is the cartesian product of
+        metric x (summary, error bar, p-value), where metric can be a loss or
+        a curve summary: ``full_tbl.loc['foo', 'bar']`` is a pandas series
+        with (metric bar on foo, corresponding error bar, statistical sig).
+        The entries should all be `float`.
+    unit_dict : dict or str to str
+        Dictionary from metric name to associated unit symbol. Treat as
+        unitless if entry is missing for a metric.
+    shift_mod : int
+        Required modulus for output. This is usually 1 or 3. When an SI prefix
+        is desired on the shift then a modulus of 3 is used. Must be >= 1.
+        Use None for no shifting at all.
+    crap_limit_max : dict of str to int
+        Dictionary with the log10 max_clip for each column. This is optional.
+    crap_limit_min : dict of str to int
+        Dictionary with the log10 min_clip for each column. This is optional.
+    EB_limit : dict of str to int
+        Error bar limit in log10 scale for each column. If the
+        ``error > 10 ** EB_limit`` then the error is treated as if
+        ``error = inf`` since it is too large to be useful. This dictionary is
+        optional. Can be positive or negative integer since in log10 scale.
+    non_finite_fmt : dict of str to str
+        Display format when estimate is non-finite. For example, for latex
+        looking output, one could use:
+        ``{'inf': r'\infty', '-inf': r'-\infty', 'nan': '--'}``.
+    use_tex : bool
+        If True, adjust headers with TeX based formatting.
+    use_prefix : bool
+        If True, attempt to apply SI prefix to unit symbol for shift.
+
+    Returns
+    -------
+    str_out : str
+        String containing formatted table in plain text or LaTeX.
+
+    Notes
+    -----
+    For Pandas ``use_tex=True``, LaTeX export requires
+    ``\usepackage{booktabs}`` and proper aligning of the decimal point requires
+    ``\usepackage{siunitx}``.
+    '''                       
     to_str = table_to_latex if use_tex else table_to_string
 
     perf_tbl_dec = decimalize(perf_tbl_fp, EB_limit=EB_limit)
