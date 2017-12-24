@@ -1070,7 +1070,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
     n_labels : int
         Number of labels, must be >= 1. This is not infered from `y` because
         some labels may not be found in small data chunks.
-    methods : dict of str -> sklearn estimator
+    methods : dict of str to sklearn estimator
         Dictionary mapping method name (`str`) to object that performs training
         and test. Object must follow the interface of sklearn estimators, that
         is it has a ``fit()`` method and either a ``predict_log_proba()`` or
@@ -1092,6 +1092,11 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
         of methods x labels. For exampe, ``log_pred_prob_table.loc[5, 'foo']``
         is the categorical distribution (in log scale) prediction that method
         foo places on ``y[5]``.
+
+    Notes
+    -----
+    If a train/test operation is loaded from a checkpoint file, the estimator
+    object in methods will not be in a fit state.
     '''
     n_test = X_test.shape[0]
     assert(X_train.ndim == 2)
@@ -1150,7 +1155,7 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     n_labels : int
         Number of labels, must be >= 1. This is not infered from `y` because
         some labels may not be found in small data chunks.
-    methods : dict of str -> sklearn estimator
+    methods : dict of str to sklearn estimator
         Dictionary mapping method name (`str`) to object that performs training
         and test. Object must follow the interface of sklearn estimators, that
         is it has a ``fit()`` method and either a ``predict_log_proba()`` or
@@ -1168,7 +1173,7 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     ref_method : str
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
-        be found in the 1st level of the columns of `log_pred_prob_table`.
+        be found in `methods` dictionary.
     min_log_prob : float
         Minimum value to floor the predictive log probabilities (while still
         normalizing). Must be < 0. Useful to prevent inf log loss penalties.
