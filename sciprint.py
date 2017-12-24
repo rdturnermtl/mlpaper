@@ -959,7 +959,7 @@ def just_format_it(perf_tbl_fp, unit_dict={}, shift_mod=None,
     For Pandas ``use_tex=True``, LaTeX export requires
     ``\usepackage{booktabs}`` and proper aligning of the decimal point requires
     ``\usepackage{siunitx}``.
-    '''                       
+    '''
     to_str = table_to_latex if use_tex else table_to_string
 
     perf_tbl_dec = decimalize(perf_tbl_fp, EB_limit=EB_limit)
