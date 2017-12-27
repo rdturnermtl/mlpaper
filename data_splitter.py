@@ -123,6 +123,7 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
                                 assume_sorted=(feature in assume_sorted),
                                 assume_unique=(feature in assume_unique))
 
+        # TODO assert dtype bool before ~ operation
         train_series &= train_curr
         test_series &= ~train_curr
     assert(not (train_series & test_series).any())
