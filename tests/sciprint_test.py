@@ -4,11 +4,11 @@ from builtins import range
 
 import decimal
 from string import ascii_letters
-import constants
+import src.constants as constants
 import numpy as np
 import pandas as pd
 from scipy.special import expit as logistic
-import sciprint as sp
+import src.sciprint as sp
 
 def decimal_eq(x, y):
     basic_eq = (x == y) or (x.is_nan() and y.is_nan())
