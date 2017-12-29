@@ -1,12 +1,12 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function
 from builtins import range
-import src.constants as constants
+import benchmark_tools.constants as constants
 from collections import OrderedDict
 from string import ascii_letters
 import numpy as np
 import pandas as pd
-import src.data_splitter as ds
+import benchmark_tools.data_splitter as ds
 
 def unif2():
     x = np.random.choice([0.0, np.random.rand(), 1.0], p=[0.05, 0.9, 0.05])

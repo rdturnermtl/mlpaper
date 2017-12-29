@@ -2,9 +2,9 @@
 from __future__ import print_function
 from builtins import range
 import numpy as np
-import src.constants as constants
-import src.benchmark_tools as bt
-import src.perf_curves as pc
+import benchmark_tools.constants as constants
+import benchmark_tools.benchmark_tools as bt
+import benchmark_tools.perf_curves as pc
 
 np.random.seed(3563)
 

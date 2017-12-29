@@ -22,9 +22,9 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-import benchmark_tools as bt
-from benchmark_tools import STD_BINARY_LOSS, STD_BINARY_CURVES
-import sciprint as sp
+import benchmark_tools.benchmark_tools as bt
+from benchmark_tools.benchmark_tools import STD_BINARY_LOSS, STD_BINARY_CURVES
+import benchmark_tools.sciprint as sp
 
 h = 0.02  # step size in the mesh
 

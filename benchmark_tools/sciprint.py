@@ -6,9 +6,9 @@ import warnings
 import numpy as np
 import pandas as pd
 import decimal
-from constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
-from constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
-from constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
+from benchmark_tools.constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
+from benchmark_tools.constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
+from benchmark_tools.constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
 
 # Some numeric constants
 NAN_STR = str(np.nan)

@@ -2,10 +2,10 @@
 from __future__ import print_function
 from builtins import range
 from string import ascii_letters
-import src.constants as constants
+import benchmark_tools.constants as constants
 import numpy as np
 import pandas as pd
-import src.benchmark_tools as bt
+import benchmark_tools.benchmark_tools as bt
 import scipy.stats as ss
 from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 from sklearn.preprocessing import OneHotEncoder, normalize

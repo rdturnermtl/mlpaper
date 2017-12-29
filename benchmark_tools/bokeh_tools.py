@@ -4,8 +4,8 @@ import itertools
 import numpy as np
 import pandas as pd
 from pandas import MultiIndex
-from constants import MEAN_COL, ERR_COL
-from constants import METHOD, METRIC, STAT, HORIZON
+from benchmark_tools.constants import MEAN_COL, ERR_COL
+from benchmark_tools.constants import METHOD, METRIC, STAT, HORIZON
 # Plotting last
 import bokeh.plotting as bp
 from bokeh.models import HoverTool

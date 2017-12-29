@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from scipy.misc import logsumexp
-from constants import LABEL, METHOD, METRIC, STAT, CURVE_STATS
-from constants import STD_STATS, PVAL_COL, ERR_COL
-import perf_curves as pc
+from benchmark_tools.constants import LABEL, METHOD, METRIC, STAT, CURVE_STATS
+from benchmark_tools.constants import STD_STATS, PVAL_COL, ERR_COL
+import benchmark_tools.perf_curves as pc
 
 PAIRWISE_DEFAULT = False
 N_GRID = 100

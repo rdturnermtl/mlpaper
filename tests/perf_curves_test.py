@@ -6,8 +6,8 @@ import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
-import src.perf_curves as pc
-import src.constants as constants
+import benchmark_tools.perf_curves as pc
+import benchmark_tools.constants as constants
 
 def eval_step_func_test():
     N = np.random.randint(low=0, high=10)

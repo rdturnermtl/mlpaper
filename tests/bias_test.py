@@ -4,9 +4,9 @@ from builtins import range
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-import src.constants as constants
+import benchmark_tools.constants as constants
 from sklearn.metrics import roc_auc_score, average_precision_score
-import src.perf_curves as pc
+import benchmark_tools.perf_curves as pc
 
 import prg
 

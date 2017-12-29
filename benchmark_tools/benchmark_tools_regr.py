@@ -6,8 +6,8 @@ from joblib import Memory
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from constants import METHOD, METRIC
-from benchmark_tools import loss_summary_table, PAIRWISE_DEFAULT
+from benchmark_tools.constants import METHOD, METRIC
+from benchmark_tools.benchmark_tools import loss_summary_table, PAIRWISE_DEFAULT
 
 MOMENT = 'moment'
 PKL_EXT = '.checkpoint'
