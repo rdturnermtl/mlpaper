@@ -1,4 +1,7 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
+
 from joblib import Memory
 import numpy as np
 import pandas as pd
@@ -260,11 +263,11 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
     col_names = pd.MultiIndex.from_product([methods.keys(), ('mu', 'std')],
                                            names=[METHOD, MOMENT])
-    pred_tbl = pd.DataFrame(index=xrange(n_test), columns=col_names,
+    pred_tbl = pd.DataFrame(index=range(n_test), columns=col_names,
                             dtype=float)
     for method_name, method_obj in methods.iteritems():
         if verbose:
-            print 'Running fit/predict for %s' % method_name
+            print('Running fit/predict for %s' % method_name)
         mu, std = train_predict(method_obj, X_train, y_train, X_test)
         assert(mu.shape == (n_test,) and std.shape == (n_test,))
 

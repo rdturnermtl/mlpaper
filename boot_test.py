@@ -1,4 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
 import numpy as np
 import benchmark_tools as bt
 import perf_curves as pc
@@ -15,7 +17,7 @@ w = 0.1
 auc = np.zeros((runs, 3))
 valid = np.zeros((runs, 3))
 pval = np.zeros((runs, 3))
-for rr in xrange(runs):
+for rr in range(runs):
     y_score = np.random.rand(N_big, 2)
     y_true = np.random.rand(N_big) <= w * y_score[:, 0] + (1-w) * y_score[:, 1]
 
@@ -46,14 +48,14 @@ for rr in xrange(runs):
                                n_boot=1000, confidence=confidence)
     auc[rr, 2], EB, pval[rr, 2] = summary
     valid[rr, 2] = np.abs(ref - auc[rr, 2]) <= EB
-print np.mean(valid, axis=0)
-print np.mean(auc, axis=0)
-print np.mean(pval <= 0.05, axis=0)
+print(np.mean(valid, axis=0))
+print(np.mean(auc, axis=0))
+print(np.mean(pval <= 0.05, axis=0))
 
 auc = np.zeros((runs, 3))
 valid = np.zeros((runs, 3))
 pval = np.zeros((runs, 3))
-for rr in xrange(runs):
+for rr in range(runs):
     y_true = np.random.rand(N) <= p
     y_score = np.random.randn(N, 2)
 
@@ -75,6 +77,6 @@ for rr in xrange(runs):
                                n_boot=1000, confidence=confidence)
     auc[rr, 2], EB, pval[rr, 2] = summary
     valid[rr, 2] = np.abs(auc[rr, 2]) <= EB
-print np.mean(valid, axis=0)
-print np.mean(auc, axis=0)
-print np.mean(pval <= 0.05, axis=0)
+print(np.mean(valid, axis=0))
+print(np.mean(auc, axis=0))
+print(np.mean(pval <= 0.05, axis=0))

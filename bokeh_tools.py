@@ -1,4 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from builtins import range
 import itertools
 import numpy as np
 import pandas as pd
@@ -105,7 +106,7 @@ def plot_perf_table(perf_tbl, run_name=DEFAULT_NAME, max_offset=0.0):
 if __name__ == '__main__':
     np.random.seed(8123)
 
-    C = MultiIndex.from_product([('score',), [MEAN_COL, ERR_COL], xrange(5)],
+    C = MultiIndex.from_product([('score',), [MEAN_COL, ERR_COL], range(5)],
                                 names=[METRIC, STAT, HORIZON])
     methods = ('foo', 'bar', 'baz')
 

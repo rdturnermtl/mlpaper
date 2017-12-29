@@ -1,4 +1,7 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
+
 import warnings
 import numpy as np
 import pandas as pd
@@ -499,7 +502,7 @@ def get_shift_range(x_dec_list, shift_mod=1):
         min_shift = max_shift
 
     assert(min_shift <= max_shift)
-    assert(any(k % shift_mod == 0 for k in xrange(min_shift, max_shift + 1)))
+    assert(any(k % shift_mod == 0 for k in range(min_shift, max_shift + 1)))
     return min_shift, max_shift, all_small
 
 
@@ -554,7 +557,7 @@ def find_shift(mean_list, err_list, shift_mod=1):
     min_shift, max_shift, _ = get_shift_range(mean_list, shift_mod)
 
     # Build an order that prefers small magnitude shifts as tie breaker
-    L = np.array(xrange(min_shift, max_shift + 1))
+    L = np.array(range(min_shift, max_shift + 1))
     idx = np.argsort(np.abs(L))
     L = L[idx]
 

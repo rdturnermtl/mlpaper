@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 from constants import METHOD, METRIC, STAT, HORIZON
 from constants import MEAN_COL, ERR_COL
+from __future__ import print_function
 
 DATASET = 'dataset'  # TODO move to constants
 UNIT_FMT = '%s (%s)'

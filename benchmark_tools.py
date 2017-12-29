@@ -1,4 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
 from joblib import Memory
 import numpy as np
 import pandas as pd
@@ -40,7 +42,7 @@ def one_hot(y, n_labels):
     assert(np.all(0 <= y) and np.all(y < n_labels))
 
     y_bin = np.zeros((N, n_labels), dtype=bool)
-    y_bin[xrange(N), y] = True
+    y_bin[range(N), y] = True
     return y_bin
 
 
@@ -815,7 +817,7 @@ def curve_boot(y, log_pred_prob,
 
     # Unclear if there is efficient way to vectorize this
     yp_boot_grid = np.zeros((x_grid.size, n_boot))
-    for nn in xrange(n_boot):
+    for nn in range(n_boot):
         x_curve_, y_curve_ = pc.make_into_step(xp_boot[:, nn], yp_boot[:, nn])
         yp_boot_grid[:, nn] = eval_step_func(x_grid, x_curve_, y_curve_)
 
@@ -840,7 +842,7 @@ def curve_boot(y, log_pred_prob,
     y_LB = np.percentile(yp_boot_grid, q_levels[0], axis=1)
     y_UB = np.percentile(yp_boot_grid, q_levels[1], axis=1)
     curve = pd.DataFrame(data=np.stack((x_grid, y_curve, y_LB, y_UB), axis=1),
-                         index=xrange(x_grid.size), columns=CURVE_STATS,
+                         index=range(x_grid.size), columns=CURVE_STATS,
                          dtype=float)
     return summary, curve
 
@@ -1117,13 +1119,13 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
             pred_log_prob = np.log(method_obj.predict_proba(X_test))
         return pred_log_prob
 
-    col_names = pd.MultiIndex.from_product([methods.keys(), xrange(n_labels)],
+    col_names = pd.MultiIndex.from_product([methods.keys(), range(n_labels)],
                                            names=[METHOD, LABEL])
-    pred_tbl = pd.DataFrame(index=xrange(n_test), columns=col_names,
+    pred_tbl = pd.DataFrame(index=range(n_test), columns=col_names,
                             dtype=float)
     for method_name, method_obj in methods.iteritems():
         if verbose:
-            print 'Running fit/predict for %s' % method_name
+            print('Running fit/predict for %s' % method_name)
         pred_log_prob = train_predict(method_obj, X_train, y_train, X_test)
         assert(pred_log_prob.shape == (n_test, n_labels))
 
@@ -1212,13 +1214,13 @@ if __name__ == '__main__':
     n_labels = 2
 
     methods = ['foo', 'bar', 'baz']
-    labels = xrange(n_labels)
+    labels = range(n_labels)
 
     col_names = pd.MultiIndex.from_product([methods, labels],
                                            names=[METHOD, LABEL])
     dat = np.random.randn(N, n_labels * len(methods))
     log_pred_prob_table = pd.DataFrame(data=dat,
-                                       index=xrange(N), columns=col_names,
+                                       index=range(N), columns=col_names,
                                        dtype=float)
     y = np.random.rand(N) <= 0.3
 
@@ -1228,14 +1230,14 @@ if __name__ == '__main__':
                                            STD_BINARY_CURVES, 'foo')
     full_tbl, dump2 = summary_table(log_pred_prob_table, y, STD_BINARY_LOSS,
                                     STD_BINARY_CURVES, 'foo')
-    print full_tbl
+    print(full_tbl)
 
-    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+    print(sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
                             crap_limit_max={'zero_one': -1},
                             EB_limit={'AUPRG': -1},
-                            non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True)
-    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+                            non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True))
+    print(sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
                             crap_limit_max={'zero_one': -1},
-                            non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
+                            non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False))

@@ -1,4 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
 from string import ascii_letters
 import numpy as np
 import pandas as pd
@@ -7,7 +9,6 @@ import scipy.stats as ss
 from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 from sklearn.preprocessing import OneHotEncoder, normalize
 from statsmodels.distributions.empirical_distribution import StepFunction
-
 
 def test_t_EB(runs=100, trials=1000):
     pval = []
@@ -21,7 +22,7 @@ def test_t_EB(runs=100, trials=1000):
             assert(EB == np.inf)
         else:
             fail = 0
-            for tt in xrange(trials):
+            for tt in range(trials):
                 x = np.random.randn(N)
 
                 EB = bt.t_EB(x, confidence=confidence)
@@ -55,7 +56,7 @@ def test_get_mean_and_EB(runs=100, trials=1000):
             assert(np.allclose(EB, np.nanmean(EB2), equal_nan=True))
         else:
             fail = 0
-            for tt in xrange(trials):
+            for tt in range(trials):
                 x = 2.0 + np.random.randn(N)
                 x_ref = 1.5 + np.random.randn(N)
 
@@ -184,7 +185,7 @@ def log_loss_test():
 
     if n_labels >= 2:
         loss = bt.log_loss(y, y_pred)
-        loss2 = log_loss(y, np.exp(y_pred), labels=xrange(n_labels))
+        loss2 = log_loss(y, np.exp(y_pred), labels=range(n_labels))
         assert(np.allclose(np.mean(loss), loss2))
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -250,12 +251,12 @@ def loss_summary_table_test():
     methods = np.random.choice(list(ascii_letters), n_methods, replace=False)
     ref = np.random.choice(methods)
     metrics = bt.STD_MULTICLASS_LOSS
-    labels = xrange(n_labels)
+    labels = range(n_labels)
 
     col_names = pd.MultiIndex.from_product([methods, labels],
                                            names=[bt.METHOD, bt.LABEL])
     dat = np.random.randn(N, n_labels * len(methods))
-    tbl = pd.DataFrame(data=dat, index=xrange(N), columns=col_names,
+    tbl = pd.DataFrame(data=dat, index=range(N), columns=col_names,
                        dtype=float)
 
     y = np.random.randint(low=0, high=n_labels, size=N)
@@ -287,7 +288,7 @@ def loss_summary_table_test():
 
 np.random.seed(53634)
 
-for _ in xrange(1000):
+for _ in range(1000):
     test_one_hot()
     test_normalize()
     epsilon_noise_test()
@@ -298,7 +299,7 @@ for _ in xrange(1000):
     spherical_loss_test()
     loss_summary_table_test()
     eval_step_func_test()
-print 'Now running MC tests'
+print('Now running MC tests')
 
-print test_t_EB()
-print test_get_mean_and_EB(trials=10000)
+print(test_t_EB())
+print(test_get_mean_and_EB(trials=10000))

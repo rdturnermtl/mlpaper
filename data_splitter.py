@@ -1,4 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from builtins import range
 import numpy as np
 import pandas as pd
 
@@ -51,7 +52,7 @@ def build_lag_df(df, n_lags, stride=1, features=None):
          3    3  5  6   8   4   2   9
     """
     df_sub = df if features is None else df[list(features)]  # Take all if None
-    D = {(SFT_FMT % nn): df_sub.shift(stride * nn) for nn in xrange(1, n_lags)}
+    D = {(SFT_FMT % nn): df_sub.shift(stride * nn) for nn in range(1, n_lags)}
     D[SFT_FMT % 0] = df
 
     df = pd.concat(D, axis=1, names=['lag'])
@@ -127,7 +128,7 @@ def rand_mask(N, frac):
         Random binary mask.
     """
     # rand_subset() checks that frac in range
-    pos = rand_subset(xrange(N), frac)
+    pos = rand_subset(range(N), frac)
     mask = np.zeros(N, dtype=bool)
     mask[pos] = True
     assert(np.sum(mask) >= N * frac)
