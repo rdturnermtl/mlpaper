@@ -914,7 +914,7 @@ def table_to_string(perf_tbl_str, shifts, unit_dict, use_prefix=True):
 def just_format_it(perf_tbl_fp, unit_dict={}, shift_mod=None,
                    crap_limit_max={}, crap_limit_min={}, EB_limit={},
                    non_finite_fmt={}, use_tex=False, use_prefix=True):
-    '''One stop function call to format a results table and get the output as
+    r'''One stop function call to format a results table and get the output as
     a string in readable human plain text or as LaTeX source.
 
     Parameters

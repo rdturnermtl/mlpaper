@@ -2,6 +2,7 @@
 from __future__ import print_function
 from builtins import range
 import numpy as np
+import constants
 import benchmark_tools as bt
 import perf_curves as pc
 
@@ -9,9 +10,9 @@ np.random.seed(3563)
 
 confidence = 0.95
 N = 200
-N_big = int(1e5)
+N_big = constants.MC_REPEATS_LARGE
 p = 0.3
-runs = int(1e3)
+runs = constants.MC_REPEATS_1K
 w = 0.1
 
 auc = np.zeros((runs, 3))

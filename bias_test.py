@@ -4,6 +4,7 @@ from builtins import range
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
+import constants
 from sklearn.metrics import roc_auc_score, average_precision_score
 import perf_curves as pc
 
@@ -13,7 +14,7 @@ np.random.seed(3563)
 
 N = 6
 p = 0.3
-runs = int(1e3)
+runs = constants.MC_REPEATS_1K
 resample = True
 
 auc = np.zeros((runs, 7))

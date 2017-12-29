@@ -7,6 +7,7 @@ from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
 import perf_curves as pc
+import constants
 
 def eval_step_func_test():
     N = np.random.randint(low=0, high=10)
@@ -248,7 +249,7 @@ def binary_clf_curve_test():
 np.random.seed(89254)
 
 print('start')
-for rr in range(100000):
+for rr in range(constants.MC_REPEATS_LARGE):
     eval_step_func_test()
     nv_binary_clf_curve_test()
     binary_clf_curve_test()

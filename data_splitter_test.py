@@ -1,7 +1,7 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function
 from builtins import range
-
+import constants
 from collections import OrderedDict
 from string import ascii_letters
 import numpy as np
@@ -106,7 +106,7 @@ def test_splitter(seed0, seed1):
 if __name__ == '__main__':
     np.random.seed(635463)
 
-    runs = int(1e4)
+    runs = constants.MC_REPEATS_1K
     seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
     for rr in range(runs):
         test_splitter(seeds[rr, 0], seeds[rr, 1])

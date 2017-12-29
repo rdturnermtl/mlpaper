@@ -2,6 +2,7 @@
 from __future__ import print_function
 from builtins import range
 from string import ascii_letters
+import constants
 import numpy as np
 import pandas as pd
 import benchmark_tools as bt
@@ -288,7 +289,7 @@ def loss_summary_table_test():
 
 np.random.seed(53634)
 
-for _ in range(1000):
+for _ in range(constants.MC_REPEATS_1K):
     test_one_hot()
     test_normalize()
     epsilon_noise_test()
@@ -301,5 +302,5 @@ for _ in range(1000):
     eval_step_func_test()
 print('Now running MC tests')
 
-print(test_t_EB())
-print(test_get_mean_and_EB(trials=10000))
+print(test_t_EB(trials=constants.MC_REPEATS_1K))
+print(test_get_mean_and_EB(trials=constants.MC_REPEATS_1K))

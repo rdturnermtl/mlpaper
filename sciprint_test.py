@@ -4,6 +4,7 @@ from builtins import range
 
 import decimal
 from string import ascii_letters
+import constants
 import numpy as np
 import pandas as pd
 from scipy.special import expit as logistic
@@ -428,16 +429,15 @@ def dec_rnd_list(N, to_dot=False, all_pos=False, all_finite=False):
 if __name__ == '__main__':
     np.random.seed(8235)
 
-    for rr in range(100):
+    for rr in range(constants.MC_REPEATS_1K):
         decimalize_test()
     print('decimalize_test done')
 
-    for rr in range(1000):
+    for rr in range(constants.MC_REPEATS_1K):
         format_table_test()
     print('format_table_test done')
 
-    runs = int(1e5)
-    for rr in range(runs):
+    for rr in range(constants.MC_REPEATS_1K):
         for f in DEC_TESTS:
             f()
     print('passed')
