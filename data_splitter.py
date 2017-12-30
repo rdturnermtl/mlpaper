@@ -282,7 +282,7 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
         Dictionary explaining how to do the split. The keys of the `splits` are
         the columns in `df` we will base the split on. The constant INDEX can
         be used to symbolize that the index is the desired column.
-        Each value is a tuple with (split type, fraction for training). The 
+        Each value is a tuple with (split type, fraction for training). The
         split type can be either: random, ordered, or linear. The fraction for
         training must be in [0,1]. Fraction of region be between series min and
         series max we want to be True. The Fraction must be in [0,1]. If
