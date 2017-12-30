@@ -22,7 +22,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import classification as btc
-from classification import STD_BINARY_LOSS, STD_BINARY_CURVES
+from classification import STD_CLASS_LOSS, STD_BINARY_CURVES
 import sciprint as sp
 
 h = 0.02  # step size in the mesh
@@ -89,7 +89,7 @@ for ds_cnt, ds in enumerate(datasets):
 
     full_tbl, curve_dumps[ds_cnt] = \
         btc.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
-                           STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method,
+                           STD_CLASS_LOSS, STD_BINARY_CURVES, ref_method,
                            min_pred_log_prob=min_pred_log_prob)
     print '-' * 20
     print 'DATASET %d Results' % ds_cnt

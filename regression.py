@@ -238,8 +238,8 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
     If a train/test operation is loaded from a checkpoint file, the estimator
     object in methods will not be in a fit state.
     '''
-    # TODO assert that n_test > 0
     n_test = X_test.shape[0]
+    assert(n_test > 0)
     assert(X_train.ndim == 2)
     assert(y_train.shape == (X_train.shape[0],))
     assert(X_test.ndim == 2 and X_test.shape[1] == X_train.shape[1])
