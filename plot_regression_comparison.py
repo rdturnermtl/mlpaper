@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared
 from sklearn.linear_model import BayesianRidge
-import benchmark_tools_regr as btr
-from benchmark_tools_regr import STD_REGR_LOSS
+import regression as btr
+from regression import STD_REGR_LOSS
 import sciprint as sp
 
 rng = np.random.RandomState(0)

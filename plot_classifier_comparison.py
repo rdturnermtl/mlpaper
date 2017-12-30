@@ -21,8 +21,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-import benchmark_tools as bt
-from benchmark_tools import STD_BINARY_LOSS, STD_BINARY_CURVES
+import classification as btc
+from classification import STD_BINARY_LOSS, STD_BINARY_CURVES
 import sciprint as sp
 
 h = 0.02  # step size in the mesh
@@ -39,7 +39,7 @@ classifiers = \
      'AdaBoost': AdaBoostClassifier(),
      'Naive Bayes': GaussianNB(),
      'QDA': QuadraticDiscriminantAnalysis(),
-     'iid': bt.JustNoise()}
+     'iid': btc.JustNoise()}
 ref_method = 'iid'
 min_pred_log_prob = np.log(1e-6)
 
@@ -88,9 +88,9 @@ for ds_cnt, ds in enumerate(datasets):
     i += 1
 
     full_tbl, curve_dumps[ds_cnt] = \
-        bt.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
-                          STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method,
-                          min_pred_log_prob=min_pred_log_prob)
+        btc.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
+                           STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method,
+                           min_pred_log_prob=min_pred_log_prob)
     print '-' * 20
     print 'DATASET %d Results' % ds_cnt
     print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},

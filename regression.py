@@ -6,12 +6,7 @@ import scipy.stats as ss
 from constants import METHOD, METRIC
 from benchmark_tools import loss_summary_table, PAIRWISE_DEFAULT
 
-MOMENT = 'moment'
-PKL_EXT = '.checkpoint'
-
-# ============================================================================
-# Handy specific utils
-# ============================================================================
+MOMENT = 'moment'  # Don't put in constants since only needed for regression
 
 
 def shape_and_validate(y, mu, std):

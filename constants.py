@@ -1,7 +1,9 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 
+# Settings
+PAIRWISE_DEFAULT = False
+
 # Pandas indices
-LABEL = 'label'
 METRIC = 'metric'
 METHOD = 'method'
 STAT = 'stat'
