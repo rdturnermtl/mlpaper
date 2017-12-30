@@ -407,13 +407,16 @@ def print_estimate(mu, EB, shift=0, min_clip=D_NINF, max_clip=D_INF,
     return std_str
 
 
-def print_pval(pval, non_finite_fmt={}):
+def print_pval(pval, below_fmt=BELOW_FMT, non_finite_fmt={}):
     '''Convert decimal p-value into string representation.
 
     Parameters
     ----------
     pval : Decimal
         Decimal p-value to represent as string. Must be in [0,1] or nan.
+    below_fmt : str (format string)
+        Format string to display when p-value is lower limit clipped, often:
+        '<{0:,f}'.
     non_finite_fmt : dict of str to str
         Display format when estimate is non-finite. For example, for latex
         looking output, one could use: ``{'nan': '--'}``.
@@ -425,7 +428,6 @@ def print_pval(pval, non_finite_fmt={}):
         Decimal value allowable in precision of pval. We simply return clipped
         string, e.g. '<0.0001', as value.
     '''
-    # TODO take below format as argument
     pval_eps = decimal_eps(pval)
     if pval.is_nan():
         pval_str = non_finite_fmt.get(NAN_STR, NAN_STR)
@@ -435,7 +437,7 @@ def print_pval(pval, non_finite_fmt={}):
         # then the actual value must be stricly <0.0001 and not equal
         # to 0.0001. This sounds shaky but 1ek is not representable
         # exactly in binary fp anyway, so it is true.
-        pval_str = BELOW_FMT.format(pval_eps)
+        pval_str = below_fmt.format(pval_eps)
     else:
         assert(pval_eps < pval and pval <= 1)
         # Some style guides suggest we should remove the leading zero
@@ -774,8 +776,13 @@ def adjust_headers(headers, shifts, unit_dict, use_prefix=True, use_tex=False):
     -------
     headers : list of str
         New header strings in same order as headers.
+
+    Notes
+    -----
+    Requiring list `headers` is not redundant with dictionary `shifts` which
+    contains the same entries as keys because we care about the order. Standard
+    dictionaries in Python do not guarantee order.
     '''
-    # TODO comment why headers is not redundant with shifts dict
     prefix_dict = _PREFIX_TEX if use_tex else _PREFIX
     fmt_shift = '%s $\times 10^{%d}$' if use_tex else '%s x 1e%d'
     fmt_unit = '%s (%s)'

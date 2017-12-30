@@ -15,7 +15,7 @@ def ttest1(x, nan_on_zero=False):
 
     Parameters
     ----------
-    x : 1d np array
+    x : array-like
         array of data points to test.
     nan_on_zero : bool
         If True, return a p-value of NaN for samples with zero variances,
@@ -26,8 +26,7 @@ def ttest1(x, nan_on_zero=False):
     pval : float
         p-value (in [0,1]) from t-test on `x`.
     '''
-    # TODO assert is 1d
-    assert(x.size > 0)
+    assert(np.ndim(x) == 1 and len(x) > 0)
 
     if np.std(x) == 0.0:
         pval = np.nan if nan_on_zero else 1.0
@@ -155,11 +154,11 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     '''
     assert(loss.ndim == 1 and np.ndim(loss_ref) <= 1)
     assert(np.ndim(min_EB) == 0)
-    mu = np.nanmean(loss)  # TODO use mean, don't allow nan
-
-    delta = loss - loss_ref  # TODO check loss_ref dim <= 1
+    # EB subroutines all check for presence of nans
+    mu = np.mean(loss)
 
     # Note we are computing CI on delta to reference!
+    delta = loss - loss_ref
     if method == 't':
         EB = t_EB(delta, confidence=confidence)
     elif method == 'bernstein':

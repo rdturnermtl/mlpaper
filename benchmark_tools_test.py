@@ -9,6 +9,24 @@ import classification as btc
 import util
 
 
+def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
+    '''Special case of hard_loss.'''
+    N, n_labels = btc.shape_and_validate(y_bool, log_pred_prob)
+    assert(n_labels == 2)
+    assert(FP_cost > 0.0)
+
+    FN_cost = 1.0
+    thold = np.log(FP_cost / (FP_cost + FN_cost))
+
+    y_bool = y_bool.astype(bool)  # So we can use ~
+    yhat = log_pred_prob[:, 1] >= thold
+    assert(y_bool.dtype.kind == 'b' and yhat.dtype.kind == 'b')
+
+    loss = (~y_bool * yhat) * FP_cost + (y_bool * ~yhat) * FN_cost
+    assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
+    return loss
+
+
 def test_t_EB(runs=100, trials=1000):
     pval = []
     while len(pval) < runs:
@@ -82,7 +100,7 @@ def hard_loss_binary_test():
 
     y_bool = np.random.rand(N) <= 0.5
     y_pred = util.normalize(np.random.randn(N, n_labels))
-    loss = btc.hard_loss_binary(y_bool, y_pred)
+    loss = hard_loss_binary(y_bool, y_pred)
 
     act = btc.hard_loss_decision(y_pred, 1.0 - np.eye(n_labels))
     loss2 = zero_one_loss(y_bool.astype(int), act)
@@ -188,7 +206,7 @@ def loss_summary_table_test():
 
     methods = np.random.choice(list(ascii_letters), n_methods, replace=False)
     ref = np.random.choice(methods)
-    metrics = btc.STD_MULTICLASS_LOSS
+    metrics = btc.STD_CLASS_LOSS
     labels = xrange(n_labels)
 
     col_names = pd.MultiIndex.from_product([methods, labels],

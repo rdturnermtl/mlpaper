@@ -46,7 +46,7 @@ for rr in xrange(runs):
                             n_boot=1000, confidence=confidence)
     auc[rr, 2], EB, pval[rr, 2] = summary
     valid[rr, 2] = np.abs(ref - auc[rr, 2]) <= EB
-print 'againt N-big'
+print 'against N-big'
 print 'P EB valid', np.mean(valid, axis=0)
 print 'mean AUC', np.mean(auc, axis=0)
 print 'P p-val sig', np.mean(pval <= 0.05, axis=0)

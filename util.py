@@ -77,7 +77,6 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
     '''
     assert(x.ndim == 1)
     assert(np.all(np.isfinite(x)))
-    # TODO cast as float in case someone passes in a bool array
 
     u_x = np.unique(x)
     delta = default_epsilon if len(u_x) <= 1 else np.min(np.diff(u_x))
@@ -102,7 +101,7 @@ def eval_step_func(x_grid, xp, yp, ival=None,
     x_grid : 1d np array
         Values to evaluate the stepwise function at.
     xp : 1d np array
-        Points at which the step function changes.
+        Points at which the step function changes. Typically of type float.
     yp : 1d np array
         The new values at each of the steps
     ival : scalar or None
@@ -122,7 +121,6 @@ def eval_step_func(x_grid, xp, yp, ival=None,
         Step function defined by `xp` and `yp` evaluated at the points in
         `x_grid`.
     '''
-    # TODO requires floats for input??
     assert(x_grid.ndim == 1)
     assert(xp.ndim == 1 and xp.shape == yp.shape)
 
@@ -143,3 +141,37 @@ def eval_step_func(x_grid, xp, yp, ival=None,
     idx = np.searchsorted(xp, x_grid, side='right') - 1
     y_grid = yp[idx]
     return y_grid
+
+
+def make_into_step(xp, yp):
+    """Make pairs of `xp` and `yp` vectors into proper step function. That is,
+    remove NaN `xp` values and multiple steps at same location.
+
+    Parameters
+    ----------
+    xp : 1d np array
+        The sample points corresponding to the y values. Must be sorted.
+    yp : 1d np array
+        Values in y-axis for step function.
+
+    Returns
+    -------
+    xp : 1d np array
+        Input `xp` after removing extra points.
+    yp : 1d np array
+        Input `yp` after removing extra points.
+
+    Notes
+    -----
+    Keeps last value in list when multiple steps happen at the same x-value.
+    """
+    assert(xp.ndim == 1 and xp.shape == yp.shape)
+
+    idx = ~np.isnan(xp)
+    xp, yp = xp[idx], yp[idx]
+
+    deltas = np.diff(xp)
+    assert(not np.any(deltas < -1e-10))
+
+    idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
+    return xp[idx], yp[idx]

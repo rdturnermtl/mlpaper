@@ -7,7 +7,7 @@ from benchmark_tools import loss_summary_table
 from constants import METHOD, METRIC, STAT, CURVE_STATS
 from constants import STD_STATS, PVAL_COL, ERR_COL, PAIRWISE_DEFAULT
 import perf_curves as pc
-from util import one_hot, normalize, eval_step_func
+from util import one_hot, normalize, eval_step_func, make_into_step
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -45,25 +45,6 @@ def shape_and_validate(y, log_pred_prob):
 # ============================================================================
 # Loss functions
 # ============================================================================
-
-
-def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
-    '''Special case of hard_loss so should be moved to test.'''
-    # TODO move
-    N, n_labels = shape_and_validate(y_bool, log_pred_prob)
-    assert(n_labels == 2)
-    assert(FP_cost > 0.0)
-
-    FN_cost = 1.0
-    thold = np.log(FP_cost / (FP_cost + FN_cost))
-
-    y_bool = y_bool.astype(bool)  # So we can use ~
-    yhat = log_pred_prob[:, 1] >= thold
-    assert(y_bool.dtype.kind == 'b' and yhat.dtype.kind == 'b')
-
-    loss = (~y_bool * yhat) * FP_cost + (y_bool * ~yhat) * FN_cost
-    assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
-    return loss
 
 
 def hard_loss_decision(log_pred_prob, loss_mat):
@@ -110,8 +91,8 @@ def hard_loss(y, log_pred_prob, loss_mat=None):
     loss_mat : 2d np array or None
         Loss matrix to use for making decisions of size
         ``(n_labels, n_actions)``. The loss of taking action a when the true
-        outcome (label) is y is found in ``loss_mat[y, a]``. If None, the
-        identity matrix is used for the 0-1 loss function.
+        outcome (label) is y is found in ``loss_mat[y, a]``. If None,
+        1 - identity matrix is used to obtain the 0-1 loss function.
 
     Returns
     -------
@@ -264,7 +245,9 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
     loss_tbl = pd.DataFrame(index=log_pred_prob_table.index,
                             columns=col_names, dtype=float)
     for method in methods:
-        # TODO validate labels int??
+        # Make sure the columns are in right order and we aren't mixing things
+        assert(list(log_pred_prob_table[method].columns) == range(n_labels))
+
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (N, n_labels))
         assert(not np.any(np.isnan(log_pred_prob)))  # Would let method cheat
@@ -416,7 +399,7 @@ def curve_boot(y, log_pred_prob,
     # To really plot curve at full precision we should use union of x_curve
     # and x_grid, but if x_grid is also random the validity of the following
     # bootstrap procedure is more difficult to determine.
-    x_curve_, y_curve_ = pc.make_into_step(x_curve[:, 0], y_curve[:, 0])
+    x_curve_, y_curve_ = make_into_step(x_curve[:, 0], y_curve[:, 0])
     y_curve = eval_step_func(x_grid, x_curve_, y_curve_)
 
     p_BS = np.ones(N) / N
@@ -437,7 +420,7 @@ def curve_boot(y, log_pred_prob,
     # Unclear if there is efficient way to vectorize this
     yp_boot_grid = np.zeros((x_grid.size, n_boot))
     for nn in xrange(n_boot):
-        x_curve_, y_curve_ = pc.make_into_step(xp_boot[:, nn], yp_boot[:, nn])
+        x_curve_, y_curve_ = make_into_step(xp_boot[:, nn], yp_boot[:, nn])
         yp_boot_grid[:, nn] = eval_step_func(x_grid, x_curve_, y_curve_)
 
     # Summary stat: Get EB
@@ -645,11 +628,8 @@ def summary_table(log_pred_prob_table, y,
 # ============================================================================
 
 # Pre-build some standard metric dicts for the user
-STD_MULTICLASS_LOSS = {'NLL': log_loss, 'Brier': brier_loss,
-                       'sphere': spherical_loss}
-
-STD_BINARY_LOSS = {'NLL': log_loss, 'Brier': brier_loss,
-                   'sphere': spherical_loss, 'zero_one': hard_loss_binary}
+STD_CLASS_LOSS = {'NLL': log_loss, 'Brier': brier_loss,
+                   'sphere': spherical_loss, 'zero_one': hard_loss}
 
 STD_BINARY_CURVES = {'AUC': (pc.roc_curve, pc.auc_trapz),
                      'AP': (pc.recall_precision_curve, pc.auc_left),
@@ -720,6 +700,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
     object in methods will not be in a fit state.
     '''
     n_test = X_test.shape[0]
+    assert(n_test > 0)
     assert(X_train.ndim == 2)
     assert(y_train.shape == (X_train.shape[0],))
     assert(y_train.dtype.kind in ('b', 'i'))
