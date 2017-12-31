@@ -14,12 +14,12 @@ def add_pseudo_points(fps, tps):
 
     Parameters
     ----------
-    fps : 2d np array, shape = [n_thresholds, bs_samples]
+    fps : ndarray, shape (n_thresholds, n_boot)
         A count of false positives, at index i being the number of negative
         samples assigned a ``score >= thresholds[i]``. The total number of
         negative samples is equal to ``fps[-1]`` (thus true negatives are given
         by ``fps[-1] - fps``).
-    tps : array, shape = [n_thresholds, bs_samples]
+    tps : ndarray, shape (n_thresholds, n_boot)
         An increasing count of true positives, at index i being the number
         of positive samples assigned a ``score >= thresholds[i]``. The total
         number of positive samples is equal to ``tps[-1]`` (thus false
@@ -27,9 +27,9 @@ def add_pseudo_points(fps, tps):
 
     Returns
     -------
-    fps : 2d np array, shape = [n_thresholds, bs_samples]
+    fps : ndarray, shape (n_thresholds, n_boot)
         If in corner case, `fps` after adding pseudo-points
-    tps : array, shape = [n_thresholds, bs_samples]
+    tps : ndarray, shape (n_thresholds, n_boot)
         If in corner case, `fps` after adding pseudo-points
     """
     fps_fix = (fps[-1, :] == 0)
@@ -54,26 +54,26 @@ def _binary_clf_curve(y_true, y_score, sample_weight=None):
 
     Parameters
     ----------
-    y_true : 1d np array of type bool, shape = [n_samples]
+    y_true : ndarray of type bool, shape (n_samples,)
         True targets of binary classification. Cannot be empty.
-    y_score : 1d np array, shape = [n_samples]
+    y_score : ndarray, shape (n_samples,)
         Estimated probabilities or decision function. Must be finite.
-    sample_weight : array-like of shape = [n_samples, bs_samples], optional
+    sample_weight : None or ndarray of shape (n_samples, n_boot)
         Sample weights. If `None`, all weights are one.
 
     Returns
     -------
-    fps : 2d np array, shape = [n_thresholds, bs_samples]
+    fps : ndarray, shape (n_thresholds, n_boot)
         A count of false positives, at index i being the number of negative
         samples assigned a ``score >= thresholds[i]``. The total number of
         negative samples is equal to ``fps[-1]`` (thus true negatives are given
         by ``fps[-1] - fps``).
-    tps : array, shape = [n_thresholds, bs_samples]
+    tps : ndarray, shape (n_thresholds, n_boot)
         An increasing count of true positives, at index i being the number
         of positive samples assigned a ``score >= thresholds[i]``. The total
         number of positive samples is equal to ``tps[-1]`` (thus false
         negatives are given by ``tps[-1] - tps``).
-    thresholds : array, shape = [n_thresholds, bs_samples]
+    thresholds : ndarray, shape (n_thresholds, n_boot)
         Decreasing score values.
     """
     assert(y_true.ndim == 1 and y_true.dtype.kind == 'b')
@@ -143,22 +143,22 @@ def roc_curve(y_true, y_score, sample_weight=None):
 
     Parameters
     ----------
-    y_true : 1d np array of type bool, shape = [n_samples]
+    y_true : ndarray of type bool, shape (n_samples,)
         True targets of binary classification. Cannot be empty.
-    y_score : 1d np array, shape = [n_samples]
+    y_score : ndarray, shape (n_samples,)
         Estimated probabilities or decision function. Must be finite.
-    sample_weight : array-like of shape = [n_samples, bs_samples], optional
+    sample_weight : None or ndarray of shape (n_samples, n_boot)
         Sample weights. If `None`, all weights are one.
 
     Returns
     -------
-    fpr : 2d np array, shape = [n_thresholds, bs_samples]
+    fpr : ndarray, shape (n_thresholds, n_boot)
         The false positive rates. Each column is computed indepently by each
         column in `sample_weight`.
-    tpr : 2d np array, shape = [n_thresholds, bs_samples]
+    tpr : ndarray, shape (n_thresholds, n_boot)
         The false positive rates. Each column is computed indepently by each
         column in `sample_weight`.
-    thresholds : 2d np array, shape = [n_thresholds, bs_samples]
+    thresholds : ndarray, shape (n_thresholds, n_boot)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
@@ -184,22 +184,22 @@ def recall_precision_curve(y_true, y_score, sample_weight=None):
 
     Parameters
     ----------
-    y_true : 1d np array of type bool, shape = [n_samples]
+    y_true : ndarray of type bool, shape (n_samples,)
         True targets of binary classification. Cannot be empty.
-    y_score : 1d np array, shape = [n_samples]
+    y_score : ndarray, shape (n_samples,)
         Estimated probabilities or decision function. Must be finite.
-    sample_weight : array-like of shape = [n_samples, bs_samples], optional
+    sample_weight : None or ndarray of shape (n_samples, n_boot)
         Sample weights. If `None`, all weights are one.
 
     Returns
     -------
-    recall : 2d np array, shape = [n_thresholds, bs_samples]
+    recall : ndarray, shape (n_thresholds, n_boot)
         The recall. Each column is computed indepently by each column in
         `sample_weight`.
-    precision : 2d np array, shape = [n_thresholds, bs_samples]
+    precision : ndarray, shape (n_thresholds, n_boot)
         The precision. Each column is computed indepently by each column in
         `sample_weight`.
-    thresholds : 2d np array, shape = [n_thresholds, bs_samples]
+    thresholds : ndarray, shape (n_thresholds, n_boot)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
@@ -218,22 +218,22 @@ def prg_curve(y_true, y_score, sample_weight=None):
 
     Parameters
     ----------
-    y_true : 1d np array of type bool, shape = [n_samples]
+    y_true : ndarray of type bool, shape (n_samples,)
         True targets of binary classification. Cannot be empty.
-    y_score : 1d np array, shape = [n_samples]
+    y_score : ndarray, shape (n_samples,)
         Estimated probabilities or decision function. Must be finite.
-    sample_weight : array-like of shape = [n_samples, bs_samples], optional
+    sample_weight : None or ndarray of shape (n_samples, n_boot)
         Sample weights. If `None`, all weights are one.
 
     Returns
     -------
-    recall_gain : 2d np array, shape = [n_thresholds, bs_samples]
+    recall_gain : ndarray, shape (n_thresholds, n_boot)
         The recall_gain. Each column is computed indepently by each column in
         `sample_weight`.
-    prec_gain : 2d np array, shape = [n_thresholds, bs_samples]
+    prec_gain : ndarray, shape (n_thresholds, n_boot)
         The precision gain. Each column is computed indepently by each column
         in `sample_weight`.
-    thresholds : 2d np array, shape = [n_thresholds, bs_samples]
+    thresholds : ndarray, shape (n_thresholds, n_boot)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
@@ -266,15 +266,15 @@ def auc_trapz(x_curve, y_curve):
 
     Parameters
     ----------
-    x_curve : 2d np array
+    x_curve : ndarray, shape (n_thresholds, n_boot)
         The sample points corresponding to the y values. Must be sorted.
-    y_curve : 2d np array
+    y_curve : ndarray, shape (n_thresholds, n_boot)
         Input array to integrate. Must be same size as `x_curve`. Operation
         performed independently for each column.
 
     Returns
     -------
-    auc : 1d np array
+    auc : ndarray, shape (n_boot,)
         Area under curve. Has same length as `x_curve` has columns.
     """
     auc = np.trapz(y_curve, x_curve, axis=0)
@@ -286,15 +286,15 @@ def auc_left(x_curve, y_curve):
 
     Parameters
     ----------
-    x_curve : 2d np array
+    x_curve : ndarray, shape (n_thresholds, n_boot)
         The sample points corresponding to the y values. Must be sorted.
-    y_curve : 2d np array
+    y_curve : ndarray, shape (n_thresholds, n_boot)
         Input array to integrate. Must be same size as `x_curve`. Operation
         performed independently for each column.
 
     Returns
     -------
-    auc : 1d np array
+    auc : ndarray, shape (n_boot,)
         Area under curve. Has same length as `x_curve` has columns.
     """
     assert(not np.any(np.isnan(x_curve)))

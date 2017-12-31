@@ -5,6 +5,7 @@ import pandas as pd
 RANDOM = 'random'
 ORDRED = 'ordered'
 LINEAR = 'linear'
+ORDERED = ORDRED  # Alias with extra char but correct spelling
 
 SFT_FMT = 'L%d'
 INDEX = None  # Dummy variable to represent index of dataframe
@@ -18,22 +19,22 @@ def build_lag_df(df, n_lags, stride=1, features=None):
 
     Parameters
     ----------
-    df : pandas dataframe
+    df : DataFrame, shape (n_samples, n_cols)
         Orginal dataset we want to build lag data set from.
     n_lags : int
         Number of lags. ``n_lags=1`` means only the original data set. Must be
         >= 1.
     stride : int
         Stride of the lags. For instance, ``stride=2`` means only even lags.
-    features : array_like
-        List of columns to include in the lags data. All columns are retained
-        for lag 0. For data frames containing features and targets, the
-        features (inputs)  can be placed in `features` so the targets (outputs)
-        are only present for lag 0. If None, use all columns.
+    features : array-like, shape (n_features,)
+        Subset of columns in `df` to include in the lags data. All columns are
+        retained for lag 0. For data frames containing features and targets,
+        the features (inputs)  can be placed in `features` so the targets
+        (outputs) are only present for lag 0. If None, use all columns.
 
     Returns
     -------
-    df : pandas dataframe
+    df : DataFrame, shape (n_samples, n_cols + (n_lags - 1) * n_features)
         New data frame where lags data frames have been concat'ed tegether.
         The columns are a new hierarchical index with the lag at the lowest
         level.
@@ -65,13 +66,13 @@ def index_to_series(index):
 
     Parameters
     ----------
-    index : pandas index
-        Index to make series from.
+    index : Index
+        Pandas Index to make series from.
 
     Returns
     -------
-    s : pandas series
-        Series where ``s[idx] = idx``.
+    S : Series
+        Pandas series where ``s[idx] = idx``.
 
     Examples
     --------
@@ -81,7 +82,8 @@ def index_to_series(index):
     7    7
     dtype: int64
     """
-    return pd.Series(index=index, data=index)
+    S = pd.Series(index=index, data=index)
+    return S
 
 
 def rand_subset(x, frac):
@@ -90,15 +92,15 @@ def rand_subset(x, frac):
 
     Parameters
     ----------
-    x : array_like
+    x : array-like, shape (n_samples,)
         List that we want a subset of.
     frac : float
         Fraction of `x` elements we want to keep in subset. Must be in [0,1].
 
     Returns
     -------
-    L : 1d np array
-        Array that is subset.
+    L : ndarray, shape (m_samples,)
+        Array that is subset with m_samples = ceil(frac * n_samples) samples.
     """
     assert(0.0 <= frac and frac <= 1.0)
 
@@ -110,28 +112,28 @@ def rand_subset(x, frac):
     return L
 
 
-def rand_mask(N, frac):
+def rand_mask(n_samples, frac):
     """Make a random binary mask with a certain fraction. Rounds number of
     elements up to next integer when exact fraction is not possible.
 
     Parameters
     ----------
-    N : int
+    n_samples : int
         Length of mask.
     frac : float
         Fraction of elements we want to be True. Must be in [0,1].
 
     Returns
     -------
-    L : 1d np array of type bool
+    L : ndarray of type bool, shape (n_samples,)
         Random binary mask.
     """
-    # rand_subset() checks that frac in range
-    pos = rand_subset(xrange(N), frac)
-    mask = np.zeros(N, dtype=bool)
+    # Input validation on frac done in rand_subset()
+    pos = rand_subset(xrange(n_samples), frac)
+    mask = np.zeros(n_samples, dtype=bool)
     mask[pos] = True
-    assert(np.sum(mask) >= N * frac)
-    assert(np.sum(mask) - 1 < N * frac)
+    assert(np.sum(mask) >= n_samples * frac)
+    assert(np.sum(mask) - 1 < n_samples * frac)
     return mask
 
 
@@ -142,9 +144,9 @@ def random_split_series(S, frac, assume_sorted=False, assume_unique=False):
 
     Parameters
     ----------
-    S : pandas series
-        Series whose index will be used for binary mask. Random splitting is
-        based on a random parititioning of the series *values*.
+    S : Series, shape (n_samples,)
+        Pandas Series whose index will be used for binary mask. Random
+        splitting is based on a random parititioning of the series *values*.
     frac : float
         Fraction of elements we want to be True. Must be in [0,1].
     assume_sorted : bool
@@ -156,7 +158,7 @@ def random_split_series(S, frac, assume_sorted=False, assume_unique=False):
 
     Returns
     -------
-    train_curr : pandas series with values of type bool
+    train_curr : Series with values of type bool, shape (n_samples,)
         Random binary mask with index matching `S`.
     """
     assert(not S.isnull().any())  # Ordering/comparing NaNs ambiguous
@@ -179,9 +181,9 @@ def ordered_split_series(S, frac, assume_sorted=False, assume_unique=False):
 
     Parameters
     ----------
-    S : pandas series
-        Series whose index will be used for binary mask. The ordered split is
-        based on the series *values*.
+    S : Series, shape (n_samples,)
+        Pandas Series whose index will be used for binary mask. The ordered
+        split is based on the series *values*.
     frac : float
         Fraction of elements we want to be True. Must be in [0,1].
     assume_sorted : bool
@@ -193,7 +195,7 @@ def ordered_split_series(S, frac, assume_sorted=False, assume_unique=False):
 
     Returns
     -------
-    train_curr : pandas series with values of type bool
+    train_curr : Series with values of type bool, shape (n_samples,)
         Binary mask with index matching `S`.
     """
     assert(not S.isnull().any())  # Ordering/comparing NaNs ambiguous
@@ -225,9 +227,9 @@ def linear_split_series(S, frac, assume_sorted=False, assume_unique=False):
 
     Parameters
     ----------
-    S : pandas series
-        Series whose index will be used for binary mask. The linear split is
-        based on the series *values*.
+    S : Series, shape (n_samples,)
+        Pandas Series whose index will be used for binary mask. The linear
+        split is based on the series *values*.
     frac : float
         Fraction of region be between series min and series max we want to be
         True. Must be in [0,1].
@@ -240,7 +242,7 @@ def linear_split_series(S, frac, assume_sorted=False, assume_unique=False):
 
     Returns
     -------
-    train_curr : pandas series with values of type bool
+    train_curr : Series with values of type bool, shape (n_samples,)
         Binary mask with index matching `S`.
     """
     assert(not S.isnull().any())  # Ordering/comparing NaNs ambiguous
@@ -276,7 +278,7 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
 
     Parameters
     ----------
-    df : pandas DataFrame
+    df : DataFrame, shape (n_samples, n_features)
         DataFrame we wish to split into training and test chunks
     splits : dict of object to ({RANDOM, ORDRED, LINEAR}, float)
         Dictionary explaining how to do the split. The keys of the `splits` are
@@ -288,20 +290,20 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
         series max we want to be True. The Fraction must be in [0,1]. If
         `splits` is omitted, the default is to perform a 80-20 random split
         based on the index.
-    assume_sorted : array_like of str
+    assume_sorted : array-like of str
         Columns that we can assume are alreay sorted by value. This can be
         used for computational speedups.
-    assume_unique : array_like of str
+    assume_unique : array-like of str
         Columns that we can assume have unique values. This can be used for
         computational speedups.
 
     Returns
     -------
-    df_train : pandas DataFrame
+    df_train : DataFrame, shape (n_train, n_features)
         Subset of `df` placed in training set.
-    df_test : pandas DataFrame
+    df_test : DataFrame, shape (n_test, n_features)
         Subset of `df` placed in test set.
-    df_unused : pandas DataFrame
+    df_unused : DataFrame, shape (n_unused, n_features)
         Subset of `df` not in training or test. This will be empty if only a
         single column is ued in `splits`.
     """

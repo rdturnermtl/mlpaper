@@ -15,26 +15,28 @@ def shape_and_validate(y, mu, std):
 
     Parameters
     ----------
-    y : 1d np array
+    y : ndarray, shape (n_samples,)
         True targets for each regression data point. Typically of type `float`.
-    mu : 1d np array
+    mu : ndarray, shape (n_samples,)
         Predictive mean for each regression data point. Typically of type
         `float`. Must be of same shape as `y`.
-    std : 1d np array
+    std : ndarray, shape (n_samples,)
         Predictive standard deviation for each regression data point. Typically
         of type `float`. Must be positive and of same shape as `y`.
 
     Returns
     -------
-    N : int
+    n_samples : int
         Number of data points (length of `y`)
     '''
-    N, = y.shape
-    assert(N >= 1)  # Otherwise min and max confused
-    assert(mu.shape == (N,) and std.shape == (N,))
+    n_samples, = y.shape
+    assert(n_samples >= 1)
+    assert(np.all(np.isfinite(y)))
+
+    assert(mu.shape == (n_samples,) and std.shape == (n_samples,))
     assert(np.all(np.isfinite(mu)) and np.all(np.isfinite(std)))
     assert(np.all(std > 0.0))
-    return N
+    return n_samples
 
 # ============================================================================
 # Loss functions
@@ -46,19 +48,19 @@ def square_loss(y, mu, std):
 
     Parameters
     ----------
-    y : 1d np array
+    y : ndarray, shape (n_samples,)
         True targets for each regression data point. Typically of type `float`.
-    mu : 1d np array
+    mu : ndarray, shape (n_samples,)
         Predictive mean for each regression data point. Typically of type
         `float`. Must be of same shape as `y`.
-    std : 1d np array
+    std : ndarray, shape (n_samples,)
         Predictive standard deviation for each regression data point. Typically
         of type `float`. Must be positive and of same shape as `y`. Ignored in
         this function.
 
     Returns
     -------
-    loss : np array of `float`
+    loss : ndarray, shape (n_samples,)
         Square error of target vs prediction. Same shape as `y`.
     '''
     shape_and_validate(y, mu, std)
@@ -71,19 +73,19 @@ def abs_loss(y, mu, std):
 
     Parameters
     ----------
-    y : 1d np array
+    y : ndarray, shape (n_samples,)
         True targets for each regression data point. Typically of type `float`.
-    mu : 1d np array
+    mu : ndarray, shape (n_samples,)
         Predictive mean for each regression data point. Typically of type
         `float`. Must be of same shape as `y`.
-    std : 1d np array
+    std : ndarray, shape (n_samples,)
         Predictive standard deviation for each regression data point. Typically
         of type `float`. Must be positive and of same shape as `y`. Ignored in
         this function.
 
     Returns
     -------
-    loss : np array of float
+    loss : ndarray, shape (n_samples,)
         Absolute error of target vs prediction. Same shape as `y`.
     '''
     shape_and_validate(y, mu, std)
@@ -96,18 +98,18 @@ def log_loss(y, mu, std):
 
     Parameters
     ----------
-    y : 1d np array
+    y : ndarray, shape (n_samples,)
         True targets for each regression data point. Typically of type `float`.
-    mu : 1d np array
+    mu : ndarray, shape (n_samples,)
         Predictive mean for each regression data point. Typically of type
         `float`. Must be of same shape as `y`.
-    std : 1d np array
+    std : ndarray, shape (n_samples,)
         Predictive standard deviation for each regression data point. Typically
         of type `float`. Must be positive and of same shape as `y`.
 
     Returns
     -------
-    loss : np array of float
+    loss : ndarray, shape (n_samples,)
         Log loss of Gaussian predictive distribution on target `y`. Same shape
         as `y`.
     '''
@@ -125,21 +127,21 @@ def loss_table(pred_tbl, y, metrics_dict):
 
     Parameters
     ----------
-    pred_tbl : Pandas DataFrame
+    pred_tbl : DataFrame, shape (n_samples, n_methods * 2)
         DataFrame with predictive distributions. Each row is a data point.
         The columns should be hierarchical index that is the cartesian product
         of methods x moments. For exampe, ``log_pred_prob_table.loc[5, 'foo']``
         is a pandas series with (mean, std deviation) prediction that method
         foo places on ``y[5]``. Cannot be empty.
-    y : 1d np array
+    y : ndarray, shape (n_samples,)
         True targets for each regression data point. Typically of type `float`.
-    metrics_dict : dict of str to func
+    metrics_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `square_loss`, ...
 
     Returns
     -------
-    loss_tbl : Pandas DataFrame
+    loss_tbl : DataFrame, shape (n_samples, n_metrics * n_methods)
         DataFrame with loss of each method according to each loss function on
         each data point. The rows are the data points in `y` (that is the index
         matches `pred_tbl`). The columns are a hierarchical index that is the
@@ -149,9 +151,9 @@ def loss_table(pred_tbl, y, metrics_dict):
     '''
     methods, moments = pred_tbl.columns.levels
     assert('mu' in moments and 'std' in moments)
-    N = len(pred_tbl)
-    assert(y.shape == (N,))
-    assert(N >= 1 and len(methods) >= 1)
+    n_samples = len(pred_tbl)
+    assert(y.shape == (n_samples,))
+    assert(n_samples >= 1 and len(methods) >= 1)
 
     col_names = pd.MultiIndex.from_product([metrics_dict.keys(), methods],
                                            names=[METRIC, METHOD])
@@ -201,13 +203,13 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
     Parameters
     ----------
-    X_train : 2d np array
+    X_train : ndarray, shape (n_train, n_features)
         Training set 2d feature array for classifiers. Each row is an
         indepedent data point and each column is a feature.
-    y_train : 1d np array
+    y_train : ndarray, shape (n_train,)
         True training targets for each regression data point. Typically of type
         `float`. Must be of same length as `X_train`.
-    X_test : 2d np array
+    X_test : ndarray, shape (n_test, n_features)
         Test set 2d feature array for classifiers. Each row is an indepedent
         data point and each column is a feature.
     methods : dict of str to sklearn estimator
@@ -226,7 +228,7 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
     Returns
     -------
-    pred_tbl : Pandas DataFrame
+    pred_tbl : DataFrame, shape (n_samples, n_methods * 2)
         DataFrame with predictive distributions. Each row is a data point.
         The columns should be hierarchical index that is the cartesian product
         of methods x moments. For exampe, ``log_pred_prob_table.loc[5, 'foo']``
@@ -243,6 +245,7 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
     assert(X_train.ndim == 2)
     assert(y_train.shape == (X_train.shape[0],))
     assert(X_test.ndim == 2 and X_test.shape[1] == X_train.shape[1])
+    assert(X_train.dtype == X_test.dtype)  # Would be weird otherwise
     assert(min_std >= 0.0)
 
     memory = Memory(cachedir=checkpointdir, verbose=0)
@@ -277,16 +280,16 @@ def just_benchmark(X_train, y_train, X_test, y_test,
 
     Parameters
     ----------
-    X_train : 2d np array
+    X_train : ndarray, shape (n_train, n_features)
         Training set 2d feature array for classifiers. Each row is an
         indepedent data point and each column is a feature.
-    y_train : 1d np array
+    y_train : ndarray, shape (n_train,)
         True training targets for each regression data point. Typically of type
         `float`. Must be of same length as `X_train`.
-    X_test : 2d np array
+    X_test : ndarray, shape (n_test, n_features)
         Test set 2d feature array for classifiers. Each row is an indepedent
         data point and each column is a feature.
-    y_test : 1d np array
+    y_test : ndarray, shape (n_test,)
         True test targets for each regression data point. Typically of type
         `float`. Cannot be empty. Must be of same length as `X_test`.
     methods : dict of str to sklearn estimator
@@ -294,7 +297,7 @@ def just_benchmark(X_train, y_train, X_test, y_test,
         and test. Object must follow the interface of sklearn estimators, that
         is, it has a ``fit()`` method and a ``predict()`` method that accepts
         the argument ``return_std=True``.
-    loss_dict : dict of str to func
+    loss_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `square_loss`, ...
     ref_method : str
@@ -310,7 +313,7 @@ def just_benchmark(X_train, y_train, X_test, y_test,
 
     Returns
     -------
-    loss_summary : Pandas DataFrame
+    loss_summary : DataFrame, shape (n_methods, n_metrics * 3)
         DataFrame with mean loss of each method according to each loss
         function. The rows are the methods. The columns are a hierarchical
         index that is the cartesian product of
@@ -321,6 +324,7 @@ def just_benchmark(X_train, y_train, X_test, y_test,
         test on the hypothesis H0 that foo has the same mean loss as the
         reference method `ref_method`.
     '''
+    assert(y_train.dtype == y_test.dtype)  # Would be weird otherwise
     pred_tbl = get_gauss_pred(X_train, y_train, X_test, methods,
                               min_std=min_std)
     loss_tbl = loss_table(pred_tbl, y_test, loss_dict)

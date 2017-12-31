@@ -19,28 +19,31 @@ def shape_and_validate(y, log_pred_prob):
 
     Parameters
     ----------
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point.
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         Array of shape ``(len(y), n_labels)``. Each row corresponds to a
         categorical distribution with *normalized* probabilities in log scale.
         Therefore, the number of columns must be at least 1.
 
     Returns
     -------
-    N : int
+    n_samples : int
         Number of data points (length of `y`)
     n_labels : int
         The number of possible labels in `y`. Inferred from size of
         `log_pred_prob` and *not* from `y`.
+
+    Notes
+    -----
+    This does *not* check normalization.
     '''
-    # Note: This does not check normalization
-    N, n_labels = log_pred_prob.shape
-    assert(N >= 1)  # Otherwise min and max confused
+    n_samples, n_labels = log_pred_prob.shape
+    assert(n_samples >= 1)  # Otherwise min and max confused
     assert(n_labels >= 1)  # Otherwise makes no sense
-    assert(y.shape == (N,) and y.dtype.kind in ('b', 'i'))
+    assert(y.shape == (n_samples,) and y.dtype.kind in ('b', 'i'))
     assert(0 <= y.min() and y.max() < n_labels)
-    return N, n_labels
+    return n_samples, n_labels
 
 # ============================================================================
 # Loss functions
@@ -53,18 +56,18 @@ def hard_loss_decision(log_pred_prob, loss_mat):
 
     Parameters
     ----------
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         Array of shape ``(len(y), n_labels)``. Each row corresponds to a
         categorical distribution with *normalized* probabilities in log scale.
         Therefore, the number of columns must be at least 1.
-    loss_mat : 2d np array
+    loss_mat : ndarray, shape (n_labels, n_actions)
         Loss matrix to use for making decisions of size
         ``(n_labels, n_actions)``. The loss of taking action a when the true
         outcome (label) is y is found in ``loss_mat[y, a]``.
 
     Returns
     -------
-    action : 1d np array of type int
+    action : ndarray of type int, shape (n_samples,)
         Array of resulting Bayes' optimal action for each data point.
     '''
     pred_prob = np.exp(log_pred_prob)
@@ -82,13 +85,13 @@ def hard_loss(y, log_pred_prob, loss_mat=None):
 
     Parameters
     ----------
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point.
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         Array of shape ``(len(y), n_labels)``. Each row corresponds to a
         categorical distribution with *normalized* probabilities in log scale.
         Therefore, the number of columns must be at least 1.
-    loss_mat : 2d np array or None
+    loss_mat : None or ndarray of shape (n_labels, n_actions)
         Loss matrix to use for making decisions of size
         ``(n_labels, n_actions)``. The loss of taking action a when the true
         outcome (label) is y is found in ``loss_mat[y, a]``. If None,
@@ -96,10 +99,10 @@ def hard_loss(y, log_pred_prob, loss_mat=None):
 
     Returns
     -------
-    loss : 1d np array
+    loss : ndarray, shape (n_samples,)
         Array of the resulting loss for the predictions on each point in `y`.
     '''
-    N, n_labels = shape_and_validate(y, log_pred_prob)
+    n_samples, n_labels = shape_and_validate(y, log_pred_prob)
     loss_mat = (1.0 - np.eye(n_labels)) if loss_mat is None else loss_mat
     assert(np.ndim(loss_mat) == 2 and loss_mat.shape[0] == n_labels)
     assert(loss_mat.shape[1] >= 1)  # Must be least one action
@@ -108,7 +111,7 @@ def hard_loss(y, log_pred_prob, loss_mat=None):
 
     assert(action.shape == y.shape and action.dtype.kind == 'i')
     loss = loss_mat[y.astype(int), action]
-    assert(loss.shape == (N,))
+    assert(loss.shape == (n_samples,))
     return loss
 
 
@@ -117,20 +120,20 @@ def log_loss(y, log_pred_prob):
 
     Parameters
     ----------
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point.
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         Array of shape ``(len(y), n_labels)``. Each row corresponds to a
         categorical distribution with *normalized* probabilities in log scale.
         Therefore, the number of columns must be at least 1.
 
     Returns
     -------
-    loss : 1d np array
+    loss : ndarray, shape (n_samples,)
         Array of the log loss for the predictions on each data point in `y`.
     '''
-    N, n_labels = shape_and_validate(y, log_pred_prob)
-    nll = -log_pred_prob[np.arange(N), y.astype(int)]
+    n_samples, n_labels = shape_and_validate(y, log_pred_prob)
+    nll = -log_pred_prob[np.arange(n_samples), y.astype(int)]
     return nll
 
 
@@ -139,9 +142,9 @@ def brier_loss(y, log_pred_prob, rescale=True):
 
     Parameters
     ----------
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point.
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         Array of shape ``(len(y), n_labels)``. Each row corresponds to a
         categorical distribution with *normalized* probabilities in log scale.
         Therefore, the number of columns must be at least 1.
@@ -152,10 +155,10 @@ def brier_loss(y, log_pred_prob, rescale=True):
 
     Returns
     -------
-    loss : 1d np array
+    loss : ndarray, shape (n_samples,)
         Array of the Brier loss for the predictions on each data point in `y`.
     '''
-    N, n_labels = shape_and_validate(y, log_pred_prob)
+    n_samples, n_labels = shape_and_validate(y, log_pred_prob)
 
     y_bin = one_hot(y.astype(int), n_labels)
     loss = np.sum((np.exp(log_pred_prob) - y_bin) ** 2, axis=1)
@@ -171,9 +174,9 @@ def spherical_loss(y, log_pred_prob, rescale=True):
 
     Parameters
     ----------
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point.
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         Array of shape ``(len(y), n_labels)``. Each row corresponds to a
         categorical distribution with *normalized* probabilities in log scale.
         Therefore, the number of columns must be at least 1.
@@ -184,7 +187,7 @@ def spherical_loss(y, log_pred_prob, rescale=True):
 
     Returns
     -------
-    loss : 1d np array
+    loss : ndarray, shape (n_samples,)
         Array of the spherical loss for the predictions on each point in `y`.
     '''
     N, n_labels = shape_and_validate(y, log_pred_prob)
@@ -209,16 +212,16 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
 
     Parameters
     ----------
-    log_pred_prob_table : Pandas DataFrame
+    log_pred_prob_table : DataFrame, shape (n_samples, n_methods * n_labels)
         DataFrame with predictive distributions. Each row is a data point.
         The columns should be hierarchical index that is the cartesian product
         of methods x labels. For exampe, ``log_pred_prob_table.loc[5, 'foo']``
         is the categorical distribution (in log scale) prediction that method
         foo places on ``y[5]``.
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point. Must be of same length as
         DataFrame `log_pred_prob_table`.
-    metrics_dict : dict of str to func
+    metrics_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `brier_loss`, ...
     assume_normalized : bool
@@ -227,7 +230,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
 
     Returns
     -------
-    loss_tbl : Pandas DataFrame
+    loss_tbl : DataFrame, shape (n_samples, n_metrics * n_methods)
         DataFrame with loss of each method according to each loss function on
         each data point. The rows are the data points in `y` (that is the index
         matches `log_pred_prob_table`). The columns are a hierarchical index
@@ -236,9 +239,9 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
         stored in ``loss_tbl.loc[5, ('bar', 'foo')]``.
     '''
     methods, labels = log_pred_prob_table.columns.levels
-    N, n_labels = len(log_pred_prob_table), len(labels)
-    assert(y.shape == (N,))
-    assert(N >= 1 and n_labels >= 1 and len(methods) >= 1)
+    n_samples, n_labels = len(log_pred_prob_table), len(labels)
+    assert(y.shape == (n_samples,))
+    assert(n_samples >= 1 and n_labels >= 1 and len(methods) >= 1)
 
     col_names = pd.MultiIndex.from_product([metrics_dict.keys(), methods],
                                            names=[METRIC, METHOD])
@@ -249,7 +252,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
         assert(list(log_pred_prob_table[method].columns) == range(n_labels))
 
         log_pred_prob = log_pred_prob_table[method].values
-        assert(log_pred_prob.shape == (N, n_labels))
+        assert(log_pred_prob.shape == (n_samples, n_labels))
         assert(not np.any(np.isnan(log_pred_prob)))  # Would let method cheat
 
         if not assume_normalized:
@@ -270,13 +273,13 @@ def check_curve(curve):
 
     Parameters
     ----------
-    curve : tuple of (2d np array, 2d np array, 2d np array)
+    curve : tuple of (2d ndarray, 2d ndarray, 2d ndarray)
         Tuple containing (x points in step function, y points in step function,
         threshold values).
 
     Returns
     -------
-    curve : tuple of (2d np array, 2d np array, 2d np array)
+    curve : tuple of (2d ndarray, 2d ndarray, 2d ndarray)
         Returns same object passed in after some input checks.
     '''
     x_curve, y_curve, _ = curve  # Skipping tholds since not used here
@@ -296,12 +299,12 @@ def check_summary(cs):
 
     Parameters
     ----------
-    cs : float
+    cs : ndarray, shape (n_boot,)
         Curve summary scalar
 
     Returns
     -------
-    cs : float
+    cs : ndarray, shape (n_boot,)
         Returns same object passed in after some input checks.
     '''
     assert(cs.ndim == 1)
@@ -319,14 +322,14 @@ def curve_boot(y, log_pred_prob,
 
     Parameters
     ----------
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         Array containing true labels, must be `bool` or {0,1}.
-    log_pred_prob : 2d np array
+    log_pred_prob :  ndarray, shape (n_samples, 2)
         Array of shape ``(len(y), 2)``. Each row corresponds to a categorical
         distribution with *normalized* probabilities in log scale. However,
         many curves (e.g., ROC) are invariant to monotonic transformation and
         hence linear scale could also be used.
-    log_pred_prob_ref : 2d np array or None
+    log_pred_prob_ref : None or ndarray of shape (n_samples, 2)
         Array of shape ``(len(y), 2)``. Same as `log_pred_prob` except for the
         reference (baseline) method if a paired statistical test is desired
         on the area under the curve.
@@ -336,15 +339,15 @@ def curve_boot(y, log_pred_prob,
         `default_summary_ref` in a non-paired test. For ROC analysis,
         `default_summary_ref` is typically 0.5. Either `log_pred_prob_ref`
         or `default_summary_ref` must be provided.
-    curve_f : function
+    curve_f : callable
         Function to compute the performance curve. Standard choices are:
         `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
-    summary_f : function
+    summary_f : callable
         Function that computes scalar summary (e.g., AUC) of performance curve.
         Standard choices are: `perf_curves.auc_trapz`, `perf_curves.auc_left`.
         Different choices are needed for different curves as it can effect
         estimator bias.
-    x_grid : 1d np array or None
+    x_grid : None or ndarray of shape (n_grid,)
         Grid of points to evaluate curve in results. If `None`, defaults to
         linear grid on [0,1].
     n_boot : int
@@ -363,7 +366,7 @@ def curve_boot(y, log_pred_prob,
         p-value from the two-sided boot strap significance test that its value
         is the same as the reference summary value (from either
         `log_pred_prob_ref` or `default_summary_ref`).
-    curve : Pandas DataFrame
+    curve : DataFrame, shape (n_grid, 4)
         DataFrame containing four columns: `x_grid`, the curve value, the lower
         end of confidence envelope, and the upper end of the confidence
         envelope.
@@ -458,16 +461,16 @@ def curve_summary_table(log_pred_prob_table, y,
 
     Parameters
     ----------
-    log_pred_prob_table : Pandas DataFrame
+    log_pred_prob_table : DataFrame, shape (n_samples, n_methods * n_labels)
         DataFrame with predictive distributions. Each row is a data point.
         The columns should be hierarchical index that is the cartesian product
         of methods x labels. For exampe, ``log_pred_prob_table.loc[5, 'foo']``
         is the categorical distribution (in log scale) prediction that method
         foo places on ``y[5]``.
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point. Must be of same length as
         DataFrame `log_pred_prob_table`.
-    curve_dict : dict of str to (func, func)
+    curve_dict : dict of str to (callable, callable)
         Dictionary mapping curve name to tuple of two functions:
         (`curve_f`, `summary_f`). The first `curve_f` computes the curve
         (e.g., ROC) and the second `summary_f` computes the summary
@@ -478,7 +481,7 @@ def curve_summary_table(log_pred_prob_table, y,
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
         be found in the 1st level of the columns of `log_pred_prob_table`.
-    x_grid : 1d np array or None
+    x_grid : None or ndarray of shape (n_grid,)
         Grid of points to evaluate curve in results. If `None`, defaults to
         linear grid on [0,1].
     n_boot : int
@@ -491,7 +494,7 @@ def curve_summary_table(log_pred_prob_table, y,
 
     Returns
     -------
-    curve_tbl : Pandas DataFrame
+    curve_tbl : DataFrame, shape (n_methods, n_metrics * 3)
         DataFrame with curve summary of each method according to each curve.
         The rows are the methods. The columns are a hierarchical index that is
         the cartesian product of curve x (summary, error bar, p-value).
@@ -500,7 +503,7 @@ def curve_summary_table(log_pred_prob_table, y,
         The statistical significance is a p-value from a two-sided hypothesis
         test on the hypothesis H0 that foo has the same curve summary as the
         reference method `ref_method`.
-    curve_dump : dict of (str, str) to Pandas DataFrame
+    curve_dump : dict of (str, str) to DataFrame of shape (n_grid, 4)
         Each key is a pair of (method name, curve name) with the value being
         a pandas dataframe with the performance curve, which has four columns:
         `x_grid`, the curve value, the lower end of confidence envelope,
@@ -512,6 +515,7 @@ def curve_summary_table(log_pred_prob_table, y,
     assert(ref_method in methods)  # ==> len(methods) >= 1
     assert(N >= 1 and n_labels >= 1 and len(curve_dict) >= 1)
 
+    assert(list(log_pred_prob_table[ref_method].columns) == range(n_labels))
     log_pred_prob_ref = log_pred_prob_table[ref_method].values
     assert(log_pred_prob_ref.shape == (N, n_labels))
     # Note: Most curve methods are rank based and so normalization is not
@@ -525,6 +529,7 @@ def curve_summary_table(log_pred_prob_table, y,
 
     curve_dump = {}
     for method in methods:
+        assert(list(log_pred_prob_table[method].columns) == range(n_labels))
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (N, n_labels))
 
@@ -553,19 +558,19 @@ def summary_table(log_pred_prob_table, y,
 
     Parameters
     ----------
-    log_pred_prob_table : Pandas DataFrame
+    log_pred_prob_table : DataFrame, shape (n_samples, n_methods * n_labels)
         DataFrame with predictive distributions. Each row is a data point.
         The columns should be hierarchical index that is the cartesian product
         of methods x labels. For exampe, ``log_pred_prob_table.loc[5, 'foo']``
         is the categorical distribution (in log scale) prediction that method
         foo places on ``y[5]``.
-    y : 1d np array of type int or bool
+    y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point. Must be of same length as
         DataFrame `log_pred_prob_table`.
-    loss_dict : dict of str to func
+    loss_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `brier_loss`, ...
-    curve_dict : dict of str to (func, func)
+    curve_dict : dict of str to (callable, callable)
         Dictionary mapping curve name to tuple of two functions:
         (`curve_f`, `summary_f`). The first `curve_f` computes the curve
         (e.g., ROC) and the second `summary_f` computes the summary
@@ -576,7 +581,7 @@ def summary_table(log_pred_prob_table, y,
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
         be found in the 1st level of the columns of `log_pred_prob_table`.
-    x_grid : 1d np array or None
+    x_grid : None or ndarray of shape (n_grid,)
         Grid of points to evaluate curve in results. If `None`, defaults to
         linear grid on [0,1].
     n_boot : int
@@ -589,7 +594,7 @@ def summary_table(log_pred_prob_table, y,
 
     Returns
     -------
-    full_tbl : Pandas DataFrame
+    full_tbl : DataFrame, shape (n_methods, (n_loss + n_curve) * 3)
         DataFrame with curve/loss summary of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of
@@ -599,7 +604,7 @@ def summary_table(log_pred_prob_table, y,
         The statistical significance is a p-value from a two-sided hypothesis
         test on the hypothesis H0 that foo has the same metric as the reference
         method `ref_method`.
-    curve_dump : dict of (str, str) to Pandas DataFrame
+    curve_dump : dict of (str, str) to DataFrame of shape (n_grid, 4)
         Each key is a pair of (method name, curve name) with the value being
         a pandas dataframe with the performance curve, which has four columns:
         `x_grid`, the curve value, the lower end of confidence envelope,
@@ -629,7 +634,7 @@ def summary_table(log_pred_prob_table, y,
 
 # Pre-build some standard metric dicts for the user
 STD_CLASS_LOSS = {'NLL': log_loss, 'Brier': brier_loss,
-                   'sphere': spherical_loss, 'zero_one': hard_loss}
+                  'sphere': spherical_loss, 'zero_one': hard_loss}
 
 STD_BINARY_CURVES = {'AUC': (pc.roc_curve, pc.auc_trapz),
                      'AP': (pc.recall_precision_curve, pc.auc_left),
@@ -647,8 +652,8 @@ class JustNoise:
         self.pred = [np.log(1.0 - P), np.log(P)]
 
     def predict_log_proba(self, X_test):
-        N = X_test.shape[0]
-        pred_log_prob = np.repeat([self.pred], N, axis=0)
+        n_samples = X_test.shape[0]
+        pred_log_prob = np.repeat([self.pred], n_samples, axis=0)
         return pred_log_prob
 
 
@@ -659,13 +664,13 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
     Parameters
     ----------
-    X_train : 2d np array
+    X_train : ndarray, shape (n_train, n_features)
         Training set 2d feature array for classifiers. Each row is an
         indepedent data point and each column is a feature.
-    y_train : 1d np array of type int or bool
+    y_train : ndarray of type int or bool, shape (n_train,)
         Training set 1d array of truth labels for classifiers. Must be of same
         length as `X_train`. Values must be in range [0, `n_labels`) or `bool`.
-    X_test : 2d np array
+    X_test : ndarray, shape (n_test, n_features)
         Test set 2d feature array for classifiers. Each row is an indepedent
         data point and each column is a feature.
     n_labels : int
@@ -687,7 +692,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
     Returns
     -------
-    pred_tbl : Pandas DataFrame
+    log_pred_prob_table : DataFrame, shape (n_samples, n_methods * n_labels)
         DataFrame with predictive distributions. Each row is a data point.
         The columns should be hierarchical index that is the cartesian product
         of methods x labels. For exampe, ``log_pred_prob_table.loc[5, 'foo']``
@@ -706,6 +711,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
     assert(y_train.dtype.kind in ('b', 'i'))
     assert(0 <= y_train.min() and y_train.max() < n_labels)
     assert(X_test.ndim == 2 and X_test.shape[1] == X_train.shape[1])
+    assert(X_train.dtype == X_test.dtype)  # Would be weird otherwise
     assert(min_log_prob < 0.0)  # Ensure is a log-prob
 
     memory = Memory(cachedir=checkpointdir, verbose=0)
@@ -721,8 +727,8 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
     col_names = pd.MultiIndex.from_product([methods.keys(), xrange(n_labels)],
                                            names=[METHOD, LABEL])
-    pred_tbl = pd.DataFrame(index=xrange(n_test), columns=col_names,
-                            dtype=float)
+    log_pred_prob_table = pd.DataFrame(index=xrange(n_test), columns=col_names,
+                                       dtype=float)
     for method_name, method_obj in methods.iteritems():
         if verbose:
             print 'Running fit/predict for %s' % method_name
@@ -730,8 +736,8 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
         assert(pred_log_prob.shape == (n_test, n_labels))
 
         pred_log_prob = normalize(np.maximum(min_log_prob, pred_log_prob))
-        pred_tbl.loc[:, method_name] = pred_log_prob
-    return pred_tbl
+        log_pred_prob_table.loc[:, method_name] = pred_log_prob
+    return log_pred_prob_table
 
 
 def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
@@ -742,16 +748,16 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
 
     Parameters
     ----------
-    X_train : 2d np array
+    X_train : ndarray, shape (n_train, n_features)
         Training set 2d feature array for classifiers. Each row is an
         indepedent data point and each column is a feature.
-    y_train : 1d np array of type int or bool
+    y_train : ndarray of type int or bool, shape (n_train,)
         Training set 1d array of truth labels for classifiers. Must be of same
         length as `X_train`. Values must be in range [0, `n_labels`) or `bool`.
-    X_test : 2d np array
+    X_test : ndarray, shape (n_test, n_features)
         Test set 2d feature array for classifiers. Each row is an indepedent
         data point and each column is a feature.
-    y_test : 1d np array of type int or bool
+    y_test : ndarray of type int or bool, shape (n_test,)
         Test set 1d array of truth labels for classifiers. Must be of same
         length as `X_test`. Values must be in range [0, `n_labels`) or `bool`.
     n_labels : int
@@ -762,10 +768,10 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
         and test. Object must follow the interface of sklearn estimators, that
         is it has a ``fit()`` method and either a ``predict_log_proba()`` or
         ``predict_proba()`` method.
-    loss_dict : dict of str to func
+    loss_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `brier_loss`, ...
-    curve_dict : dict of str to (func, func)
+    curve_dict : dict of str to (callable, callable)
         Dictionary mapping curve name to tuple of two functions:
         (`curve_f`, `summary_f`). The first `curve_f` computes the curve
         (e.g., ROC) and the second `summary_f` computes the summary
@@ -782,7 +788,7 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
 
     Returns
     -------
-    full_tbl : Pandas DataFrame
+    full_tbl : DataFrame, shape (n_methods, (n_loss + n_curve) * 3)
         DataFrame with curve/loss summary of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of
@@ -792,13 +798,14 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
         The statistical significance is a p-value from a two-sided hypothesis
         test on the hypothesis H0 that foo has the same metric as the reference
         method `ref_method`.
-    dump : dict of (str, str) to Pandas DataFrame
+    curve_dump : dict of (str, str) to DataFrame of shape (n_grid, 4)
         Each key is a pair of (method name, curve name) with the value being
         a pandas dataframe with the performance curve, which has four columns:
         `x_grid`, the curve value, the lower end of confidence envelope,
         and the upper end of the confidence envelope. Only metrics from
         `curve_dict` and *not* from `loss_dict` are found here.
     '''
+    assert(y_train.dtype == y_test.dtype)  # Would be weird otherwise
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
                                  methods, min_log_prob=min_pred_log_prob)
     full_tbl, dump = summary_table(pred_tbl, y_test, loss_dict, curve_dict,
