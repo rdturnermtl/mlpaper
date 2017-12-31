@@ -15,7 +15,7 @@ def ttest1(x, nan_on_zero=False):
 
     Parameters
     ----------
-    x : array-like
+    x : array-like, shape (n_samples,)
         array of data points to test.
     nan_on_zero : bool
         If True, return a p-value of NaN for samples with zero variances,
@@ -40,7 +40,7 @@ def t_EB(x, confidence=0.95):
 
     Parameters
     ----------
-    x : 1d np array
+    x : array-like, shape (n_samples,)
         Data points to estimate mean. Must not be empty or contain NaNs.
     confidence : float
         Confidence probability (in (0, 1)) to construct confidence interval
@@ -49,14 +49,14 @@ def t_EB(x, confidence=0.95):
     Returns
     -------
     EB : float
-        Size of error bar on mean (> 0). The confidence interval is
+        Size of error bar on mean (>= 0). The confidence interval is
         ``[mean(x) - EB, mean(x) + EB]``. EB is inf when ``len(x) = 1``.
     '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.ndim(confidence) == 0)
     assert(0.0 < confidence and confidence < 1.0)
 
-    N = x.size
+    N = len(x)
     if N <= 1:
         return np.inf
 
@@ -124,9 +124,9 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
 
     Parameters
     ----------
-    loss : 1d np array
+    loss : ndarray, shape (n_samples,)
         Array of loss value where each entry is an independent prediction.
-    loss_ref : scalar or 1d array
+    loss_ref : float or array-like of shape (n_samples,)
         Reference values for losses. This may be the losses of another method
         on the same datapoints. If 1d must be of same size as loss. The error
         bars are constructed from ``loss - loss_ref`` (like paired test) which
@@ -183,7 +183,7 @@ def loss_summary_table(loss_table, ref_method,
 
     Parameters
     ----------
-    loss_tbl : Pandas DataFrame
+    loss_tbl : DataFrame, shape (n_samples, n_metrics * n_methods)
         DataFrame with loss of each method according to each loss function on
         each data point. The rows are the data points in `y` (that is the index
         matches `log_pred_prob_table`). The columns are a hierarchical index
@@ -202,7 +202,7 @@ def loss_summary_table(loss_table, ref_method,
 
     Returns
     -------
-    perf_tbl : Pandas DataFrame
+    perf_tbl : DataFrame, shape (n_methods, n_metrics * 3)
         DataFrame with mean loss of each method according to each loss
         function. The rows are the methods. The columns are a hierarchical
         index that is the cartesian product of

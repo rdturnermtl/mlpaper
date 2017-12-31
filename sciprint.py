@@ -125,6 +125,8 @@ def decimal_eps(x_dec):
     '''
     return decimal_1ek(x_dec.as_tuple().exponent)
 
+# TODO move these
+
 
 def decimal_left_digits(x_dec):
     '''Not currently used, could be moved into test files.'''
@@ -251,7 +253,7 @@ def decimalize(perf_tbl, err_digits=2, pval_digits=4, default_digits=5,
 
     Parameters
     ----------
-    perf_tbl : Pandas DataFrame
+    perf_tbl : DataFrame, shape (n_methods, n_metrics * 3)
         DataFrame with curve/loss summary of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of
@@ -278,7 +280,7 @@ def decimalize(perf_tbl, err_digits=2, pval_digits=4, default_digits=5,
 
     Returns
     -------
-    perf_tbl_dec : Pandas DataFrame
+    perf_tbl_dec : DataFrame, shape (n_methods, n_metrics * 3)
         DataFrame with same rows and columns as `perf_tbl`, however the entires
         are now Decimal objects that have been rounded in accordance with the
         input options.
@@ -460,7 +462,7 @@ def get_shift_range(x_dec_list, shift_mod=1):
 
     Parameters
     ----------
-    x_dec_list : array_like of Decimal
+    x_dec_list : array-like of Decimal
         List of `Decimal` estimates to format. Assumes all non-finite and
         clipped values are already removed.
     shift_mod : int
@@ -525,10 +527,10 @@ def find_shift(mean_list, err_list, shift_mod=1):
 
     Parameters
     ----------
-    mean_list : array_like of Decimal
+    mean_list : array-like of Decimal, shape (n,)
         List of `Decimal` estimates to format. Assumes all non-finite and
         clipped values are already removed.
-    err_list : array_like of Decimal
+    err_list : array-like of Decimal, shape (n,)
         List of `Decimal` error bars. Must be of same length as `mean_list`.
     shift_mod : int
         Required modulus for output. This is usually 1 or 3. When an SI prefix
@@ -624,14 +626,14 @@ def pad_num_str(num_str_list, pad=' '):
 
     Parameters
     ----------
-    num_str_list : array_like of str
+    num_str_list : array-like of str, shape (n,)
         List of numbers already formatted as strings.
     pad : str
         Padding character, typically space. Must be length 1.
 
     Returns
     -------
-    L : list of str
+    L : list of str, shape (n,)
         List of padded strings.
 
     Examples
@@ -652,7 +654,7 @@ def format_table(perf_tbl_dec, shift_mod=None, pad=True,
 
     Parameters
     ----------
-    perf_tbl_dec : Pandas DataFrame
+    perf_tbl_dec : DataFrame, shape (n_methods, n_metrics * 3)
         DataFrame with curve/loss summary of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of
@@ -679,7 +681,7 @@ def format_table(perf_tbl_dec, shift_mod=None, pad=True,
 
     Returns
     -------
-    perf_tbl_str : Pandas DataFrame
+    perf_tbl_str : DataFrame, shape (n_methods, n_metrics * 2)
         DataFrame with summary string of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of
@@ -760,7 +762,7 @@ def adjust_headers(headers, shifts, unit_dict, use_prefix=True, use_tex=False):
 
     Parameters
     ----------
-    headers : array_like of str
+    headers : array-like of str, shape (n_metrics,)
         List of metrics to adjust
     shifts : dict of str to int
         The used shift in log10 scale for each metric.
@@ -774,7 +776,7 @@ def adjust_headers(headers, shifts, unit_dict, use_prefix=True, use_tex=False):
 
     Returns
     -------
-    headers : list of str
+    headers : list of str, shape (n_metrics,)
         New header strings in same order as headers.
 
     Notes
@@ -831,7 +833,7 @@ def table_to_latex(perf_tbl_str, shifts, unit_dict, use_prefix=True):
 
     Parameters
     ----------
-    perf_tbl_str : Pandas DataFrame
+    perf_tbl_str : DataFrame, shape (n_methods, n_metrics * 2)
         DataFrame with summary string of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of
@@ -883,7 +885,7 @@ def table_to_string(perf_tbl_str, shifts, unit_dict, use_prefix=True):
 
     Parameters
     ----------
-    perf_tbl_str : Pandas DataFrame
+    perf_tbl_str : DataFrame, shape (n_methods, n_metrics * 2)
         DataFrame with summary string of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of
@@ -923,7 +925,7 @@ def just_format_it(perf_tbl_fp, unit_dict={}, shift_mod=None,
 
     Parameters
     ----------
-    perf_tbl_fp : Pandas DataFrame
+    perf_tbl_fp : DataFrame, shape (n_methods, n_metrics * 3)
         DataFrame with curve/loss summary of each method according to each
         curve or loss function. The rows are the methods. The columns are a
         hierarchical index that is the cartesian product of

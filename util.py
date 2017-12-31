@@ -9,7 +9,7 @@ def one_hot(y, n_labels):
 
     Parameters
     ----------
-    y : 1d np array of int type
+    y : ndarray of type int, shape (n_samples,)
         Integers in range ``[0, n_labels)`` to be one-hot encoded.
     n_labels : int
         Number of labels, must be >= 1. This is not infered from `y` because
@@ -17,7 +17,7 @@ def one_hot(y, n_labels):
 
     Returns
     -------
-    y_bin : 2d np array of bool type
+    y_bin : ndarray of type bool, shape (n_samples, n_labels)
         One hot encoding of `y`, with size ``(len(y), n_labels)``
     '''
     N, = y.shape
@@ -35,14 +35,14 @@ def normalize(log_pred_prob):
 
     Parameters
     ----------
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         Each row corresponds to a categorical distribution with unnormalized
         probabilities in log scale. Therefore, the number of columns must be at
         least 1.
 
     Returns
     -------
-    log_pred_prob : 2d np array
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
         A row-wise normalized (``exp(log_pred_prob)`` sums to 1 on each row)
         version of the input.
     '''
@@ -61,7 +61,7 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
 
     Parameters
     ----------
-    x : 1d np array
+    x : ndarray, shape (n_samples,)
         Input vector to be noise corrupted. Must have all finite values.
     default_epsilon : float
         Default noise to add for singleton lists, musts be > 0.0.
@@ -70,7 +70,7 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
 
     Returns
     -------
-    x : 1d np array of float type
+    x : ndarray, shape (n_samples,)
         Noise correupted version of input. All values are unique with
         probability 1. The ordering is the same as the input if the inputs
         values are all unique.
@@ -98,11 +98,11 @@ def eval_step_func(x_grid, xp, yp, ival=None,
 
     Parameters
     ----------
-    x_grid : 1d np array
+    x_grid : ndarray, shape (n_grid,)
         Values to evaluate the stepwise function at.
-    xp : 1d np array
+    xp : ndarray, shape (n_samples,)
         Points at which the step function changes. Typically of type float.
-    yp : 1d np array
+    yp : ndarray, shape (n_samples,)
         The new values at each of the steps
     ival : scalar or None
         Initial value for step function, e.g., the value of the step function
@@ -117,7 +117,7 @@ def eval_step_func(x_grid, xp, yp, ival=None,
 
     Returns
     -------
-    y_grid : 1d np array
+    y_grid : ndarray, shape (n_grid,)
         Step function defined by `xp` and `yp` evaluated at the points in
         `x_grid`.
     '''
@@ -149,17 +149,17 @@ def make_into_step(xp, yp):
 
     Parameters
     ----------
-    xp : 1d np array
+    xp : ndarray, shape (n_samples,)
         The sample points corresponding to the y values. Must be sorted.
-    yp : 1d np array
+    yp : ndarray, shape (n_samples,)
         Values in y-axis for step function.
 
     Returns
     -------
-    xp : 1d np array
-        Input `xp` after removing extra points.
-    yp : 1d np array
-        Input `yp` after removing extra points.
+    xp : ndarray, shape (m_samples,)
+        Input `xp` after removing extra points. m_samples <= n_samples.
+    yp : ndarray, shape (m_samples,)
+        Input `yp` after removing extra points. m_samples <= n_samples.
 
     Notes
     -----
