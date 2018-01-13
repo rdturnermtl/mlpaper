@@ -1,3 +1,7 @@
 # to be filled
 joblib==0.11
 pyprg==0.1.1b7
+future==0.16.0
+pytest-pythonpath==0.7.1
+pytest==3.0.7
+pytest-cov==2.5.1
