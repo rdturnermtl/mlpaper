@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.misc import logsumexp
 from benchmark_tools.benchmark_tools import loss_summary_table
 from benchmark_tools.constants import (
-    METHOD, STAT, CURVE_STATS, STD_STATS, 
+    METHOD, STAT, CURVE_STATS, STD_STATS, METRIC, 
     PVAL_COL, ERR_COL, PAIRWISE_DEFAULT)
 
 import benchmark_tools.perf_curves as pc
@@ -733,7 +733,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
                                        dtype=float)
     for method_name, method_obj in methods.iteritems():
         if verbose:
-            print 'Running fit/predict for %s' % method_name
+            print('Running fit/predict for {}'.format(method_name))
         pred_log_prob = train_predict(method_obj, X_train, y_train, X_test)
         assert(pred_log_prob.shape == (n_test, n_labels))
 

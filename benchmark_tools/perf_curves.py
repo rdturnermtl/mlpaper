@@ -1,5 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function
+from builtins import range
 import numpy as np
 EPSILON = 1e-10  # Size of pseudo-point to add to true/false positive count.
 

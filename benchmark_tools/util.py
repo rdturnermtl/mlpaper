@@ -1,4 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
 import numpy as np
 from scipy.misc import logsumexp
 
@@ -26,7 +28,7 @@ def one_hot(y, n_labels):
     assert(np.all(0 <= y) and np.all(y < n_labels))
 
     y_bin = np.zeros((N, n_labels), dtype=bool)
-    y_bin[xrange(N), y] = True
+    y_bin[range(N), y] = True
     return y_bin
 
 
