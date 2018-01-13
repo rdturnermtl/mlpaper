@@ -1,7 +1,14 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
 from string import ascii_letters
+import benchmark_tools.constants as constants
 import numpy as np
 import pandas as pd
+<<<<<<< HEAD:benchmark_tools_test.py
+=======
+import benchmark_tools.benchmark_tools as bt
+>>>>>>> py3:tests/benchmark_tools_test.py
 import scipy.stats as ss
 from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 import benchmark_tools as bt
@@ -26,7 +33,6 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
     return loss
 
-
 def test_t_EB(runs=100, trials=1000):
     pval = []
     while len(pval) < runs:
@@ -39,7 +45,7 @@ def test_t_EB(runs=100, trials=1000):
             assert(EB == np.inf)
         else:
             fail = 0
-            for tt in xrange(trials):
+            for tt in range(trials):
                 x = np.random.randn(N)
 
                 EB = bt.t_EB(x, confidence=confidence)
@@ -73,7 +79,7 @@ def test_get_mean_and_EB(runs=100, trials=1000):
             assert(np.allclose(EB, np.nanmean(EB2), equal_nan=True))
         else:
             fail = 0
-            for tt in xrange(trials):
+            for tt in range(trials):
                 x = 2.0 + np.random.randn(N)
                 x_ref = 1.5 + np.random.randn(N)
 
@@ -140,8 +146,13 @@ def log_loss_test():
     y_pred = util.normalize(np.random.randn(N, n_labels))
 
     if n_labels >= 2:
+<<<<<<< HEAD:benchmark_tools_test.py
         loss = btc.log_loss(y, y_pred)
         loss2 = log_loss(y, np.exp(y_pred), labels=xrange(n_labels))
+=======
+        loss = bt.log_loss(y, y_pred)
+        loss2 = log_loss(y, np.exp(y_pred), labels=range(n_labels))
+>>>>>>> py3:tests/benchmark_tools_test.py
         assert(np.allclose(np.mean(loss), loss2))
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -206,13 +217,18 @@ def loss_summary_table_test():
 
     methods = np.random.choice(list(ascii_letters), n_methods, replace=False)
     ref = np.random.choice(methods)
+<<<<<<< HEAD:benchmark_tools_test.py
     metrics = btc.STD_CLASS_LOSS
     labels = xrange(n_labels)
+=======
+    metrics = bt.STD_MULTICLASS_LOSS
+    labels = range(n_labels)
+>>>>>>> py3:tests/benchmark_tools_test.py
 
     col_names = pd.MultiIndex.from_product([methods, labels],
                                            names=[bt.METHOD, btc.LABEL])
     dat = np.random.randn(N, n_labels * len(methods))
-    tbl = pd.DataFrame(data=dat, index=xrange(N), columns=col_names,
+    tbl = pd.DataFrame(data=dat, index=range(N), columns=col_names,
                        dtype=float)
 
     y = np.random.randint(low=0, high=n_labels, size=N)
@@ -244,15 +260,30 @@ def loss_summary_table_test():
 
 np.random.seed(53634)
 
+<<<<<<< HEAD:benchmark_tools_test.py
 for _ in xrange(1000):
+=======
+for _ in range(constants.MC_REPEATS_1K):
+    test_one_hot()
+    test_normalize()
+    epsilon_noise_test()
+>>>>>>> py3:tests/benchmark_tools_test.py
     hard_loss_binary_test()
     hard_loss_decision_test()
     log_loss_test()
     brier_loss_test()
     spherical_loss_test()
     loss_summary_table_test()
+<<<<<<< HEAD:benchmark_tools_test.py
 
 print 'Now running MC tests'
 print test_t_EB()
 print test_get_mean_and_EB()
 print 'passed'
+=======
+    eval_step_func_test()
+print('Now running MC tests')
+
+print(test_t_EB(trials=constants.MC_REPEATS_1K))
+print(test_get_mean_and_EB(trials=constants.MC_REPEATS_1K))
+>>>>>>> py3:tests/benchmark_tools_test.py

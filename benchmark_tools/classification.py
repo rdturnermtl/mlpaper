@@ -3,11 +3,13 @@ from joblib import Memory
 import numpy as np
 import pandas as pd
 from scipy.misc import logsumexp
-from benchmark_tools import loss_summary_table
-from constants import METHOD, METRIC, STAT, CURVE_STATS
-from constants import STD_STATS, PVAL_COL, ERR_COL, PAIRWISE_DEFAULT
-import perf_curves as pc
-from util import one_hot, normalize, eval_step_func, make_into_step
+from benchmark_tools.benchmark_tools import loss_summary_table
+from benchmark_tools.constants import (
+    METHOD, STAT, CURVE_STATS, STD_STATS, 
+    PVAL_COL, ERR_COL, PAIRWISE_DEFAULT)
+
+import benchmark_tools.perf_curves as pc
+from benchmark_tools.util import one_hot, normalize, eval_step_func, make_into_step
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification

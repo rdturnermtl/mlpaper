@@ -1,9 +1,12 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
+import benchmark_tools.constants as constants
 from sklearn.metrics import roc_auc_score, average_precision_score
-import perf_curves as pc
+import benchmark_tools.perf_curves as pc
 
 import prg
 
@@ -11,13 +14,13 @@ np.random.seed(3563)
 
 N = 6
 p = 0.3
-runs = int(1e3)
+runs = constants.MC_REPEATS_1K
 resample = True
 
 auc = np.zeros((runs, 7))
 ap = np.zeros((runs, 7))
 auprg = np.zeros((runs, 7))
-for rr in xrange(runs):
+for rr in range(runs):
     y_true = np.random.rand(N) <= p
     y_score = np.random.randn(N)
 
@@ -86,9 +89,7 @@ cols = ['trap', 'right', 'left',
 pval_df = pd.DataFrame(data=np.stack((pvals_auc, pvals_ap, pvals_auprg)),
                        index=['AUC', 'AP', 'AUPRG'], columns=cols)
 
-print 'pvals:'
-print pval_df.to_string()
+print('pvals:', pval_df.to_string())
 
 biased = pval_df <= 0.05
-print 'biased:'
-print biased.to_string()
+print('biased:',biased.to_string())

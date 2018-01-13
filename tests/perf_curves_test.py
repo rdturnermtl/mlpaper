@@ -1,15 +1,24 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
+
 import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
+<<<<<<< HEAD:perf_curves_test.py
 import perf_curves as pc
 
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.
 # ============================================================================
+=======
+import benchmark_tools.perf_curves as pc
+import benchmark_tools.constants as constants
+>>>>>>> py3:tests/perf_curves_test.py
 
 
+<<<<<<< HEAD:perf_curves_test.py
 def _nv_add_pseudo_points(fps, tps):
     if fps[-1] == 0:
         fps = pc.EPSILON * tps
@@ -117,6 +126,18 @@ def _nv_prg_curve(y_true, y_score, sample_weight=None):
 # ============================================================================
 # Now the actual tests
 # ============================================================================
+=======
+    xp = np.sort(np.random.choice(np.random.randn(N + 1),
+                                  size=N, replace=True))
+    yp = np.random.randn(N)
+    D = {xp[ii]: yp[ii] for ii in range(N)}
+
+    xp2, yp2 = pc.make_into_step(xp, yp)
+    assert(xp2.shape == yp2.shape)
+    assert(np.all(np.unique(xp) == xp2))
+    D2 = {xp2[ii]: yp2[ii] for ii in range(len(xp2))}
+    assert(D == D2)
+>>>>>>> py3:tests/perf_curves_test.py
 
 
 def nv_binary_clf_curve_test():
@@ -237,7 +258,7 @@ def nv_binary_clf_curve_test():
 
 def auc_trapz_test(x_curve, y_curve):
     auc0 = pc.auc_trapz(x_curve, y_curve)
-    for ii in xrange(x_curve.shape[1]):
+    for ii in range(x_curve.shape[1]):
         auc1 = auc(x_curve[:, ii], y_curve[:, ii])
         assert(np.allclose(auc0[ii], auc1))
 
@@ -248,7 +269,7 @@ def auc_trapz_test(x_curve, y_curve):
 
 def auc_left_test(x_curve, y_curve):
     auc0 = pc.auc_left(x_curve, y_curve)
-    for ii in xrange(x_curve.shape[1]):
+    for ii in range(x_curve.shape[1]):
         delta = np.diff(x_curve[:, ii])
         yv = y_curve[:-1, ii]
 
@@ -317,7 +338,7 @@ def binary_clf_curve_test():
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
         return
 
-    for ii in xrange(n_boot):
+    for ii in range(n_boot):
         weight_curr = sample_weight[:, ii]
 
         fpr2, tpr2, thresholds_roc2 = \
@@ -341,7 +362,16 @@ def binary_clf_curve_test():
 
 np.random.seed(89254)
 
+<<<<<<< HEAD:perf_curves_test.py
 for rr in xrange(100000):
     nv_binary_clf_curve_test()
     binary_clf_curve_test()
 print 'passed'
+=======
+print('start')
+for rr in range(constants.MC_REPEATS_LARGE):
+    eval_step_func_test()
+    nv_binary_clf_curve_test()
+    binary_clf_curve_test()
+print('done')
+>>>>>>> py3:tests/perf_curves_test.py

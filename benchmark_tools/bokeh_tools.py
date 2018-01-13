@@ -1,10 +1,11 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from builtins import range
 import itertools
 import numpy as np
 import pandas as pd
 from pandas import MultiIndex
-from constants import MEAN_COL, ERR_COL
-from constants import METHOD, METRIC, STAT, HORIZON
+from benchmark_tools.constants import MEAN_COL, ERR_COL
+from benchmark_tools.constants import METHOD, METRIC, STAT, HORIZON
 # Plotting last
 import bokeh.plotting as bp
 from bokeh.models import HoverTool
@@ -105,7 +106,7 @@ def plot_perf_table(perf_tbl, run_name=DEFAULT_NAME, max_offset=0.0):
 if __name__ == '__main__':
     np.random.seed(8123)
 
-    C = MultiIndex.from_product([('score',), [MEAN_COL, ERR_COL], xrange(5)],
+    C = MultiIndex.from_product([('score',), [MEAN_COL, ERR_COL], range(5)],
                                 names=[METRIC, STAT, HORIZON])
     methods = ('foo', 'bar', 'baz')
 

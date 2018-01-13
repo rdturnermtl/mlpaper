@@ -1,21 +1,25 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
 import numpy as np
-from classification import curve_boot
-import perf_curves as pc
+from benchmark_tools.classification import curve_boot
+import benchmark_tools.constants as constants
+import benchmark_tools.benchmark_tools as bt
+import benchmark_tools.perf_curves as pc
 
 np.random.seed(3563)
 
 confidence = 0.95
 N = 200
-N_big = int(1e5)
+N_big = constants.MC_REPEATS_LARGE
 p = 0.3
-runs = int(1e3)
+runs = constants.MC_REPEATS_1K
 w = 0.1
 
 auc = np.zeros((runs, 3))
 valid = np.zeros((runs, 3))
 pval = np.zeros((runs, 3))
-for rr in xrange(runs):
+for rr in range(runs):
     y_score = np.random.rand(N_big, 2)
     y_true = np.random.rand(N_big) <= w * y_score[:, 0] + (1-w) * y_score[:, 1]
 
@@ -46,15 +50,17 @@ for rr in xrange(runs):
                             n_boot=1000, confidence=confidence)
     auc[rr, 2], EB, pval[rr, 2] = summary
     valid[rr, 2] = np.abs(ref - auc[rr, 2]) <= EB
-print 'against N-big'
-print 'P EB valid', np.mean(valid, axis=0)
-print 'mean AUC', np.mean(auc, axis=0)
-print 'P p-val sig', np.mean(pval <= 0.05, axis=0)
+
+# TODO: This is not a test.
+print('against N-big')
+print('P EB valid', np.mean(valid, axis=0))
+print('mean AUC', np.mean(auc, axis=0))
+print('P p-val sig', np.mean(pval <= 0.05, axis=0))
 
 auc = np.zeros((runs, 3))
 valid = np.zeros((runs, 3))
 pval = np.zeros((runs, 3))
-for rr in xrange(runs):
+for rr in range(runs):
     y_true = np.random.rand(N) <= p
     y_score = np.random.randn(N, 2)
 
@@ -76,7 +82,9 @@ for rr in xrange(runs):
                             n_boot=1000, confidence=confidence)
     auc[rr, 2], EB, pval[rr, 2] = summary
     valid[rr, 2] = np.abs(auc[rr, 2]) <= EB
-print 'just noise'
-print 'P EB valid', np.mean(valid, axis=0)
-print 'mean AUC', np.mean(auc, axis=0)
-print 'P p-val sig', np.mean(pval <= 0.05, axis=0)
+
+# TODO: this is not a test
+print('just noise')
+print('P EB valid', np.mean(valid, axis=0))
+print('mean AUC', np.mean(auc, axis=0))
+print('P p-val sig', np.mean(pval <= 0.05, axis=0))
