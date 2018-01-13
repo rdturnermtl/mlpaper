@@ -1,5 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import matplotlib.pyplot as plt
 from benchmark_tools.constants import METHOD, METRIC, STAT, HORIZON
 from benchmark_tools.constants import MEAN_COL, ERR_COL

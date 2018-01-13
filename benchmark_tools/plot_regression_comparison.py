@@ -2,7 +2,7 @@
 # Modification of sklearn plot_compare_gpr_krr.py by
 # Authors: Jan Hendrik Metzen <jhm@informatik.uni-bremen.de>
 # License: BSD 3 clause
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor

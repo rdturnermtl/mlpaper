@@ -4,7 +4,7 @@
 #              Andreas Muller
 # Modified for documentation by Jaques Grobler
 # License: BSD 3 clause
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import numpy as np
 from matplotlib import use
 use('pdf')
