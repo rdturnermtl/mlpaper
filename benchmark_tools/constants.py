@@ -1,7 +1,9 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 
+# Settings
+PAIRWISE_DEFAULT = False
+
 # Pandas indices
-LABEL = 'label'
 METRIC = 'metric'
 METHOD = 'method'
 STAT = 'stat'
@@ -28,6 +30,7 @@ LB = 'LB'
 UB = 'UB'
 CURVE_STATS = ('xgrid', 'ygrid', 'LB', 'UB')
 
+# The SI prefixes that are used to re-label columns after a shift
 _PREFIX = {-24: 'y',
            -21: 'z',
            -18: 'a',
@@ -48,7 +51,7 @@ _PREFIX = {-24: 'y',
            21: 'Z',
            24: 'Y'}
 
-_PREFIX_TEX = dict(_PREFIX)
+_PREFIX_TEX = dict(_PREFIX)  # Make a copy
 _PREFIX_TEX[-6] = r'$\mu$'
 
 # test MC repeats

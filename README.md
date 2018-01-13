@@ -6,10 +6,10 @@ See `plot_classifier_comparison.py` for example usage. This extends the standard
 Pandas tables with the performance results of all the models can be built by:
 ```python
     performance_df, performance_curves_dict = \
-        bt.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
-                          STD_BINARY_LOSS, STD_BINARY_CURVES, ref_method)
+        btc.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
+                           STD_CLASS_LOSS, STD_BINARY_CURVES, ref_method)
 ```
-This benchmarks all the models in classifiers on the data (`X_train`, `y_train`, `X_test`, `y_test`) for 2-class classification. It uses the loss function described in the dictionaries `STD_BINARY_LOSS`, and the curves (e.g., ROC, PR) in `STD_BINARY_CURVES`. `ref_method` defines the model that is the reference to compare against for assessing statistically significant performance gains.
+This benchmarks all the models in classifiers on the data (`X_train`, `y_train`, `X_test`, `y_test`) for 2-class classification. It uses the loss function described in the dictionaries `STD_CLASS_LOSS`, and the curves (e.g., ROC, PR) in `STD_BINARY_CURVES`. `ref_method` defines the model that is the reference to compare against for assessing statistically significant performance gains.
 
 The sciprint module formats these tables for scientific presentation. The performance dictionaries can be converted to cleanly formatted tables: correct significant figures, shifting of exponent for compactness, thresholding huge/small (crap limit) results, and correct alignment of decimal points, units in headers, etc. Here we use:
 ```python
@@ -190,4 +190,3 @@ iid &  0.96908     &     N/A &  1.3982      &      N/A &  1.5884      &      N/A
 ```
 
 ![regression demo](doc/regress.png)
-
