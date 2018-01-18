@@ -7,8 +7,8 @@ from constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
 from constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
 from constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
 
-# Some numeric constants
-NAN_STR = str(np.nan)
+NAN_STR = str(np.nan)  # Our string rep of NaN
+# Constants of Decimal type
 D_INF = decimal.Decimal('Infinity')
 D_NINF = decimal.Decimal('-Infinity')
 
@@ -50,7 +50,8 @@ def decimal_all_finite(x_dec_list):
     y : bool
         True if all elements are finite.
     '''
-    return all(x.is_finite() for x in x_dec_list)
+    y = all(x.is_finite() for x in x_dec_list)
+    return y
 
 
 def decimal_from_tuple(signed, digits, expo):
@@ -70,7 +71,8 @@ def decimal_from_tuple(signed, digits, expo):
     y : Decimal
         corresponding decimal object.
     '''
-    return decimal.Decimal(decimal.DecimalTuple(int(signed), digits, expo))
+    y = decimal.Decimal(decimal.DecimalTuple(int(signed), digits, expo))
+    return y
 
 
 def as_tuple_chk(x_dec):
@@ -93,7 +95,7 @@ def as_tuple_chk(x_dec):
 
 
 def decimal_1ek(k, signed=False):
-    '''Return ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
+    '''Returns ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
 
     Parameters
     ----------
@@ -107,7 +109,8 @@ def decimal_1ek(k, signed=False):
     y : Decimal
         ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
     '''
-    return decimal_from_tuple(signed, (1,), k)
+    y = decimal_from_tuple(signed, (1,), k)
+    return y
 
 
 def decimal_eps(x_dec):
@@ -123,54 +126,7 @@ def decimal_eps(x_dec):
     y : Decimal
         Smallest value that can be added to `x_dec`.
     '''
-    return decimal_1ek(x_dec.as_tuple().exponent)
-
-# TODO move these
-
-
-def decimal_left_digits(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(decimal_to_dot(x_dec))  # Should make exception
-    y = 1 + max(0, x_dec.adjusted())
-    return y
-
-
-def decimal_right_digits(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(decimal_to_dot(x_dec))  # Should make exception
-    x_tup = as_tuple_chk(x_dec)
-    y = max(0, -x_tup.exponent)
-    return y
-
-
-def decimal_digits(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(decimal_to_dot(x_dec))  # Should make exception
-    x_tup = as_tuple_chk(x_dec)
-    y = len(x_tup.digits) - min(0, x_dec.adjusted())
-    return y
-
-
-def decimal_floor_log10_abs(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(x_dec.is_finite() and x_dec != 0)  # Should make exception
-    return x_dec.adjusted()
-
-
-def decimal_ceil_log10_abs(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    k = decimal_floor_log10_abs(x_dec)
-    assert(abs(decimal_1ek(k)) <= abs(x_dec))
-    y = k + int(decimal_1ek(k, signed=x_dec.is_signed()) != x_dec)
-    return y
-
-
-def decimal_next_pow10(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    if x_dec == 0:
-        return x_dec  # Note: this keeps sign and precision of original 0.
-    k = decimal_ceil_log10_abs(x_dec)
-    y = decimal_1ek(k, signed=x_dec.is_signed())
+    y = decimal_1ek(x_dec.as_tuple().exponent)
     return y
 
 
@@ -197,7 +153,8 @@ def decimal_to_dot(x_dec):
     >>> decimal_to_dot(Decimal('1.23E+3'))
     False
     '''
-    return x_dec.is_finite() and (x_dec.as_tuple().exponent <= 0)
+    y = x_dec.is_finite() and (x_dec.as_tuple().exponent <= 0)
+    return y
 
 
 def create_decimal(x, digits, rounding=decimal.ROUND_HALF_UP):
@@ -240,7 +197,8 @@ def digit_str(x_dec):
         String of digits in `x_dec`.
     '''
     x_tup = as_tuple_chk(x_dec)
-    return ''.join(str(digit) for digit in x_tup.digits)
+    y = ''.join(str(digit) for digit in x_tup.digits)
+    return y
 
 # ============================================================================
 # Convert into decimal
@@ -616,7 +574,9 @@ def find_last_dig(num_str):
     if pos < 0:
         pos = len(num_str)
         assert(pos != 0)
-    return pos - 1
+
+    pos = pos - 1  # Indexing adjust
+    return pos
 
 
 def pad_num_str(num_str_list, pad=' '):
