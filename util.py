@@ -22,7 +22,7 @@ def one_hot(y, n_labels):
     '''
     N, = y.shape
     assert(n_labels >= 1)
-    assert(y.dtype.kind == 'i')
+    assert(y.dtype.kind == 'i')  # bool would confuse np indexing
     assert(np.all(0 <= y) and np.all(y < n_labels))
 
     y_bin = np.zeros((N, n_labels), dtype=bool)

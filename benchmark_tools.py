@@ -50,7 +50,7 @@ def t_EB(x, confidence=0.95):
     -------
     EB : float
         Size of error bar on mean (>= 0). The confidence interval is
-        ``[mean(x) - EB, mean(x) + EB]``. EB is inf when ``len(x) = 1``.
+        ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) = 1``.
     '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.ndim(confidence) == 0)
@@ -70,7 +70,14 @@ def t_EB(x, confidence=0.95):
 
 
 def bernstein_EB(x, lower, upper, confidence=0.95):
-    '''Bernstein version of t_EB, not yet used.'''
+    '''Bernstein version of `t_EB`, not yet used.
+
+    References
+    ----------
+    Audibert, Jean-Yves, Remi Munos, and Csaba Szepesvari.
+    "Exploration-exploitation tradeoff using variance estimates in multi-armed
+    bandits." Theoretical Computer Science 410.19 (2009): 1876-1902.
+    '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.all(lower <= x) and np.all(x <= upper))
     assert(np.ndim(confidence) == 0)
@@ -81,11 +88,12 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     if N == 0:
         return range_
 
+    # From Thm 1 of Audibert et. al. (2009), must use MLE for std ==> ddof=0
     delta = 1.0 - confidence
     A = np.log(3.0 / delta)
-    EB = np.std(x) * np.sqrt((2.0 * A) / N) + (3.0 * A * range_) / N
+    EB = np.std(x, ddof=0) * np.sqrt((2.0 * A) / N) + (3.0 * A * range_) / N
 
-    # Also get worst-case bound
+    # Clip error bar with trivial worst-case based on [lower,upper] limits.
     mu = np.mean(x)
     EB_worst_case = np.maximum(upper - mu, mu - lower)
     EB = np.minimum(EB, EB_worst_case)
@@ -95,7 +103,7 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
 
 
 def boot_EB(x, confidence=0.95, n_boot=1000):
-    '''Bootstrap version of t_EB, not yet used.'''
+    '''Bootstrap version of `t_EB`, not yet used.'''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     N = x.size
     if N == 0:
@@ -149,8 +157,8 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     mu : float
         Estimated mean loss.
     EB : float
-        Size of error bar on mean loss (EB > 0). The confidence interval is
-        [mu - EB, mu + EB]. EB is inf when len(loss) = 1.
+        Size of error bar on mean loss (``EB > 0``). The confidence interval is
+        ``[mu - EB, mu + EB]``. `EB` is infinite when ``len(loss) = 1``.
     '''
     assert(loss.ndim == 1 and np.ndim(loss_ref) <= 1)
     assert(np.ndim(min_EB) == 0)

@@ -434,7 +434,7 @@ def print_pval(pval, below_fmt=BELOW_FMT, non_finite_fmt={}):
         Decimal p-value to represent as string. Must be in [0,1] or nan.
     below_fmt : str (format string)
         Format string to display when p-value is lower limit clipped, often:
-        '<{0:,f}'.
+        ``'<{0:,f}'``.
     non_finite_fmt : dict of str to str
         Display format when estimate is non-finite. For example, for latex
         looking output, one could use: ``{'nan': '--'}``.
@@ -444,7 +444,7 @@ def print_pval(pval, below_fmt=BELOW_FMT, non_finite_fmt={}):
     pval_str : str
         String representation of p-value. If p-value is zero or minimum
         Decimal value allowable in precision of pval. We simply return clipped
-        string, e.g. '<0.0001', as value.
+        string, e.g. ``'<0.0001'``, as value.
     '''
     pval_eps = decimal_eps(pval)
     if pval.is_nan():

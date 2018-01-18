@@ -32,6 +32,7 @@ def add_pseudo_points(fps, tps):
     tps : ndarray, shape (n_thresholds, n_boot)
         If in corner case, `fps` after adding pseudo-points
     """
+    # TODO assert non-empty
     fps_fix = (fps[-1, :] == 0)
     tps_fix = (tps[-1, :] == 0)
 
