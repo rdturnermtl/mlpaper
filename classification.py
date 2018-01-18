@@ -645,6 +645,7 @@ class JustNoise:
     '''Class version of iid predictor compatible with sklearn interface.'''
 
     def __init__(self):
+        # TODO handle n-class
         self.pred = [np.nan, np.nan]
 
     def fit(self, X_train, y_train):
@@ -742,7 +743,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
 def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
                    methods, loss_dict, curve_dict, ref_method,
-                   min_pred_log_prob=-np.inf):
+                   min_pred_log_prob=-np.inf, pairwise_CI=PAIRWISE_DEFAULT):
     '''Simplest one-call interface to this package. Just pass it data and
     method objects and a performance summary DataFrame is returned.
 
@@ -785,6 +786,9 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     min_log_prob : float
         Minimum value to floor the predictive log probabilities (while still
         normalizing). Must be < 0. Useful to prevent inf log loss penalties.
+    pairwise_CI : bool
+        If True, compute error bars on the mean of ``loss - loss_ref`` instead
+        of just the mean of `loss`. This typically gives smaller error bars.
 
     Returns
     -------
@@ -809,5 +813,5 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
                                  methods, min_log_prob=min_pred_log_prob)
     full_tbl, dump = summary_table(pred_tbl, y_test, loss_dict, curve_dict,
-                                   ref_method)
+                                   ref_method, pairwise_CI=pairwise_CI)
     return full_tbl, dump
