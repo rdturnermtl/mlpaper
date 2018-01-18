@@ -18,19 +18,77 @@ D_NINF = decimal.Decimal('-Infinity')
 
 
 def all_same(L):
-    return len(L) == 0 or all(x == L[0] for x in L)
+    '''Check if all elements in list are equal.
+
+    Parameters
+    ----------
+    L : array-like, shape (n,)
+        List of objects of any type.
+
+    Returns
+    -------
+    y : bool
+        True if all elements are equal.
+    '''
+    y = len(L) == 0 or all(x == L[0] for x in L)
+    return y
 
 
 def floor_mod(x, mod):
-    return (x // mod) * mod
+    '''Do floor in base mod instead of to nearest integer.
+
+    Parameters
+    ----------
+    x : int
+        Number to floor.
+    mod : int
+        Positive number (`x` >= 1) to use as modulus.
+
+    Returns
+    -------
+    y : int
+        Largest number ``y <= x`` such that ``y % mod = 0``.
+    '''
+    y = (x // mod) * mod
+    return y
 
 
 def ceil_mod(x, mod):
-    return floor_mod(x, -mod)
+    '''Do ceil in base mod instead of to nearest integer.
+
+    Parameters
+    ----------
+    x : int
+        Number to ceil.
+    mod : int
+        Positive number (`x` >= 1) to use as modulus.
+
+    Returns
+    -------
+    y : int
+        Smallest number ``y >= x`` such that ``y % mod = 0``.
+    '''
+    y = floor_mod(x, -mod)
+    return y
 
 
 def str_print_len(x_str):
-    return len(x_str.translate(None, ',.'))
+    '''Estimated width of formatted number of string when *not* displayed using
+    a fixed width font. This is the number of characters not including ``.``
+    and ``,`` because they are assumed to be of negligible width.
+
+    Parameters
+    ----------
+    x_str : str
+        Already formatted number string.
+
+    Returns
+    -------
+    str_len : int
+        Length of string without negligible width characters ``.`` and ``,``.
+    '''
+    str_len = len(x_str.translate(None, ',.'))
+    return str_len
 
 # ============================================================================
 # Decimal utils
