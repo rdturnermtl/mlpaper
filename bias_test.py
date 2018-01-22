@@ -3,9 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from sklearn.metrics import roc_auc_score, average_precision_score
-import perf_curves as pc
-
-import prg
+import perf_curves_test as pc
 
 np.random.seed(3563)
 
@@ -75,7 +73,7 @@ for rr in xrange(runs):
         auprg[rr, 4] = np.sum(prec_gain[1:] * np.diff(rec_gain))
         auprg[rr, 5] = np.sum(prec_gain[:-1] * np.diff(rec_gain))
 
-        auprg[rr, 6] = prg.calc_auprg(prg.create_prg_curve(y_true, y_score))
+        auprg[rr, 6] = np.nan
 _, pvals_auc = ss.ttest_1samp(auc, 0.5, axis=0)
 _, pvals_ap = ss.ttest_1samp(ap, p, axis=0)
 _, pvals_auprg = ss.ttest_1samp(auprg, 0.0, axis=0)
