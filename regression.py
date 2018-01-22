@@ -176,7 +176,9 @@ STD_REGR_LOSS = {'NLL': log_loss, 'MSE': square_loss, 'MAE': abs_loss}
 
 
 class JustNoise:
-    '''Class version of iid predictor compatible with sklearn interface.'''
+    '''Class version of iid predictor compatible with sklearn interface. Same
+    as ``sklearn.dummy.DummyRegressor(strategy='mean')`` but also keeps track
+    of std to be able to accept ``return_std=True``.'''
 
     def __init__(self):
         self.mu = np.nan

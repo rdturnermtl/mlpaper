@@ -642,15 +642,16 @@ STD_BINARY_CURVES = {'AUC': (pc.roc_curve, pc.auc_trapz),
 
 
 class JustNoise:
-    '''Class version of iid predictor compatible with sklearn interface.'''
+    '''Class version of iid predictor compatible with sklearn interface. Same
+    as ``sklearn.dummy.DummyClassifier(strategy='prior').``'''
 
-    def __init__(self):
-        # TODO handle n-class
-        self.pred = [np.nan, np.nan]
+    def __init__(self, n_labels=2):
+        self.pred = np.nan + np.zeros(n_labels)
 
     def fit(self, X_train, y_train):
-        P = np.mean(y_train)
-        self.pred = [np.log(1.0 - P), np.log(P)]
+        n_labels = len(self.pred)
+        self.pred = np.log(np.mean(one_hot(y_train, n_labels), axis=0))
+        assert(self.pred.shape == (n_labels,))
 
     def predict_log_proba(self, X_test):
         n_samples = X_test.shape[0]
