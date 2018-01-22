@@ -1,5 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 import numpy as np
+import scipy.interpolate as si
 from scipy.misc import logsumexp
 
 
@@ -175,3 +176,46 @@ def make_into_step(xp, yp):
 
     idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
     return xp[idx], yp[idx]
+
+
+def interp1d(x_grid, xp, yp, kind='linear',
+             assume_sorted=False, skip_unique_chk=False):
+    """Wrap `scipy.interpolate.interp1d` so it can handle ``'previous'`` like
+    MATLAB's `interp1` function. ``'next'`` may be added in future.
+
+    This wrapper does not support extrapolation at the moment.
+
+    Parameters
+    ----------
+    x_grid : ndarray, shape (n_grid,)
+        Values to evaluate the stepwise function at.
+    xp : ndarray, shape (n_samples,)
+        Points at which the step function changes. Typically of type float.
+    yp : ndarray, shape (n_samples,)
+        The new values at each of the steps
+    kind : str
+        Type of interpolation scheme, must be ``'previous'`` or any method that
+        `scipy.interpolate.interp1d` can process such as ``'linear'``.
+    assume_sorted : bool
+        Set to True is `xp` is alreaded sorted in increasing order. This skips
+        sorting for computational speed.
+    skip_unique_chk: bool
+        Assume all values in `xp` are sorted and unique. Setting to True skips
+        checking this condition for speed.
+
+    Returns
+    -------
+    y_grid : ndarray, shape (n_grid,)
+        Interpolation `xp` and `yp` evaluated at the points in `x_grid`.
+    """
+    if kind == 'previous':
+        y_grid = eval_step_func(x_grid, xp, yp, assume_sorted=assume_sorted,
+                                skip_unique_chk=skip_unique_chk)
+    elif kind == 'next':
+        # It would be easy to modify eval_step_func to handle this case, but we
+        # don't have any need for it right now.
+        raise NotImplementedError
+    else:
+        f = si.interp1d(xp, yp, kind=kind, assume_sorted=assume_sorted)
+        y_grid = f(x_grid)
+    return y_grid
