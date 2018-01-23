@@ -1,7 +1,10 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+import warnings
 import numpy as np
 import scipy.interpolate as si
 from scipy.misc import logsumexp
+
+STRICT_SPACING = False
 
 
 def one_hot(y, n_labels):
@@ -87,6 +90,67 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
     x = x + delta * (np.random.rand(len(x)) - 0.5)
     return x
 
+# ============================================================================
+# Interpolation utils
+# Everything in here will be obsolete once various enhancements get merged
+# into scipy for scipy.interpolate.interp1d.
+# ============================================================================
+
+
+def unique_take_last(xp, yp=None):
+    """Make pairs of `xp` and `yp` vectors into proper step function. That is,
+    remove NaN `xp` values and multiple steps at same location.
+
+    Parameters
+    ----------
+    xp : ndarray, shape (n_samples,)
+        The sample points corresponding to the y values. Must be sorted.
+    yp : ndarray, shape (n_samples,)
+        Values in y-axis for step function.
+
+    Returns
+    -------
+    xp : ndarray, shape (m_samples,)
+        Input `xp` after removing extra points. m_samples <= n_samples.
+    yp : ndarray, shape (m_samples,)
+        Input `yp` after removing extra points. m_samples <= n_samples.
+
+    Notes
+    -----
+    Keeps last value in list when multiple steps happen at the same x-value.
+    """
+    # TODO update doc string
+    # TODO test against using unique on reverse array
+    assert(xp.ndim == 1)
+    assert(yp is None or xp.shape == yp.shape)
+
+    idx = ~np.isnan(xp)
+    if ~np.all(idx):
+        warnings.warn('NaN value encountered in unique_take_last.')
+        xp = xp[idx]
+        yp = None if yp is None else yp[idx]
+
+    deltas = np.diff(xp)
+    assert(not np.any(deltas < 0))  # Should be sorted exactly
+
+    idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
+    xp = xp[idx]
+    yp = None if yp is None else yp[idx]
+    return xp, yp
+
+
+def cummax_strict(x, copy=True):
+    '''Minimally increase array elements to make the array strictly increasing.
+    '''
+    # TODO doc string, tests
+    assert(x.ndim == 1)
+
+    x = np.copy(x) if copy else x
+    for ii in xrange(1, len(x)):
+        x[ii] = np.maximum(np.nextafter(x[ii - 1], np.inf), x[ii])
+    assert(np.all(np.diff(x) > 0))
+    return x  # return even though inplace
+
 
 def eval_step_func(x_grid, xp, yp, ival=None,
                    assume_sorted=False, skip_unique_chk=False):
@@ -144,46 +208,13 @@ def eval_step_func(x_grid, xp, yp, ival=None,
     return y_grid
 
 
-def make_into_step(xp, yp):
-    """Make pairs of `xp` and `yp` vectors into proper step function. That is,
-    remove NaN `xp` values and multiple steps at same location.
-
-    Parameters
-    ----------
-    xp : ndarray, shape (n_samples,)
-        The sample points corresponding to the y values. Must be sorted.
-    yp : ndarray, shape (n_samples,)
-        Values in y-axis for step function.
-
-    Returns
-    -------
-    xp : ndarray, shape (m_samples,)
-        Input `xp` after removing extra points. m_samples <= n_samples.
-    yp : ndarray, shape (m_samples,)
-        Input `yp` after removing extra points. m_samples <= n_samples.
-
-    Notes
-    -----
-    Keeps last value in list when multiple steps happen at the same x-value.
-    """
-    assert(xp.ndim == 1 and xp.shape == yp.shape)
-
-    idx = ~np.isnan(xp)
-    xp, yp = xp[idx], yp[idx]
-
-    deltas = np.diff(xp)
-    assert(not np.any(deltas < -1e-10))
-
-    idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
-    xp, yp = xp[idx], yp[idx]
-    return xp, yp
-
-
-def interp1d(x_grid, xp, yp, kind='linear', assume_sorted=False):
+def interp1d(x_grid, xp, yp, kind='linear'):
     """Wrap `scipy.interpolate.interp1d` so it can handle ``'previous'`` like
     MATLAB's `interp1` function. ``'next'`` may be added in future.
 
-    This wrapper does not support extrapolation at the moment.
+    This wrapper does not support extrapolation at the moment. Scipy ENH such
+    as #6718 may be merged to scipy master in the near future and make this
+    wrapper obsolete.
 
     Parameters
     ----------
@@ -196,9 +227,6 @@ def interp1d(x_grid, xp, yp, kind='linear', assume_sorted=False):
     kind : str
         Type of interpolation scheme, must be ``'previous'`` or any method that
         `scipy.interpolate.interp1d` can process such as ``'linear'``.
-    assume_sorted : bool
-        Set to True is `xp` is alreaded sorted in increasing order. This skips
-        sorting for computational speed.
 
     Returns
     -------
@@ -206,14 +234,21 @@ def interp1d(x_grid, xp, yp, kind='linear', assume_sorted=False):
         Interpolation `xp` and `yp` evaluated at the points in `x_grid`.
     """
     if kind == 'previous':
-        xp, yp = make_into_step(xp, yp)  # Remove redundant to be safe
-        y_grid = eval_step_func(x_grid, xp, yp, assume_sorted=assume_sorted)
+        # eval_step_func does not work when x points overlap so need to call
+        # unique_take_last to get final one.
+        xp, yp = unique_take_last(xp, yp)
+        y_grid = eval_step_func(x_grid, xp, yp, assume_sorted=True)
     elif kind == 'next':
         # It would be easy to modify eval_step_func to handle this case, but we
         # don't have any need for it right now.
         raise NotImplementedError
     else:
-        f = si.interp1d(xp, yp, kind=kind, assume_sorted=assume_sorted)
+        # interp1d appears to do the right thing with points on top of each
+        # other if assume_sorted=True and given sorted data, but can apply
+        # cummax strict to make all points exactly unique to be extra safe.
+        assert(np.all(np.diff(xp) >= 0))
+        xp = cummax_strict(xp) if STRICT_SPACING else xp
+        f = si.interp1d(xp, yp, kind=kind, assume_sorted=True)
         y_grid = f(x_grid)
     return y_grid
 

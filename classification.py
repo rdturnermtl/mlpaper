@@ -368,6 +368,8 @@ def curve_boot(y, log_pred_prob,
         end of confidence envelope, and the upper end of the confidence
         envelope.
     '''
+    # TODO change to log_pred_prob_ref to ref and if scalar serves as scalar
+    # ref or if 2D serves as ref distn, consider re-arrange args
     N, n_labels = shape_and_validate(y, log_pred_prob)
     assert(n_labels == 2)
     assert(log_pred_prob_ref is None or
