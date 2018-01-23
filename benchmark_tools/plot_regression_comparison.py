@@ -2,14 +2,21 @@
 # Modification of sklearn plot_compare_gpr_krr.py by
 # Authors: Jan Hendrik Metzen <jhm@informatik.uni-bremen.de>
 # License: BSD 3 clause
+from __future__ import print_function, absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared
 from sklearn.linear_model import BayesianRidge
+<<<<<<< HEAD:plot_regression_comparison.py
 import regression as btr
 from regression import STD_REGR_LOSS
 import sciprint as sp
+=======
+import benchmark_tools.regression as btr
+from benchmark_tools.regression import STD_REGR_LOSS
+import benchmark_tools.sciprint as sp
+>>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:benchmark_tools/plot_regression_comparison.py
 
 rng = np.random.RandomState(0)
 
@@ -38,13 +45,13 @@ full_tbl = btr.just_benchmark(X_train, y_train, X_test, y_test,
                               regressors, STD_REGR_LOSS, 'iid',
                               pairwise_CI=True)
 
-print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+print(sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                         crap_limit_min={'NLL': 1}, EB_limit={'NLL': 1},
-                        non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
+                        non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False))
 
-print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+print(sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                         crap_limit_min={'NLL': 1}, EB_limit={'NLL': 1},
-                        non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=True)
+                        non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=True))
 
 # Predict using kernel ridge
 X_plot = np.linspace(0, 20, 1000)[:, None]

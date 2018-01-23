@@ -1,11 +1,14 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
+
 import decimal
 from string import ascii_letters
+import benchmark_tools.constants as constants
 import numpy as np
 import pandas as pd
 from scipy.special import expit as logistic
-import sciprint as sp
-
+import benchmark_tools.sciprint as sp
 
 def decimal_eq(x, y):
     basic_eq = (x == y) or (x.is_nan() and y.is_nan())
@@ -194,7 +197,7 @@ def get_shift_range_test():
     assert(not valid_list(x_dec_list, min_shift - shift_mod, all_small=False))
     assert(not valid_list(x_dec_list, max_shift + shift_mod, all_small))
 
-    for shift in xrange(min_shift, max_shift + 1):
+    for shift in range(min_shift, max_shift + 1):
         if shift % shift_mod == 0:
             assert(valid_list(x_dec_list, shift, all_small))
 
@@ -223,7 +226,7 @@ def find_shift_test():
     max_len_0 = max(sp.str_print_len(sp.print_estimate(mm, ee, best_shift))
                     for mm, ee in zip(mu, EB))
 
-    for shift in xrange(min_shift, max_shift + 1):
+    for shift in range(min_shift, max_shift + 1):
         if shift % shift_mod != 0:
             continue
 
@@ -268,7 +271,7 @@ def format_table_test():
             crap_limit_max[metric] = max_clip
 
         pval_prec = np.random.randint(low=1, high=6)
-        pval = [decimal.Decimal(np.random.rand()) for _ in xrange(N)]
+        pval = [decimal.Decimal(np.random.rand()) for _ in range(N)]
         pval = [p.quantize(sp.decimal_1ek(-pval_prec),
                            rounding=decimal.ROUND_CEILING)
                 for p in pval]
@@ -360,13 +363,13 @@ def decimalize_test():
         if np.random.rand() <= 0.5:
             crap_limit_max[metric] = max_clip
 
-    print perf_tbl
+    print(perf_tbl)
     err_digits = np.random.randint(low=1, high=6)
     pval_digits = np.random.randint(low=1, high=6)
     default_digits = np.random.randint(low=1, high=6)
     perf_tbl_dec = sp.decimalize(perf_tbl, err_digits, pval_digits,
                                  default_digits)
-    print perf_tbl_dec
+    print(perf_tbl_dec)
 
     assert(not (perf_tbl_dec.xs(sp.PVAL_COL, axis=1, level=sp.STAT) <
                 perf_tbl.xs(sp.PVAL_COL, axis=1, level=sp.STAT)).any().any())
@@ -379,8 +382,8 @@ def decimalize_test():
     pad = True
     perf_tbl_str, shifts = sp.format_table(perf_tbl_dec, shift_mod, pad,
                                            crap_limit_max, crap_limit_min)
-    print perf_tbl_str
-    print '-' * 10
+    print(perf_tbl_str)
+    print('-' * 10)
 
 DEC_TESTS = [mod_test,
              decimal_1ek_test, decimal_shift_test,
@@ -421,21 +424,20 @@ def dec_rnd(to_dot=False, no_zero=False, all_pos=False, all_finite=False):
 
 def dec_rnd_list(N, to_dot=False, all_pos=False, all_finite=False):
     return [dec_rnd(to_dot=to_dot, all_pos=all_pos, all_finite=all_finite)
-            for _ in xrange(N)]
+            for _ in range(N)]
 
 if __name__ == '__main__':
     np.random.seed(8235)
 
-    for rr in xrange(100):
+    for rr in range(constants.MC_REPEATS_1K):
         decimalize_test()
-    print 'decimalize_test done'
+    print('decimalize_test done')
 
-    for rr in xrange(1000):
+    for rr in range(constants.MC_REPEATS_1K):
         format_table_test()
-    print 'format_table_test done'
+    print('format_table_test done')
 
-    runs = int(1e5)
-    for rr in xrange(runs):
+    for rr in range(constants.MC_REPEATS_1K):
         for f in DEC_TESTS:
             f()
-    print 'passed'
+    print('passed')

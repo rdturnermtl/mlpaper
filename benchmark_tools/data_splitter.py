@@ -1,4 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from builtins import range
 import numpy as np
 import pandas as pd
 
@@ -52,7 +53,7 @@ def build_lag_df(df, n_lags, stride=1, features=None):
          3    3  5  6   8   4   2   9
     """
     df_sub = df if features is None else df[list(features)]  # Take all if None
-    D = {(SFT_FMT % nn): df_sub.shift(stride * nn) for nn in xrange(1, n_lags)}
+    D = {(SFT_FMT % nn): df_sub.shift(stride * nn) for nn in range(1, n_lags)}
     D[SFT_FMT % 0] = df
 
     df = pd.concat(D, axis=1, names=['lag'])
@@ -129,7 +130,11 @@ def rand_mask(n_samples, frac):
         Random binary mask.
     """
     # Input validation on frac done in rand_subset()
+<<<<<<< HEAD:data_splitter.py
     pos = rand_subset(xrange(n_samples), frac)
+=======
+    pos = rand_subset(range(n_samples), frac)
+>>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:benchmark_tools/data_splitter.py
     mask = np.zeros(n_samples, dtype=bool)
     mask[pos] = True
     assert(np.sum(mask) >= n_samples * frac)

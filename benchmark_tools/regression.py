@@ -1,10 +1,11 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import
 from joblib import Memory
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from constants import METHOD, METRIC
-from benchmark_tools import loss_summary_table, PAIRWISE_DEFAULT
+from benchmark_tools.constants import METHOD, METRIC
+from benchmark_tools.benchmark_tools import loss_summary_table, PAIRWISE_DEFAULT
 
 MOMENT = 'moment'  # Don't put in constants since only needed for regression
 

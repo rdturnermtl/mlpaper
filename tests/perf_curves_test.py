@@ -1,14 +1,80 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
+
 import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
-import perf_curves as pc
+
+import benchmark_tools.perf_curves as pc
+import benchmark_tools.constants as constants
+# ============================================================================
+# Non-vectorized versions of routines in perf_curves for testing.
+# ============================================================================
+
+def _nv_add_pseudo_points(fps, tps):
+    if fps[-1] == 0:
+        fps = pc.EPSILON * tps
+        tps = tps.astype(fps.dtype)
+
+    if tps[-1] == 0:
+        tps = pc.EPSILON * fps
+        fps = fps.astype(tps.dtype)
+    return fps, tps
+
+
+def _nv_binary_clf_curve(y_true, y_score, sample_weight=None):
+    assert(y_true.ndim == 1 and y_true.dtype.kind == 'b')
+    assert(y_score.shape == y_true.shape and np.all(np.isfinite(y_score)))
+    assert(y_true.size >= 1)
+
+    # sort scores and corresponding truth values
+    desc_score_indices = np.argsort(y_score, kind='mergesort')[::-1]
+    y_score, y_true = y_score[desc_score_indices], y_true[desc_score_indices]
+
+    # y_score typically has many tied values. Here we extract
+    # the indices associated with the distinct values. We also
+    # concatenate a value for the end of the curve.
+    distinct_value_indices = np.where(np.diff(y_score))[0]
+    threshold_idxs = np.r_[distinct_value_indices, y_true.size - 1]
+
+    if sample_weight is None:
+        tps = np.cumsum(y_true)[threshold_idxs]
+        fps = 1 + threshold_idxs - tps
+        assert(fps[-1] == np.sum(~y_true) and tps[-1] == np.sum(y_true))
+    else:
+        assert(sample_weight.shape == y_true.shape)
+        assert(np.all(np.isfinite(sample_weight)))
+        # Negative weight makes no sense, 0 can violate assumps. of other funcs
+        assert(np.all(sample_weight > 0))
+
+        weight = sample_weight[desc_score_indices]
+        tps = np.cumsum(y_true * weight)[threshold_idxs]
+        fps = np.cumsum(weight)[threshold_idxs] - tps
+        assert(np.allclose((fps[-1], tps[-1]),
+                           (np.sum(weight[~y_true]), np.sum(weight[y_true]))))
+
+    # Now put in the (0, 0) coord (y_score >= np.inf)
+    assert(not (tps[0] == 0 and fps[0] == 0))
+    fps, tps = np.r_[0, fps], np.r_[0, tps]
+    thresholds = np.r_[np.inf, y_score[threshold_idxs]]
+
+    # Clean up corner case
+    fps, tps = _nv_add_pseudo_points(fps, tps)
+    assert(fps[-1] > 0 and tps[-1] > 0)
+    assert(fps.dtype == tps.dtype)
+
+    # Remove any decreases due to numerics
+    fps = np.maximum.accumulate(fps)
+    assert(np.all((np.diff(fps) >= 0.0) & (np.diff(tps) >= 0.0)))
+    return fps, tps, thresholds
 
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.
 # ============================================================================
 
+<<<<<<< HEAD:perf_curves_test.py
 
 def _nv_add_pseudo_points(fps, tps):
     if fps[-1] == 0:
@@ -108,16 +174,64 @@ def _nv_prg_curve(y_true, y_score, sample_weight=None):
     assert(idx == np.where(rec_gain > 0.0)[0][0])
     assert(idx > 0)  # Not selecting first point
 
+=======
+def _nv_roc_curve(y_true, y_score, sample_weight=None):
+    fps, tps, thresholds = _nv_binary_clf_curve(y_true, y_score,
+                                                sample_weight=sample_weight)
+    fpr = np.true_divide(fps, fps[-1])
+    tpr = np.true_divide(tps, tps[-1])
+    return fpr, tpr, thresholds
+
+
+def _nv_recall_precision_curve(y_true, y_score, sample_weight=None):
+    fps, tps, thresholds = _nv_binary_clf_curve(y_true, y_score,
+                                                sample_weight=sample_weight)
+    recall = np.true_divide(tps, tps[-1])
+    with np.errstate(divide='ignore', invalid='ignore'):
+        precision = np.true_divide(tps, tps + fps)
+    precision[0] = precision[1]
+    assert(np.all(0.0 <= precision) and np.all(precision <= 1.0))
+    return recall, precision, thresholds
+
+
+def _nv_prg_curve(y_true, y_score, sample_weight=None):
+    fps, tps, thresholds = _nv_binary_clf_curve(y_true, y_score,
+                                                sample_weight=sample_weight)
+    n_neg, n_pos = fps[-1], tps[-1]
+    fns = n_pos - tps
+
+    den = n_neg * tps
+    with np.errstate(divide='ignore', invalid='ignore'):
+        rec_gain = 1.0 - np.true_divide(n_pos * fns, den)
+        prec_gain = 1.0 - np.true_divide(n_pos * fps, den)
+    # interpolate backward just like in PR curve
+    prec_gain[0] = prec_gain[1]
+    assert(np.all(rec_gain <= 1.0) and np.all(prec_gain <= 1.0))
+
+    # Find index to put everything in the box
+    with np.errstate(invalid='ignore'):
+        assert(not np.any(np.diff(rec_gain) < 0.0))
+    idx = np.searchsorted(rec_gain, 0.0, side='right')
+    assert(idx == np.where(rec_gain > 0.0)[0][0])
+    assert(idx > 0)  # Not selecting first point
+
+>>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/perf_curves_test.py
     # Bring forward most recent negative point as point at 0
     rec_gain = np.concatenate(([0.0], rec_gain[idx:]))
     prec_gain = prec_gain[idx - 1:]
     thresholds = thresholds[idx - 1:]
     return rec_gain, prec_gain, thresholds
+<<<<<<< HEAD:perf_curves_test.py
 
 # ============================================================================
 # Now the actual tests
 # ============================================================================
+=======
+>>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/perf_curves_test.py
 
+# ============================================================================
+# Now the actual tests
+# ============================================================================
 
 def nv_binary_clf_curve_test():
     N = np.random.randint(low=1, high=10)
@@ -237,7 +351,7 @@ def nv_binary_clf_curve_test():
 
 def auc_trapz_test(x_curve, y_curve):
     auc0 = pc.auc_trapz(x_curve, y_curve)
-    for ii in xrange(x_curve.shape[1]):
+    for ii in range(x_curve.shape[1]):
         auc1 = auc(x_curve[:, ii], y_curve[:, ii])
         assert(np.allclose(auc0[ii], auc1))
 
@@ -248,7 +362,7 @@ def auc_trapz_test(x_curve, y_curve):
 
 def auc_left_test(x_curve, y_curve):
     auc0 = pc.auc_left(x_curve, y_curve)
-    for ii in xrange(x_curve.shape[1]):
+    for ii in range(x_curve.shape[1]):
         delta = np.diff(x_curve[:, ii])
         yv = y_curve[:-1, ii]
 
@@ -317,7 +431,7 @@ def binary_clf_curve_test():
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
         return
 
-    for ii in xrange(n_boot):
+    for ii in range(n_boot):
         weight_curr = sample_weight[:, ii]
 
         fpr2, tpr2, thresholds_roc2 = \
@@ -341,7 +455,14 @@ def binary_clf_curve_test():
 
 np.random.seed(89254)
 
+<<<<<<< HEAD:perf_curves_test.py
 for rr in xrange(100000):
     nv_binary_clf_curve_test()
     binary_clf_curve_test()
 print 'passed'
+=======
+for rr in range(constants.MC_REPEATS_LARGE):
+    nv_binary_clf_curve_test()
+    binary_clf_curve_test()
+print('passed')
+>>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/perf_curves_test.py
