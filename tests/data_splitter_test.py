@@ -1,10 +1,12 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function
+from builtins import range
+import benchmark_tools.constants as constants
 from collections import OrderedDict
 from string import ascii_letters
 import numpy as np
 import pandas as pd
-import data_splitter as ds
-
+import benchmark_tools.data_splitter as ds
 
 def unif2():
     x = np.random.choice([0.0, np.random.rand(), 1.0], p=[0.05, 0.9, 0.05])
@@ -33,7 +35,7 @@ def test_df(high_M=6, high_N=6):
     M = np.random.randint(low=1, high=high_M)
     N = np.random.randint(low=1, high=high_N)
     col = unif_subset(list(ascii_letters), size=N)
-    idx = xrange(M)  # Will over-write anyway
+    idx = range(M)  # Will over-write anyway
 
     s_list, u_list = unif_subset(col), unif_subset(col)
     dat = [vec_rnd(M, req_sorted=(c in s_list), req_unique=(c in u_list))
@@ -104,8 +106,8 @@ def test_splitter(seed0, seed1):
 if __name__ == '__main__':
     np.random.seed(635463)
 
-    runs = int(1e4)
+    runs = constants.MC_REPEATS_1K
     seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
-    for rr in xrange(runs):
+    for rr in range(runs):
         test_splitter(seeds[rr, 0], seeds[rr, 1])
-    print 'passed'
+    print('passed')

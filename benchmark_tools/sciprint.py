@@ -1,11 +1,14 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import
+from builtins import range
+
 import warnings
 import numpy as np
 import pandas as pd
 import decimal
-from constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
-from constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
-from constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
+from benchmark_tools.constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
+from benchmark_tools.constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
+from benchmark_tools.constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
 
 # Some numeric constants
 NAN_STR = str(np.nan)
@@ -503,7 +506,7 @@ def get_shift_range(x_dec_list, shift_mod=1):
         min_shift = max_shift
 
     assert(min_shift <= max_shift)
-    assert(any(k % shift_mod == 0 for k in xrange(min_shift, max_shift + 1)))
+    assert(any(k % shift_mod == 0 for k in range(min_shift, max_shift + 1)))
     return min_shift, max_shift, all_small
 
 
@@ -558,7 +561,7 @@ def find_shift(mean_list, err_list, shift_mod=1):
     min_shift, max_shift, _ = get_shift_range(mean_list, shift_mod)
 
     # Build an order that prefers small magnitude shifts as tie breaker
-    L = np.array(xrange(min_shift, max_shift + 1))
+    L = np.array(range(min_shift, max_shift + 1))
     idx = np.argsort(np.abs(L))
     L = L[idx]
 
@@ -920,7 +923,7 @@ def table_to_string(perf_tbl_str, shifts, unit_dict, use_prefix=True):
 def just_format_it(perf_tbl_fp, unit_dict={}, shift_mod=None,
                    crap_limit_max={}, crap_limit_min={}, EB_limit={},
                    non_finite_fmt={}, use_tex=False, use_prefix=True):
-    '''One stop function call to format a results table and get the output as
+    r'''One stop function call to format a results table and get the output as
     a string in readable human plain text or as LaTeX source.
 
     Parameters
