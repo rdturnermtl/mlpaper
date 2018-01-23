@@ -27,6 +27,8 @@ import sciprint as sp
 
 h = 0.02  # step size in the mesh
 
+np.random.seed(1234)
+
 classifiers = \
     {'Nearest Neighbors': KNeighborsClassifier(3),
      'Linear SVM': SVC(kernel='linear', C=0.025, probability=True),
