@@ -175,11 +175,11 @@ def make_into_step(xp, yp):
     assert(not np.any(deltas < -1e-10))
 
     idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
-    return xp[idx], yp[idx]
+    xp, yp = xp[idx], yp[idx]
+    return xp, yp
 
 
-def interp1d(x_grid, xp, yp, kind='linear',
-             assume_sorted=False, skip_unique_chk=False):
+def interp1d(x_grid, xp, yp, kind='linear', assume_sorted=False):
     """Wrap `scipy.interpolate.interp1d` so it can handle ``'previous'`` like
     MATLAB's `interp1` function. ``'next'`` may be added in future.
 
@@ -199,9 +199,6 @@ def interp1d(x_grid, xp, yp, kind='linear',
     assume_sorted : bool
         Set to True is `xp` is alreaded sorted in increasing order. This skips
         sorting for computational speed.
-    skip_unique_chk: bool
-        Assume all values in `xp` are sorted and unique. Setting to True skips
-        checking this condition for speed.
 
     Returns
     -------
@@ -209,8 +206,8 @@ def interp1d(x_grid, xp, yp, kind='linear',
         Interpolation `xp` and `yp` evaluated at the points in `x_grid`.
     """
     if kind == 'previous':
-        y_grid = eval_step_func(x_grid, xp, yp, assume_sorted=assume_sorted,
-                                skip_unique_chk=skip_unique_chk)
+        xp, yp = make_into_step(xp, yp)  # Remove redundant to be safe
+        y_grid = eval_step_func(x_grid, xp, yp, assume_sorted=assume_sorted)
     elif kind == 'next':
         # It would be easy to modify eval_step_func to handle this case, but we
         # don't have any need for it right now.
@@ -219,3 +216,35 @@ def interp1d(x_grid, xp, yp, kind='linear',
         f = si.interp1d(xp, yp, kind=kind, assume_sorted=assume_sorted)
         y_grid = f(x_grid)
     return y_grid
+
+
+def area(x_curve, y_curve, kind):
+    """Compute area under function in vectorized way.
+
+    Parameters
+    ----------
+    x_curve : ndarray, shape (n_thresholds, n_boot)
+        The sample points corresponding to the y values. Must be sorted.
+    y_curve : ndarray, shape (n_thresholds, n_boot)
+        Input array to integrate. Must be same size as `x_curve`. Operation
+        performed independently for each column.
+    kind : {'linear', 'kind'}
+        Type of interpolation scheme to turn points into lines.
+
+    Returns
+    -------
+    auc : ndarray, shape (n_boot,)
+        Area under curve. Has same length as `x_curve` has columns.
+    """
+    assert(not np.any(np.isnan(x_curve)))
+    assert(not np.any(np.isnan(y_curve)))
+
+    if kind == 'previous':
+        # Treat 0*inf as 0:
+        with np.errstate(invalid='ignore'):
+            auc = np.nansum(y_curve[:-1, :] * np.diff(x_curve, axis=0), axis=0)
+    elif kind == 'linear':
+        auc = np.trapz(y_curve, x_curve, axis=0)
+    else:
+        raise NotImplementedError
+    return auc

@@ -7,7 +7,7 @@ from benchmark_tools import loss_summary_table
 from constants import METHOD, METRIC, STAT, CURVE_STATS
 from constants import STD_STATS, PVAL_COL, ERR_COL, PAIRWISE_DEFAULT
 import perf_curves as pc
-from util import one_hot, normalize, eval_step_func, make_into_step
+from util import one_hot, normalize, interp1d, area
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -282,7 +282,8 @@ def check_curve(curve):
     curve : tuple of (2d ndarray, 2d ndarray, 2d ndarray)
         Returns same object passed in after some input checks.
     '''
-    x_curve, y_curve, _ = curve  # Skipping tholds since not used here
+    # TODO update doc-string
+    (x_curve, y_curve, kind), _ = curve  # Skipping tholds since not used here
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
     assert(np.all(np.isfinite(x_curve)))
@@ -290,7 +291,7 @@ def check_curve(curve):
     assert(np.all(y_curve < np.inf))
     # x should be sorted
     assert(np.all(np.diff(x_curve, axis=0) >= 0.0))
-    return curve
+    return x_curve, y_curve, kind
 
 
 def check_summary(cs):
@@ -307,6 +308,7 @@ def check_summary(cs):
     cs : ndarray, shape (n_boot,)
         Returns same object passed in after some input checks.
     '''
+    # TODO not really needed anymore, remove
     assert(cs.ndim == 1)
     # PRG can be -inf, but all curves should be < inf
     assert(np.all(cs < np.inf))
@@ -315,7 +317,7 @@ def check_summary(cs):
 
 def curve_boot(y, log_pred_prob,
                log_pred_prob_ref=None, default_summary_ref=np.nan,
-               curve_f=pc.roc_curve, summary_f=pc.auc_trapz, x_grid=None,
+               curve_f=pc.roc_curve, x_grid=None,
                n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
     '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
     For binary classification only.
@@ -342,11 +344,6 @@ def curve_boot(y, log_pred_prob,
     curve_f : callable
         Function to compute the performance curve. Standard choices are:
         `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
-    summary_f : callable
-        Function that computes scalar summary (e.g., AUC) of performance curve.
-        Standard choices are: `perf_curves.auc_trapz`, `perf_curves.auc_left`.
-        Different choices are needed for different curves as it can effect
-        estimator bias.
     x_grid : None or ndarray of shape (n_grid,)
         Grid of points to evaluate curve in results. If `None`, defaults to
         linear grid on [0,1].
@@ -395,36 +392,35 @@ def curve_boot(y, log_pred_prob,
     log_pred_prob = log_pred_prob[:, 1]
 
     # Basic no-boot strap result
-    x_curve, y_curve, _ = check_curve(curve_f(y, log_pred_prob))
-    mu, = check_summary(summary_f(x_curve, y_curve))
-    assert(mu.ndim == 0)
-
-    # To really plot curve at full precision we should use union of x_curve
-    # and x_grid, but if x_grid is also random the validity of the following
-    # bootstrap procedure is more difficult to determine.
-    x_curve_, y_curve_ = make_into_step(x_curve[:, 0], y_curve[:, 0])
-    y_curve = eval_step_func(x_grid, x_curve_, y_curve_)
+    x_curve, y_curve, kind = check_curve(curve_f(y, log_pred_prob))
+    mu, = check_summary(area(x_curve, y_curve, kind))
+    assert(mu.ndim == 0)  # TODO also check curves are single col
+    # Interpolate onto same grid as boot-strapped result
+    y_curve = interp1d(x_grid, x_curve[:, 0], y_curve[:, 0], kind)
 
     p_BS = np.ones(N) / N
     weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot).T)
 
-    xp_boot, yp_boot, _ = check_curve(curve_f(y, log_pred_prob, weight))
-    curve_summary = check_summary(summary_f(xp_boot, yp_boot))
+    xp_boot, yp_boot, kind = check_curve(curve_f(y, log_pred_prob, weight))
+    curve_summary = check_summary(area(xp_boot, yp_boot, kind))
 
+    # Repeat area boot-strap with reference predictor
     curve_summary_ref = default_summary_ref
     if log_pred_prob_ref is not None:
         assert(not np.any(np.isnan(log_pred_prob_ref)))
         log_pred_prob_ref = log_pred_prob_ref[:, 1]
 
-        xp_boot_ref, yp_boot_ref, _ = \
+        # TODO compress these lines
+        xp_boot_ref, yp_boot_ref, kind_ref = \
             check_curve(curve_f(y, log_pred_prob_ref, weight))
-        curve_summary_ref = check_summary(summary_f(xp_boot_ref, yp_boot_ref))
+        curve_summary_ref = \
+            check_summary(area(xp_boot_ref, yp_boot_ref, kind_ref))
 
     # Unclear if there is efficient way to vectorize this
     yp_boot_grid = np.zeros((x_grid.size, n_boot))
     for nn in xrange(n_boot):
-        x_curve_, y_curve_ = make_into_step(xp_boot[:, nn], yp_boot[:, nn])
-        yp_boot_grid[:, nn] = eval_step_func(x_grid, x_curve_, y_curve_)
+        yp_boot_grid[:, nn] = \
+            interp1d(x_grid, xp_boot[:, nn], yp_boot[:, nn], kind)
 
     # Summary stat: Get EB
     # This could create problems if curve_summary and curve_summary_ref both
@@ -470,13 +466,9 @@ def curve_summary_table(log_pred_prob_table, y,
     y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point. Must be of same length as
         DataFrame `log_pred_prob_table`.
-    curve_dict : dict of str to (callable, callable)
-        Dictionary mapping curve name to tuple of two functions:
-        (`curve_f`, `summary_f`). The first `curve_f` computes the curve
-        (e.g., ROC) and the second `summary_f` computes the summary
-        (e.g., AUC). Standard choices are:
-        ``(perf_curves.roc_curve, perf_curves.auc_trapz)`` or
-        ``(perf_curves.recall_precision_curve, perf_curves.auc_left)``
+    curve_dict : dict of str to callable
+        Dictionary mapping curve name to performance curve. Standard choices:
+        `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
     ref_method : str
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
@@ -533,13 +525,11 @@ def curve_summary_table(log_pred_prob_table, y,
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (N, n_labels))
 
-        for curve_name, curve_and_area_f in curve_dict.iteritems():
-            curve_f, summary_f = curve_and_area_f
+        for curve_name, curve_f in curve_dict.iteritems():
             R = curve_boot(y, log_pred_prob,
                            log_pred_prob_ref=log_pred_prob_ref,
-                           curve_f=curve_f, summary_f=summary_f, x_grid=x_grid,
-                           n_boot=n_boot, pairwise_CI=pairwise_CI,
-                           confidence=confidence)
+                           curve_f=curve_f, x_grid=x_grid, n_boot=n_boot,
+                           pairwise_CI=pairwise_CI, confidence=confidence)
             curve_summary, curr_curve = R
             curve_tbl.loc[method, curve_name] = curve_summary
             if pairwise_CI and method == ref_method:
@@ -570,13 +560,9 @@ def summary_table(log_pred_prob_table, y,
     loss_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `brier_loss`, ...
-    curve_dict : dict of str to (callable, callable)
-        Dictionary mapping curve name to tuple of two functions:
-        (`curve_f`, `summary_f`). The first `curve_f` computes the curve
-        (e.g., ROC) and the second `summary_f` computes the summary
-        (e.g., AUC). Standard choices are:
-        ``(perf_curves.roc_curve, perf_curves.auc_trapz)`` or
-        ``(perf_curves.recall_precision_curve, perf_curves.auc_left)``
+    curve_dict : dict of str to callable
+        Dictionary mapping curve name to performance curve. Standard choices:
+        `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
     ref_method : str
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
@@ -636,9 +622,8 @@ def summary_table(log_pred_prob_table, y,
 STD_CLASS_LOSS = {'NLL': log_loss, 'Brier': brier_loss,
                   'sphere': spherical_loss, 'zero_one': hard_loss}
 
-STD_BINARY_CURVES = {'AUC': (pc.roc_curve, pc.auc_trapz),
-                     'AP': (pc.recall_precision_curve, pc.auc_left),
-                     'AUPRG': (pc.prg_curve, pc.auc_left)}
+STD_BINARY_CURVES = {'AUC': pc.roc_curve, 'AP': pc.recall_precision_curve,
+                     'AUPRG': pc.prg_curve}
 
 
 class JustNoise:
@@ -773,13 +758,9 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     loss_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `brier_loss`, ...
-    curve_dict : dict of str to (callable, callable)
-        Dictionary mapping curve name to tuple of two functions:
-        (`curve_f`, `summary_f`). The first `curve_f` computes the curve
-        (e.g., ROC) and the second `summary_f` computes the summary
-        (e.g., AUC). Standard choices are:
-        ``(perf_curves.roc_curve, perf_curves.auc_trapz)`` or
-        ``(perf_curves.recall_precision_curve, perf_curves.auc_left)``
+    curve_dict : dict of str to callable
+        Dictionary mapping curve name to performance curve. Standard choices:
+        `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
     ref_method : str
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must

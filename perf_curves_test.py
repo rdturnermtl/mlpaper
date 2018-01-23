@@ -4,6 +4,7 @@ from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
 import perf_curves as pc
+import util
 
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.
@@ -236,7 +237,7 @@ def nv_binary_clf_curve_test():
 
 
 def auc_trapz_test(x_curve, y_curve):
-    auc0 = pc.auc_trapz(x_curve, y_curve)
+    auc0 = util.area(x_curve, y_curve, 'linear')
     for ii in xrange(x_curve.shape[1]):
         auc1 = auc(x_curve[:, ii], y_curve[:, ii])
         assert(np.allclose(auc0[ii], auc1))
@@ -247,7 +248,7 @@ def auc_trapz_test(x_curve, y_curve):
 
 
 def auc_left_test(x_curve, y_curve):
-    auc0 = pc.auc_left(x_curve, y_curve)
+    auc0 = util.area(x_curve, y_curve, 'previous')
     for ii in xrange(x_curve.shape[1]):
         delta = np.diff(x_curve[:, ii])
         yv = y_curve[:-1, ii]
@@ -277,11 +278,15 @@ def binary_clf_curve_test():
                                    1e-6)
 
     fps, tps, thresholds = pc._binary_clf_curve(y_bool, y_pred, sample_weight)
-    fpr, tpr, thresholds_roc = pc.roc_curve(y_bool, y_pred, sample_weight)
-    rec, prec, thresholds_pr = pc.recall_precision_curve(y_bool, y_pred,
-                                                         sample_weight)
-    rec_gain, prec_gain, thresholds_prg = pc.prg_curve(y_bool, y_pred,
-                                                       sample_weight)
+    (fpr, tpr, kind), thresholds_roc = \
+        pc.roc_curve(y_bool, y_pred, sample_weight)
+    assert(kind == 'linear')
+    (rec, prec, kind), thresholds_pr = \
+        pc.recall_precision_curve(y_bool, y_pred, sample_weight)
+    assert(kind == 'previous')
+    (rec_gain, prec_gain, kind), thresholds_prg = \
+        pc.prg_curve(y_bool, y_pred, sample_weight)
+    assert(kind == 'previous')
 
     auc_trapz_test(fpr, tpr)
     auc_left_test(rec, prec)
@@ -339,9 +344,10 @@ def binary_clf_curve_test():
         assert(np.allclose(prec_gain2, prec_gain[-len(rec_gain2):, ii]))
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
 
-np.random.seed(89254)
+if __name__ == '__main__':
+    np.random.seed(89254)
 
-for rr in xrange(100000):
-    nv_binary_clf_curve_test()
-    binary_clf_curve_test()
-print 'passed'
+    for rr in xrange(100000):
+        nv_binary_clf_curve_test()
+        binary_clf_curve_test()
+    print 'passed'
