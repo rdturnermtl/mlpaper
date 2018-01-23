@@ -120,10 +120,10 @@ def unique_take_last(xp, yp=None):
     Keeps last value in list when multiple steps happen at the same x-value.
     """
     # TODO update doc string
-    # TODO test against using unique on reverse array
     assert(xp.ndim == 1)
     assert(yp is None or xp.shape == yp.shape)
 
+    # TODO consider just changing to error if never needed
     idx = ~np.isnan(xp)
     if ~np.all(idx):
         warnings.warn('NaN value encountered in unique_take_last.')
@@ -233,6 +233,7 @@ def interp1d(x_grid, xp, yp, kind='linear'):
     y_grid : ndarray, shape (n_grid,)
         Interpolation `xp` and `yp` evaluated at the points in `x_grid`.
     """
+    # TODO use np vectorize to make vectorized version
     if kind == 'previous':
         # eval_step_func does not work when x points overlap so need to call
         # unique_take_last to get final one.
@@ -247,6 +248,7 @@ def interp1d(x_grid, xp, yp, kind='linear'):
         # other if assume_sorted=True and given sorted data, but can apply
         # cummax strict to make all points exactly unique to be extra safe.
         assert(np.all(np.diff(xp) >= 0))
+        # TODO assert func gives same result with either spacing mode
         xp = cummax_strict(xp) if STRICT_SPACING else xp
         f = si.interp1d(xp, yp, kind=kind, assume_sorted=True)
         y_grid = f(x_grid)
@@ -271,6 +273,9 @@ def area(x_curve, y_curve, kind):
     auc : ndarray, shape (n_boot,)
         Area under curve. Has same length as `x_curve` has columns.
     """
+    # TODO move test for this to right file
+    # TODO test that this agrees with interp1d for tight interp grid
+    # TODO assert shapes
     assert(not np.any(np.isnan(x_curve)))
     assert(not np.any(np.isnan(y_curve)))
 

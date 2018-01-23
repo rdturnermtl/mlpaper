@@ -66,7 +66,7 @@ def eval_step_func_test():
     assert(np.allclose(y_grid, y_grid2))
 
 
-def make_into_step_test():
+def unique_take_last_test():
     N = np.random.randint(low=0, high=10)
 
     xp = np.sort(np.random.choice(np.random.randn(N + 1),
@@ -99,5 +99,5 @@ for _ in xrange(1000):
     test_normalize()
     epsilon_noise_test()
     eval_step_func_test()
-    make_into_step_test()
+    unique_take_last_test()
 print 'passed'

@@ -283,6 +283,7 @@ def check_curve(curve):
         Returns same object passed in after some input checks.
     '''
     # TODO update doc-string
+    # TODO update how done
     (x_curve, y_curve, kind), _ = curve  # Skipping tholds since not used here
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
@@ -292,27 +293,6 @@ def check_curve(curve):
     # x should be sorted
     assert(np.all(np.diff(x_curve, axis=0) >= 0.0))
     return x_curve, y_curve, kind
-
-
-def check_summary(cs):
-    '''Check result performance curve summary matches expected format and
-    return it.
-
-    Parameters
-    ----------
-    cs : ndarray, shape (n_boot,)
-        Curve summary scalar
-
-    Returns
-    -------
-    cs : ndarray, shape (n_boot,)
-        Returns same object passed in after some input checks.
-    '''
-    # TODO not really needed anymore, remove
-    assert(cs.ndim == 1)
-    # PRG can be -inf, but all curves should be < inf
-    assert(np.all(cs < np.inf))
-    return cs
 
 
 def curve_boot(y, log_pred_prob,
@@ -386,6 +366,7 @@ def curve_boot(y, log_pred_prob,
     assert(np.ndim(x_grid) == 1)
 
     # Setup levels for percentile function
+    # TODO pull-out into util
     alpha = 0.5 * (1.0 - confidence)
     q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
 
@@ -395,28 +376,27 @@ def curve_boot(y, log_pred_prob,
 
     # Basic no-boot strap result
     x_curve, y_curve, kind = check_curve(curve_f(y, log_pred_prob))
-    mu, = check_summary(area(x_curve, y_curve, kind))
-    assert(mu.ndim == 0)  # TODO also check curves are single col
+    assert(x_curve.shape[1] == 1)  # check_curve already checks x vs y_curve
+    mu, = area(x_curve, y_curve, kind)
+    assert(mu.ndim == 0)
     # Interpolate onto same grid as boot-strapped result
+    # TODO rename
     y_curve = interp1d(x_grid, x_curve[:, 0], y_curve[:, 0], kind)
 
     p_BS = np.ones(N) / N
     weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot).T)
 
     xp_boot, yp_boot, kind = check_curve(curve_f(y, log_pred_prob, weight))
-    curve_summary = check_summary(area(xp_boot, yp_boot, kind))
+    curve_summary = area(xp_boot, yp_boot, kind)
+    # TODO assert dim
 
     # Repeat area boot-strap with reference predictor
     curve_summary_ref = default_summary_ref
     if log_pred_prob_ref is not None:
         assert(not np.any(np.isnan(log_pred_prob_ref)))
         log_pred_prob_ref = log_pred_prob_ref[:, 1]
-
-        # TODO compress these lines
-        xp_boot_ref, yp_boot_ref, kind_ref = \
-            check_curve(curve_f(y, log_pred_prob_ref, weight))
-        curve_summary_ref = \
-            check_summary(area(xp_boot_ref, yp_boot_ref, kind_ref))
+        curve_summary_ref = area(*check_curve(curve_f(y, log_pred_prob_ref, weight)))
+        # TODO check dims
 
     # Unclear if there is efficient way to vectorize this
     yp_boot_grid = np.zeros((x_grid.size, n_boot))
