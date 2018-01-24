@@ -1,5 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, absolute_import
+from __future__ import print_function, absolute_import, division
 from builtins import range
 
 import warnings

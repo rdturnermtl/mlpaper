@@ -2,21 +2,15 @@
 # Modification of sklearn plot_compare_gpr_krr.py by
 # Authors: Jan Hendrik Metzen <jhm@informatik.uni-bremen.de>
 # License: BSD 3 clause
-from __future__ import print_function, absolute_import
+from __future__ import print_function, absolute_import, division
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared
 from sklearn.linear_model import BayesianRidge
-<<<<<<< HEAD:plot_regression_comparison.py
-import regression as btr
-from regression import STD_REGR_LOSS
-import sciprint as sp
-=======
 import benchmark_tools.regression as btr
 from benchmark_tools.regression import STD_REGR_LOSS
 import benchmark_tools.sciprint as sp
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:benchmark_tools/plot_regression_comparison.py
 
 rng = np.random.RandomState(0)
 

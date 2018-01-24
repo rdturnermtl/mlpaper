@@ -1,5 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function
+from __future__ import print_function, division
 from builtins import range
 import benchmark_tools.constants as constants
 from collections import OrderedDict
