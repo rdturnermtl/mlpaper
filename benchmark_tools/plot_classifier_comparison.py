@@ -22,17 +22,9 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-<<<<<<< HEAD:plot_classifier_comparison.py
-import classification as btc
-from classification import STD_CLASS_LOSS, STD_BINARY_CURVES
-import sciprint as sp
-=======
-
 import benchmark_tools.classification as btc
 from benchmark_tools.classification import STD_CLASS_LOSS, STD_BINARY_CURVES
 import benchmark_tools.sciprint as sp
-
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:benchmark_tools/plot_classifier_comparison.py
 
 h = 0.02  # step size in the mesh
 
@@ -97,23 +89,12 @@ for ds_cnt, ds in enumerate(datasets):
     i += 1
 
     full_tbl, curve_dumps[ds_cnt] = \
-<<<<<<< HEAD:plot_classifier_comparison.py
-        btc.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
-                           STD_CLASS_LOSS, STD_BINARY_CURVES, ref_method,
-                           min_pred_log_prob=min_pred_log_prob)
-    print '-' * 20
-    print 'DATASET %d Results' % ds_cnt
-    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
-=======
-
         btc.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
                            STD_CLASS_LOSS, STD_BINARY_CURVES, ref_method,
                            min_pred_log_prob=min_pred_log_prob)
     print('-' * 20)
     print('DATASET %d Results' % ds_cnt)
     print(sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
-
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:benchmark_tools/plot_classifier_comparison.py
                             crap_limit_min={'AUPRG': -1},
                             EB_limit={'AUPRG': -1},
                             non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False))
