@@ -1,7 +1,7 @@
 # Python CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-python/ for more details
-#
+# Multiple versions of python from: https://github.com/adambrenecki/virtualfish/blob/aa3d6271bcb86ad27b6d24f96b5bd386d176f588/.circleci/config.yml
 version: 2
 workflows:
   version: 2
@@ -38,8 +38,11 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            pip install -r requirements.txt --user
-            pip install -r test_requirements.txt --user
+            pip install virtualenv
+            python -m venv venv || virtualenv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+            pip install -r test_requirements.txt
 
       - save_cache:
           paths:
@@ -54,6 +57,7 @@ jobs:
       - run:
           name: run tests
           command: |
+            . venv/bin/activate
             pytest tests/ --verbose
 
       - store_artifacts:
