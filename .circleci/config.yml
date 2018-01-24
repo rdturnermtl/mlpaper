@@ -1,0 +1,38 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/benchmark_tools
+    docker:
+      - image: circleci/python:3.6.1
+      - image: circleci/python:3.5.3
+      - image: circleci/python:2.7.13
+    steps:
+          - checkout
+          - restore_cache:
+            keys:
+              - v1-dependencies-{{ checksum "requirements.txt" }}
+              - v1-dependencies-
+
+          - run:
+              command: |
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install -e .
+                pip install -r requirements.txt
+
+          - save_cache:
+              key: v1-dependencies-{{ checksum "requirements.txt" }}
+              paths:
+                - ./venv
+
+          - run:
+              command: |
+                . venv/bin/activate
+                pytest --cov=src/toolkit tests/
+
+
+          - store_artifacts:
+              path: test-reports/
+              destination: test-reports
+
+
