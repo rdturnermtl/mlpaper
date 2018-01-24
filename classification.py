@@ -267,7 +267,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
 # ============================================================================
 
 
-def check_curve(curve):
+def check_curve(result, singleton=False):
     '''Check result performance curve output matches expected format and
     return the curve.
 
@@ -283,20 +283,78 @@ def check_curve(curve):
         Returns same object passed in after some input checks.
     '''
     # TODO update doc-string
-    # TODO update how done
-    (x_curve, y_curve, kind), _ = curve  # Skipping tholds since not used here
+    curve, _ = result  # Skipping tholds since not used here
+    x_curve, y_curve, kind = curve
+
+    # Check shape
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
+    assert((not singleton) or x_curve.shape[1] == 1)
+    assert(x_curve.shape[0] >= 2)  # Otherwise not curve
+
+    # Check values
+    # TODO check all have same start and end
     assert(np.all(np.isfinite(x_curve)))
-    # PRG can be -inf, but all curves should be < inf
-    assert(np.all(y_curve < np.inf))
-    # x should be sorted
-    assert(np.all(np.diff(x_curve, axis=0) >= 0.0))
-    return x_curve, y_curve, kind
+    assert(np.all(y_curve < np.inf))  # PRG can be -inf, but all curves < inf
+    assert(np.all(np.diff(x_curve, axis=0) >= 0.0))  # sorted
+    return curve
 
 
-def curve_boot(y, log_pred_prob,
-               log_pred_prob_ref=None, default_summary_ref=np.nan,
+def confidence_to_percentiles(confidence):
+    assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
+
+    alpha = 0.5 * (1.0 - confidence)
+    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
+    return q_levels
+
+
+def boot_samples_to_CI(boot_samples, confidence):
+    assert(boot_samples.ndim >= 1)
+
+    q_levels = confidence_to_percentiles(confidence)
+    LB, UB = np.percentile(boot_samples, q_levels, axis=-1)
+    assert(LB.shape == boot_samples.shape[:-1])
+    assert(LB.shape == UB.shape)
+    return LB, UB
+
+
+def boot_samples_to_EB(boot_samples, ref=0.0, confidence=0.95):
+    assert(boot_samples.ndim == 1)
+    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
+
+    delta = boot_samples - ref
+    mu_delta = np.mean(delta)
+    LB, UB = boot_samples_to_CI(delta, confidence)
+    EB = np.fmax(UB - mu_delta, mu_delta - LB)
+    assert(EB >= 0.0 or np.isnan(EB))
+    # NaN EB only ever occurs when ref is infinite and so are some samples
+    assert(np.all(np.isfinite(ref)) <= ~np.isnan(EB))
+    return EB
+
+
+def boot_samples_to_pval(boot_samples, ref):
+    assert(boot_samples.ndim == 1)
+    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
+
+    pval = 2.0 * np.minimum(np.mean(boot_samples <= ref),
+                            np.mean(ref <= boot_samples))
+    pval = np.minimum(1.0, pval)  # Only needed when some auc == ref exactly
+    return pval
+
+
+def interp1d_(x_grid, x_boot, y_boot, kind):
+    # TODO just use np vectorize
+    n_boot = x_boot.shape[1]
+
+    y_grid_boot = np.zeros((x_grid.size, n_boot))
+    for nn in xrange(n_boot):
+        y_grid_boot[:, nn] = \
+            interp1d(x_grid, x_boot[:, nn], y_boot[:, nn], kind)
+    assert(y_grid_boot.shape == (x_grid.size, n_boot))
+    return y_grid_boot
+
+
+def curve_boot(y, log_pred_prob, ref,
                curve_f=pc.roc_curve, x_grid=None,
                n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
     '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
@@ -348,83 +406,55 @@ def curve_boot(y, log_pred_prob,
         end of confidence envelope, and the upper end of the confidence
         envelope.
     '''
-    # TODO change to log_pred_prob_ref to ref and if scalar serves as scalar
-    # ref or if 2D serves as ref distn, consider re-arrange args
+    # TODO update doc string
     N, n_labels = shape_and_validate(y, log_pred_prob)
     assert(n_labels == 2)
-    assert(log_pred_prob_ref is None or
-           log_pred_prob_ref.shape == log_pred_prob.shape)
+    assert(np.ndim(ref) == 0 or ref.shape == log_pred_prob.shape)
+    assert(not np.any(np.isnan(ref)))
     assert(n_boot >= 1)
-    assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
     assert(not np.any(np.isnan(log_pred_prob)))  # Would let method cheat
 
-    # Set weights to at least epsilon instead of zero in bootstrap since some
-    # routines have trouble with zero weight.
-    epsilon = 1e-10
-
+    # Setup constants
+    epsilon = 1e-10  # Min bootstrap weight since 0 weight can cause problems
     x_grid = np.linspace(0.0, 1.0, DEFAULT_NGRID) if x_grid is None else x_grid
     assert(np.ndim(x_grid) == 1)
 
-    # Setup levels for percentile function
-    # TODO pull-out into util
-    alpha = 0.5 * (1.0 - confidence)
-    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
-
-    # Make everything a vector
+    # Put everything into a vector of right type for binary classification
     y = y.astype(bool)
     log_pred_prob = log_pred_prob[:, 1]
 
-    # Basic no-boot strap result
-    x_curve, y_curve, kind = check_curve(curve_f(y, log_pred_prob))
-    assert(x_curve.shape[1] == 1)  # check_curve already checks x vs y_curve
-    mu, = area(x_curve, y_curve, kind)
-    assert(mu.ndim == 0)
-    # Interpolate onto same grid as boot-strapped result
-    # TODO rename
-    y_curve = interp1d(x_grid, x_curve[:, 0], y_curve[:, 0], kind)
+    # Get estimator on original data (before boot strap)
+    curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
+    auc, = area(*curve)
+    assert(auc.ndim == 0)
+    # TODO make uneeded with singleton arg
+    y_grid = interp1d_(x_grid, *curve)[:, 0]  # Use fixed grid
+    assert(x_grid.shape == y_grid.shape)
 
+    # Setup boot strap weights
     p_BS = np.ones(N) / N
     weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot).T)
 
-    xp_boot, yp_boot, kind = check_curve(curve_f(y, log_pred_prob, weight))
-    curve_summary = area(xp_boot, yp_boot, kind)
-    # TODO assert dim
+    # Get boot strapped scores
+    curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))
+    auc_boot = area(*curve_boot_)
+    assert(auc_boot.shape == (n_boot,))
+    y_grid_boot = interp1d_(x_grid, *curve_boot_)
 
-    # Repeat area boot-strap with reference predictor
-    curve_summary_ref = default_summary_ref
-    if log_pred_prob_ref is not None:
-        assert(not np.any(np.isnan(log_pred_prob_ref)))
-        log_pred_prob_ref = log_pred_prob_ref[:, 1]
-        curve_summary_ref = area(*check_curve(curve_f(y, log_pred_prob_ref, weight)))
-        # TODO check dims
+    # Repeat area boot strap with reference predictor
+    if np.ndim(ref) == 2:  # Note dim must be 0 or 2
+        ref = area(*check_curve(curve_f(y, ref[:, 1], weight)))
+        assert(ref.shape == (n_boot,))
 
-    # Unclear if there is efficient way to vectorize this
-    yp_boot_grid = np.zeros((x_grid.size, n_boot))
-    for nn in xrange(n_boot):
-        yp_boot_grid[:, nn] = \
-            interp1d(x_grid, xp_boot[:, nn], yp_boot[:, nn], kind)
+    # Pack up standard numeric summary triple
+    EB = boot_samples_to_EB(auc_boot, ref, confidence) if pairwise_CI \
+        else boot_samples_to_EB(auc_boot, confidence=confidence)
+    pval = boot_samples_to_pval(auc_boot, ref)
+    summary = (auc, EB, pval)
 
-    # Summary stat: Get EB
-    # This could create problems if curve_summary and curve_summary_ref both
-    # have inf values.
-    delta = curve_summary - curve_summary_ref if pairwise_CI else curve_summary
-    mu_delta = np.mean(delta)
-    LB, UB = np.percentile(delta, q_levels)
-    # This could nan-out if everything is inf
-    EB = np.fmax(UB - mu_delta, mu_delta - LB)
-    assert(EB >= 0.0 or np.isnan(EB))
-
-    # Summary stat: Get p-val (two-sided)
-    pval = 2.0 * np.minimum(np.mean(curve_summary <= curve_summary_ref),
-                            np.mean(curve_summary_ref <= curve_summary))
-    pval = np.minimum(1.0, pval)
-
-    summary = (mu, EB, pval)
-
-    # Summarize the curves
-    y_LB = np.percentile(yp_boot_grid, q_levels[0], axis=1)
-    y_UB = np.percentile(yp_boot_grid, q_levels[1], axis=1)
-    curve = pd.DataFrame(data=np.stack((x_grid, y_curve, y_LB, y_UB), axis=1),
+    # Pack up data frame with graphical summaries (performance curves)
+    y_LB, y_UB = boot_samples_to_CI(y_grid_boot, confidence)
+    curve = pd.DataFrame(data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1),
                          index=xrange(x_grid.size), columns=CURVE_STATS,
                          dtype=float)
     return summary, curve
@@ -508,8 +538,7 @@ def curve_summary_table(log_pred_prob_table, y,
         assert(log_pred_prob.shape == (N, n_labels))
 
         for curve_name, curve_f in curve_dict.iteritems():
-            R = curve_boot(y, log_pred_prob,
-                           log_pred_prob_ref=log_pred_prob_ref,
+            R = curve_boot(y, log_pred_prob, ref=log_pred_prob_ref,
                            curve_f=curve_f, x_grid=x_grid, n_boot=n_boot,
                            pairwise_CI=pairwise_CI, confidence=confidence)
             curve_summary, curr_curve = R

@@ -287,4 +287,6 @@ def area(x_curve, y_curve, kind):
         auc = np.trapz(y_curve, x_curve, axis=0)
     else:
         raise NotImplementedError
+
+    assert(not np.any(np.isnan(auc)))  # Make sure we have legit area
     return auc
