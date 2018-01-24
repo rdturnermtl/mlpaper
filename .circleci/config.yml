@@ -38,15 +38,13 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            pip install virtualenv
-            python -m venv venv || virtualenv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
-            pip install -r test_requirements.txt
+            export PATH=$PATH:~/.local/bin
+            pip install -r requirements.txt --user
+            pip install -r test_requirements.txt --user
 
       - save_cache:
           paths:
-            - ./venv
+            - ./
           key: v1-dependencies-{{ checksum "requirements.txt" }}
         
       # run tests!
@@ -57,8 +55,8 @@ jobs:
       - run:
           name: run tests
           command: |
-            . venv/bin/activate
-            pytest tests/ --verbose
+            export PATH=$PATH:~/.local/bin
+            python -m pytest tests/ --verbose
 
       - store_artifacts:
           path: test-reports
