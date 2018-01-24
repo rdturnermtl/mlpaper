@@ -419,9 +419,11 @@ def dec_rnd(to_dot=False, no_zero=False, all_pos=False, all_finite=False):
     if no_zero:
         mantissa = np.concatenate((mantissa,
                                    np.random.randint(low=1, high=10, size=1)))
-    # Give decimal package exactly typed data
-    # TODO remove once we make more input processing in sciprint args
-    mantissa = tuple([int(mm) for mm in mantissa])
+
+    # Give decimal package exactly typed data, but only sometimes to check
+    # type flexibility
+    if np.random.rand() <= 0.5:
+        mantissa = tuple([int(mm) for mm in mantissa])
 
     upper = 0 if to_dot else 6
     expo = np.random.randint(-6, upper)

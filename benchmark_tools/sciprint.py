@@ -51,6 +51,14 @@ def str_print_len(x_str):
     x_len = len(remove_chars(x_str, ',.'))
     return x_len
 
+
+def ensure_tuple_of_ints(L):
+    '''This could possibly be done more efficiently with `tolist` if L is
+    np or pd array, but will stick with this simple solution for now.
+    '''
+    T = tuple([int(mm) for mm in L])
+    return T
+
 # ============================================================================
 # Decimal utils
 # ============================================================================
@@ -79,9 +87,9 @@ def decimal_from_tuple(signed, digits, expo):
     ----------
     signed : bool
         True for negative values.
-    digits : tuple of ints
+    digits : iterable of ints
         digits of value each in [0,10).
-    expo : int
+    expo : int or {'F', 'n', 'N'}
         exponent of decimal.
 
     Returns
@@ -89,10 +97,9 @@ def decimal_from_tuple(signed, digits, expo):
     y : Decimal
         corresponding decimal object.
     '''
-    # TODO deal with that py3 can be anal about getting no-np objects
     # Get everything in correct type because the Py3 decimal package is anal
     signed = int(signed)
-    digits = tuple(digits)
+    digits = ensure_tuple_of_ints(digits)
     expo = expo if expo in ('F', 'n', 'N') else int(expo)
 
     x = decimal.Decimal(decimal.DecimalTuple(signed, digits, expo))
@@ -759,13 +766,17 @@ def format_table(perf_tbl_dec, shift_mod=None, pad=True,
             warnings.warn('no non-clipped values for metric %s' % str(metric))
 
         # Find the best shift
-        best_shift = 0
-        if shift_mod is not None:
+        if shift_mod is None:  # => no shifting at all
+            best_shift = 0
+            # Check all to dot, otherwise will get error. We could do this
+            # check in an except block only to optimize computation.
+            if not all(decimal_to_dot(x) for x in mean_series[idx]):
+                ValueError('shift_mod=None not possible for %s due to insufficient precision' % metric)
+        else:
             # The .tolist() might not be needed, but doing anyway to be safe.
             best_shift = find_shift(mean_series[idx].tolist(),
                                     err_series[idx].tolist(),
                                     shift_mod=shift_mod)
-        # TODO else check that 0 is in range and provide good error if not
         shifts[metric] = best_shift
 
         # Now actually do it
