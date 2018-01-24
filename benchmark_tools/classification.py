@@ -268,7 +268,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
         if not assume_normalized:
             log_pred_prob = normalize(log_pred_prob)
 
-        for metric, metric_f in metrics_dict.iteritems():
+        for metric, metric_f in metrics_dict.items():
             loss_tbl.loc[:, (metric, method)] = metric_f(y, log_pred_prob)
     return loss_tbl
 
@@ -727,7 +727,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
                                            names=[METHOD, LABEL])
     log_pred_prob_table = pd.DataFrame(index=xrange(n_test), columns=col_names,
                                        dtype=float)
-    for method_name, method_obj in methods.iteritems():
+    for method_name, method_obj in methods.items():
         if verbose:
             print('Running fit/predict for {}'.format(method_name))
         pred_log_prob = train_predict(method_obj, X_train, y_train, X_test)

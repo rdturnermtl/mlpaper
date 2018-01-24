@@ -1,12 +1,13 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, division
 from builtins import range
-import benchmark_tools.constants as constants
 from collections import OrderedDict
 from string import ascii_letters
 import numpy as np
 import pandas as pd
+import benchmark_tools.constants as constants
 import benchmark_tools.data_splitter as ds
+
 
 def unif2():
     x = np.random.choice([0.0, np.random.rand(), 1.0], p=[0.05, 0.9, 0.05])
@@ -103,11 +104,11 @@ def test_splitter(seed0=10, seed1=100):
     assert(df_test.equals(df_test2))
     assert(df_unused.equals(df_unused2))
 
-# if __name__ == '__main__':
-#     np.random.seed(635463)
+if __name__ == '__main__':
+    np.random.seed(635463)
 
-#     runs = constants.MC_REPEATS_1K
-#     seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
-#     for rr in range(runs):
-#         test_splitter(seeds[rr, 0], seeds[rr, 1])
-#     print('passed')
+    runs = constants.MC_REPEATS_1K
+    seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
+    for rr in range(runs):
+        test_splitter(seeds[rr, 0], seeds[rr, 1])
+    print('passed')

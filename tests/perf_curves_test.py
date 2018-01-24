@@ -6,9 +6,8 @@ import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
-
-import benchmark_tools.perf_curves as pc
 import benchmark_tools.constants as constants
+import benchmark_tools.perf_curves as pc
 
 np.random.seed(89254)
 ## @TODO(rdturnermtl): move MC tests into the respective test functions
@@ -346,8 +345,8 @@ def test_binary_clf_curve():
         assert(np.allclose(prec_gain2, prec_gain[-len(rec_gain2):, ii]))
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
 
-
-# for rr in range(constants.MC_REPEATS_LARGE):
-#     nv_binary_clf_curve_test()
-#     binary_clf_curve_test()
-# print('passed')
+if __name__ == '__main__':
+    for rr in range(constants.MC_REPEATS_LARGE):
+        test_nv_binary_clf_curve()
+        test_binary_clf_curve()
+    print('passed')
