@@ -2,10 +2,11 @@
 from __future__ import print_function, absolute_import, division
 from builtins import range
 
+import decimal
+from sys import version_info
 import warnings
 import numpy as np
 import pandas as pd
-import decimal
 from benchmark_tools.constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
 from benchmark_tools.constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
 from benchmark_tools.constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
@@ -16,12 +17,18 @@ D_INF = decimal.Decimal('Infinity')
 D_NINF = decimal.Decimal('-Infinity')
 
 
-def remove_chars(x_str, del_chars):
-    '''Will require some tricks to make py2/3 compatible.'''
-    # TODO fix up and move to util
+def remove_chars_py2(x_str, del_chars):
+    x_str = x_str.translate(None, del_chars)
+    return x_str
+
+
+def remove_chars_py3(x_str, del_chars):
     translator = str.maketrans('', '', del_chars)
     x_str = x_str.translate(translator)
     return x_str
+
+# TODO figure out how to make some routine work in py2 and 3, move to util.
+remove_chars = remove_chars_py3 if version_info[0] >= 3 else remove_chars_py2
 
 # ============================================================================
 # General utils
