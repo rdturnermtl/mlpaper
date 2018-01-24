@@ -10,6 +10,9 @@ import pandas as pd
 from scipy.special import expit as logistic
 import benchmark_tools.sciprint as sp
 
+ONE = decimal.Decimal('1')
+
+
 def decimal_eq(x, y):
     basic_eq = (x == y) or (x.is_nan() and y.is_nan())
     return basic_eq and (x.as_tuple() == y.as_tuple())
@@ -36,7 +39,7 @@ def test_decimal_1ek():
     sign = np.random.rand() <= 0.5
     expo = np.random.randint(-12, 12)
     x = sp.decimal_1ek(expo, sign)
-    y = -decimal._One.scaleb(expo) if sign else decimal._One.scaleb(expo)
+    y = -ONE.scaleb(expo) if sign else ONE.scaleb(expo)
     assert(decimal_eq(x, y))
 
 
@@ -411,6 +414,9 @@ def dec_rnd(to_dot=False, no_zero=False, all_pos=False, all_finite=False):
     if no_zero:
         mantissa = np.concatenate((mantissa,
                                    np.random.randint(low=1, high=10, size=1)))
+    # Give decimal package exactly typed data
+    # TODO remove once we make more input processing in sciprint args
+    mantissa = tuple([int(mm) for mm in mantissa])
 
     upper = 0 if to_dot else 6
     expo = np.random.randint(-6, upper)

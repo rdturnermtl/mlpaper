@@ -15,6 +15,14 @@ NAN_STR = str(np.nan)
 D_INF = decimal.Decimal('Infinity')
 D_NINF = decimal.Decimal('-Infinity')
 
+
+def remove_chars(x_str, del_chars):
+    '''Will require some tricks to make py2/3 compatible.'''
+    # TODO fix up and move to util
+    translator = str.maketrans('', '', del_chars)
+    x_str = x_str.translate(translator)
+    return x_str
+
 # ============================================================================
 # General utils
 # ============================================================================
@@ -33,7 +41,8 @@ def ceil_mod(x, mod):
 
 
 def str_print_len(x_str):
-    return len(x_str.translate(None, ',.'))
+    x_len = len(remove_chars(x_str, ',.'))
+    return x_len
 
 # ============================================================================
 # Decimal utils
@@ -73,7 +82,14 @@ def decimal_from_tuple(signed, digits, expo):
     y : Decimal
         corresponding decimal object.
     '''
-    return decimal.Decimal(decimal.DecimalTuple(int(signed), digits, expo))
+    # TODO deal with that py3 can be anal about getting no-np objects
+    # Get everything in correct type because the Py3 decimal package is anal
+    signed = int(signed)
+    digits = tuple(digits)
+    expo = expo if expo in ('F', 'n', 'N') else int(expo)
+
+    x = decimal.Decimal(decimal.DecimalTuple(signed, digits, expo))
+    return x
 
 
 def as_tuple_chk(x_dec):
@@ -382,6 +398,8 @@ def print_estimate(mu, EB, shift=0, min_clip=D_NINF, max_clip=D_INF,
     assert(max_clip == D_INF or max_clip.is_finite())
     assert(min_clip < max_clip)
 
+    shift = int(shift)  # scaleb doesn't like np ints in Py3 => cast to int
+
     # First check the clipped case
     if (not mu.is_nan()) and max_clip < mu:  # above max
         assert(max_clip.is_finite())
@@ -567,7 +585,8 @@ def find_shift(mean_list, err_list, shift_mod=1):
 
     best_shift = None
     best_len = np.inf
-    zip_list = zip(mean_list, err_list)
+    # Must cast to list for Py3 compatibility
+    zip_list = list(zip(mean_list, err_list))
     for shift in L:
         if shift % shift_mod != 0:
             continue
