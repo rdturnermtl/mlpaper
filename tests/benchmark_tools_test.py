@@ -29,6 +29,7 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
     return loss
 
+
 def test_t_EB(runs=10, trials=100):
     pval = []
     while len(pval) < runs:

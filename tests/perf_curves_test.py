@@ -9,10 +9,12 @@ from sklearn.metrics.ranking import roc_curve, precision_recall_curve
 import benchmark_tools.constants as constants
 import benchmark_tools.perf_curves as pc
 
-## @TODO(rdturnermtl): move MC tests into the respective test functions
+# @TODO(rdturnermtl): move MC tests into the respective test functions
+
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.
 # ============================================================================
+
 
 def _nv_add_pseudo_points(fps, tps):
     if fps[-1] == 0:
@@ -75,6 +77,7 @@ def _nv_binary_clf_curve(y_true, y_score, sample_weight=None):
 # Non-vectorized versions of routines in perf_curves for testing.
 # ============================================================================
 
+
 def _nv_roc_curve(y_true, y_score, sample_weight=None):
     fps, tps, thresholds = _nv_binary_clf_curve(y_true, y_score,
                                                 sample_weight=sample_weight)
@@ -123,6 +126,7 @@ def _nv_prg_curve(y_true, y_score, sample_weight=None):
 # ============================================================================
 # Now the actual tests
 # ============================================================================
+
 
 def test_nv_binary_clf_curve():
     N = np.random.randint(low=1, high=10)
