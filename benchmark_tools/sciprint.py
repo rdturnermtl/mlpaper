@@ -765,6 +765,7 @@ def format_table(perf_tbl_dec, shift_mod=None, pad=True,
             best_shift = find_shift(mean_series[idx].tolist(),
                                     err_series[idx].tolist(),
                                     shift_mod=shift_mod)
+        # TODO else check that 0 is in range and provide good error if not
         shifts[metric] = best_shift
 
         # Now actually do it
