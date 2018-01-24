@@ -130,11 +130,8 @@ def rand_mask(n_samples, frac):
         Random binary mask.
     """
     # Input validation on frac done in rand_subset()
-<<<<<<< HEAD:data_splitter.py
-    pos = rand_subset(xrange(n_samples), frac)
-=======
+
     pos = rand_subset(range(n_samples), frac)
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:benchmark_tools/data_splitter.py
     mask = np.zeros(n_samples, dtype=bool)
     mask[pos] = True
     assert(np.sum(mask) >= n_samples * frac)

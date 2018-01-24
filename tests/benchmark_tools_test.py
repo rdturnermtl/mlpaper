@@ -7,33 +7,9 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
-<<<<<<< HEAD:benchmark_tools_test.py
-import benchmark_tools as bt
-import classification as btc
-import util
-
-
-def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
-    '''Special case of hard_loss.'''
-    N, n_labels = btc.shape_and_validate(y_bool, log_pred_prob)
-    assert(n_labels == 2)
-    assert(FP_cost > 0.0)
-
-    FN_cost = 1.0
-    thold = np.log(FP_cost / (FP_cost + FN_cost))
-
-    y_bool = y_bool.astype(bool)  # So we can use ~
-    yhat = log_pred_prob[:, 1] >= thold
-    assert(y_bool.dtype.kind == 'b' and yhat.dtype.kind == 'b')
-
-    loss = (~y_bool * yhat) * FP_cost + (y_bool * ~yhat) * FN_cost
-    assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
-    return loss
-=======
 import benchmark_tools.benchmark_tools as bt
 import benchmark_tools.classification as btc
 from benchmark_tools import util
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/benchmark_tools_test.py
 
 
 def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
@@ -167,11 +143,8 @@ def log_loss_test():
 
     if n_labels >= 2:
         loss = btc.log_loss(y, y_pred)
-<<<<<<< HEAD:benchmark_tools_test.py
-        loss2 = log_loss(y, np.exp(y_pred), labels=xrange(n_labels))
-=======
+
         loss2 = log_loss(y, np.exp(y_pred), labels=range(n_labels))
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/benchmark_tools_test.py
         assert(np.allclose(np.mean(loss), loss2))
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -237,11 +210,7 @@ def loss_summary_table_test():
     methods = np.random.choice(list(ascii_letters), n_methods, replace=False)
     ref = np.random.choice(methods)
     metrics = btc.STD_CLASS_LOSS
-<<<<<<< HEAD:benchmark_tools_test.py
-    labels = xrange(n_labels)
-=======
     labels = range(n_labels)
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/benchmark_tools_test.py
 
     col_names = pd.MultiIndex.from_product([methods, labels],
                                            names=[bt.METHOD, btc.LABEL])
@@ -278,11 +247,7 @@ def loss_summary_table_test():
 
 np.random.seed(53634)
 
-<<<<<<< HEAD:benchmark_tools_test.py
-for _ in xrange(1000):
-=======
 for _ in range(constants.MC_REPEATS_1K):
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/benchmark_tools_test.py
     hard_loss_binary_test()
     hard_loss_decision_test()
     log_loss_test()
@@ -290,14 +255,7 @@ for _ in range(constants.MC_REPEATS_1K):
     spherical_loss_test()
     loss_summary_table_test()
 
-<<<<<<< HEAD:benchmark_tools_test.py
-print 'Now running MC tests'
-print test_t_EB()
-print test_get_mean_and_EB()
-print 'passed'
-=======
 print('Now running MC tests')
 print(test_t_EB(trials=constants.MC_REPEATS_1K))
 print(test_get_mean_and_EB(trials=constants.MC_REPEATS_1K))
 print('passed')
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a:tests/benchmark_tools_test.py
