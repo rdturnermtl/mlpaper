@@ -380,7 +380,12 @@ def test_decimalize():
                 perf_tbl.xs(sp.ERR_COL, axis=1, level=sp.STAT)).any().any())
 
     shift_mod = np.random.randint(low=0, high=6)
-    shift_mod = None if shift_mod == 0 else shift_mod
+    # If there are some not to dot numbers we can't use shift_mod=None for no
+    # shifting.
+    if shift_mod == 0:
+        mean_els = perf_tbl_dec.xs('mean', axis=1, level='stat').values.ravel()
+        all_to_dot = all(sp.decimal_to_dot(mm) for mm in mean_els)
+        shift_mod = None if all_to_dot else 1
 
     pad = True
     perf_tbl_str, shifts = sp.format_table(perf_tbl_dec, shift_mod, pad,
