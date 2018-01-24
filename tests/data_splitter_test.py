@@ -57,13 +57,13 @@ def test_df(high_M=6, high_N=6):
     return df, s_list, u_list
 
 
-def test_splitter(seed0, seed1):
+def test_splitter(seed0=10, seed1=100):
     np.random.seed(seed0)
     df, s_list, u_list = test_df()
 
     col = list(df.columns)
     kk = unif_subset(col)
-    splits = {k: (np.random.choice(ds.SPLITTER_LIB.keys()), unif2())
+    splits = {k: (np.random.choice(list(ds.SPLITTER_LIB.keys())), unif2())
               for k in kk}
 
     for k in splits:
@@ -103,11 +103,11 @@ def test_splitter(seed0, seed1):
     assert(df_test.equals(df_test2))
     assert(df_unused.equals(df_unused2))
 
-if __name__ == '__main__':
-    np.random.seed(635463)
+# if __name__ == '__main__':
+#     np.random.seed(635463)
 
-    runs = constants.MC_REPEATS_1K
-    seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
-    for rr in range(runs):
-        test_splitter(seeds[rr, 0], seeds[rr, 1])
-    print('passed')
+#     runs = constants.MC_REPEATS_1K
+#     seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
+#     for rr in range(runs):
+#         test_splitter(seeds[rr, 0], seeds[rr, 1])
+#     print('passed')

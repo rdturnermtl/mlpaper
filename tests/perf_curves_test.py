@@ -9,6 +9,9 @@ from sklearn.metrics.ranking import roc_curve, precision_recall_curve
 
 import benchmark_tools.perf_curves as pc
 import benchmark_tools.constants as constants
+
+np.random.seed(89254)
+## @TODO(rdturnermtl): move MC tests into the respective test functions
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.
 # ============================================================================
@@ -123,7 +126,7 @@ def _nv_prg_curve(y_true, y_score, sample_weight=None):
 # Now the actual tests
 # ============================================================================
 
-def nv_binary_clf_curve_test():
+def test_nv_binary_clf_curve():
     N = np.random.randint(low=1, high=10)
 
     y_bool = np.random.rand(N) <= 0.5
@@ -263,7 +266,7 @@ def auc_left_test(x_curve, y_curve):
         assert(np.allclose(auc0[ii], auc1))
 
 
-def binary_clf_curve_test():
+def test_binary_clf_curve():
     N = np.random.randint(low=1, high=10)
     n_boot = np.random.randint(low=1, high=10)
 
@@ -343,9 +346,8 @@ def binary_clf_curve_test():
         assert(np.allclose(prec_gain2, prec_gain[-len(rec_gain2):, ii]))
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
 
-np.random.seed(89254)
 
-for rr in range(constants.MC_REPEATS_LARGE):
-    nv_binary_clf_curve_test()
-    binary_clf_curve_test()
-print('passed')
+# for rr in range(constants.MC_REPEATS_LARGE):
+#     nv_binary_clf_curve_test()
+#     binary_clf_curve_test()
+# print('passed')

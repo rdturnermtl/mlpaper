@@ -1,5 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function
+from __future__ import print_function, division
 from builtins import range
 from string import ascii_letters
 import benchmark_tools.constants as constants
@@ -10,6 +10,8 @@ from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 import benchmark_tools.benchmark_tools as bt
 import benchmark_tools.classification as btc
 from benchmark_tools import util
+
+np.random.seed(53634)
 
 
 def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
@@ -29,7 +31,7 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
     return loss
 
-def test_t_EB(runs=100, trials=1000):
+def test_t_EB(runs=10, trials=100):
     pval = []
     while len(pval) < runs:
         N = np.random.randint(low=0, high=10)
@@ -54,7 +56,7 @@ def test_t_EB(runs=100, trials=1000):
     return pval_agg
 
 
-def test_get_mean_and_EB(runs=100, trials=1000):
+def test_get_mean_and_EB(runs=10, trials=100):
     pval = []
     while len(pval) < runs:
         N = np.random.randint(low=0, high=10)
@@ -245,17 +247,16 @@ def loss_summary_table_test():
             assert(np.allclose(perf_tbl.loc[method, metric].values,
                                [mu, EB, pval], equal_nan=True))
 
-np.random.seed(53634)
 
-for _ in range(constants.MC_REPEATS_1K):
-    hard_loss_binary_test()
-    hard_loss_decision_test()
-    log_loss_test()
-    brier_loss_test()
-    spherical_loss_test()
-    loss_summary_table_test()
+# for _ in range(constants.MC_REPEATS_1K):
+#     hard_loss_binary_test()
+#     hard_loss_decision_test()
+#     log_loss_test()
+#     brier_loss_test()
+#     spherical_loss_test()
+#     loss_summary_table_test()
 
-print('Now running MC tests')
-print(test_t_EB(trials=constants.MC_REPEATS_1K))
-print(test_get_mean_and_EB(trials=constants.MC_REPEATS_1K))
-print('passed')
+# print('Now running MC tests')
+# print(test_t_EB(trials=constants.MC_REPEATS_1K))
+# print(test_get_mean_and_EB(trials=constants.MC_REPEATS_1K))
+# print('passed')

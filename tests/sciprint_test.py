@@ -21,7 +21,7 @@ def decimal_shift(x_dec):
     return (len(x_tup.digits) + x_tup.exponent) - 1
 
 
-def mod_test():
+def test_mod():
     x = np.random.randint(low=-20, high=20)
     mod = np.random.randint(low=1, high=20)
 
@@ -32,7 +32,7 @@ def mod_test():
     assert(y >= x and y % mod == 0 and y - mod < x)
 
 
-def decimal_1ek_test():
+def test_decimal_1ek():
     sign = np.random.rand() <= 0.5
     expo = np.random.randint(-12, 12)
     x = sp.decimal_1ek(expo, sign)
@@ -40,7 +40,7 @@ def decimal_1ek_test():
     assert(decimal_eq(x, y))
 
 
-def decimal_shift_test():
+def test_decimal_shift():
     x = dec_rnd(all_finite=True)
     shift = decimal_shift(x)
 
@@ -57,14 +57,14 @@ def decimal_shift_test():
     assert(sp.decimal_left_digits(x_shifted) == 1)
 
 
-def decimal_left_digits_test():
+def test_decimal_left_digits():
     x = dec_rnd(to_dot=True, all_finite=True)
     str_x = str(abs(x))
     left_dig = len(str_x.split('.')[0])
     assert(left_dig == sp.decimal_left_digits(x))
 
 
-def decimal_right_digits_test():
+def test_decimal_right_digits():
     x = dec_rnd(to_dot=True, all_finite=True)
     str_x = str(x)
     L = str_x.split('.')
@@ -72,26 +72,26 @@ def decimal_right_digits_test():
     assert(right_dig == sp.decimal_right_digits(x))
 
 
-def decimal_digits_test():
+def test_decimal_digits():
     x = dec_rnd(to_dot=True, all_finite=True)
     str_x = str(abs(x))
     dig = sum(len(ss) for ss in str_x.split('.'))
     assert(dig == sp.decimal_digits(x))
 
 
-def decimal_floor_log10_test():
+def test_decimal_floor_log10():
     x = dec_rnd(no_zero=True, all_finite=True)
     y = int(np.floor(float(abs(x).log10())))
     assert(y == sp.decimal_floor_log10_abs(x))
 
 
-def decimal_ceil_log10_test():
+def test_decimal_ceil_log10():
     x = dec_rnd(no_zero=True, all_finite=True)
     y = int(np.ceil(float(abs(x).log10())))
     assert(y == sp.decimal_ceil_log10_abs(x))
 
 
-def decimal_next_pow10_test():
+def test_decimal_next_pow10():
     x = dec_rnd(all_finite=True)
     y = sp.decimal_next_pow10(x)
     assert(x.is_signed() == y.is_signed())
@@ -102,13 +102,13 @@ def decimal_next_pow10_test():
         assert(sp.decimal_ceil_log10_abs(x) == sp.decimal_ceil_log10_abs(y))
 
 
-def decimal_to_dot_test():
+def test_decimal_to_dot():
     x = dec_rnd()
     to_dot = ('E' not in str(x)) and x.is_finite()
     assert(to_dot == sp.decimal_to_dot(x))
 
 
-def create_decimal_test():
+def test_create_decimal():
     x = np.random.randn() * np.exp(np.random.randn())
     digits = np.random.randint(low=1, high=10)
     x_dec = sp.create_decimal(x, digits)
@@ -116,7 +116,7 @@ def create_decimal_test():
     assert(len(x_dec.as_tuple().digits) == digits)
 
 
-def digit_str_test():
+def test_digit_str():
     x = dec_rnd(all_finite=True)
     expo = x.as_tuple().exponent
     str_x = sp.digit_str(x)
@@ -124,7 +124,7 @@ def digit_str_test():
     assert(str_x == str_x_2)
 
 
-def print_estimate_test():
+def test_print_estimate():
     mu = dec_rnd()
     EB = dec_rnd(all_pos=True)
     if mu.is_finite() and EB.is_finite():
@@ -184,7 +184,7 @@ def valid_list(x_dec_list, shift, all_small=False):
     return valid
 
 
-def get_shift_range_test():
+def test_get_shift_range():
     N = np.random.randint(low=1, high=6)
     x_dec_list = dec_rnd_list(N, all_finite=True)
     shift_mod = np.random.randint(low=1, high=6)
@@ -203,13 +203,13 @@ def get_shift_range_test():
 
 
 def quantize_def(x, err):
-    '''Helper for find_shift_test().'''
+    '''Helper for test_find_shift().'''
     y = x.quantize(err, rounding=decimal.ROUND_HALF_UP) \
         if x.is_finite() and err.is_finite() else x
     return y
 
 
-def find_shift_test():
+def test_find_shift():
     N = np.random.randint(low=1, high=6)
     shift_mod = np.random.randint(low=1, high=6)
 
@@ -238,7 +238,7 @@ def find_shift_test():
             assert(max_len_0 < max_len)
 
 
-def format_table_test():
+def test_format_table():
     N = np.random.randint(low=1, high=6)
     M = np.random.randint(low=1, high=6)
     # Keeping it sorted makes it easier to compare before and after
@@ -332,7 +332,7 @@ def format_table_test():
                 assert(decimal_eq(EB, EB2 * rev_shift))
 
 
-def decimalize_test():
+def test_decimalize():
     N = np.random.randint(low=1, high=3)
     M = np.random.randint(low=1, high=3)
     # Keeping it sorted makes it easier to compare before and after
@@ -385,14 +385,14 @@ def decimalize_test():
     print(perf_tbl_str)
     print('-' * 10)
 
-DEC_TESTS = [mod_test,
-             decimal_1ek_test, decimal_shift_test,
-             decimal_left_digits_test, decimal_right_digits_test,
-             decimal_digits_test,
-             decimal_floor_log10_test, decimal_ceil_log10_test,
-             decimal_next_pow10_test, decimal_to_dot_test,
-             create_decimal_test, digit_str_test,
-             print_estimate_test, get_shift_range_test, find_shift_test]
+DEC_TESTS = [test_mod,
+             test_decimal_1ek, test_decimal_shift,
+             test_decimal_left_digits, test_decimal_right_digits,
+             test_decimal_digits,
+             test_decimal_floor_log10, test_decimal_ceil_log10,
+             test_decimal_next_pow10, test_decimal_to_dot,
+             test_create_decimal, test_digit_str,
+             test_print_estimate, test_get_shift_range, test_find_shift]
 
 
 def fp_rnd_list(N, all_finite=False):
@@ -430,12 +430,12 @@ if __name__ == '__main__':
     np.random.seed(8235)
 
     for rr in range(constants.MC_REPEATS_1K):
-        decimalize_test()
-    print('decimalize_test done')
+        test_decimalize()
+    print('test_decimalize done')
 
     for rr in range(constants.MC_REPEATS_1K):
-        format_table_test()
-    print('format_table_test done')
+        test_format_table()
+    print('test_format_table done')
 
     for rr in range(constants.MC_REPEATS_1K):
         for f in DEC_TESTS:
