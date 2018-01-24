@@ -1,16 +1,6 @@
-<<<<<<< HEAD
 # Only basic requirements to run the code, 2nd-order deps not included
 future>=0.16.0
 joblib>=0.11
 numpy>=1.12.0
 pandas>=0.19.2
 scipy>=0.18.1
-=======
-# to be filled
-joblib==0.11
-pyprg==0.1.1b7
-future==0.16.0
-pytest-pythonpath==0.7.1
-pytest==3.0.7
-pytest-cov==2.5.1
->>>>>>> 362bb4cac4fb470808b431c44874da108dc0763a
