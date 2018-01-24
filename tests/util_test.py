@@ -82,12 +82,13 @@ def make_into_step_test():
     D2 = {xp2[ii]: yp2[ii] for ii in range(len(xp2))}
     assert(D == D2)
 
-np.random.seed(75675)
+if __name__ == '__main__':
+    np.random.seed(75675)
 
-for _ in range(1000):
-    test_one_hot()
-    test_normalize()
-    epsilon_noise_test()
-    eval_step_func_test()
-    make_into_step_test()
-print('passed')
+    for _ in range(1000):
+        test_one_hot()
+        test_normalize()
+        epsilon_noise_test()
+        eval_step_func_test()
+        make_into_step_test()
+    print('passed')
