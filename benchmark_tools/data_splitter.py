@@ -315,7 +315,7 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
 
     train_series = pd.Series(index=df.index, data=True)
     test_series = pd.Series(index=df.index, data=True)
-    for feature, how in splits.iteritems():
+    for feature, how in splits.items():
         split_type, frac = how
         # Could throw exception for unknown splitter type
         splitter_f = SPLITTER_LIB[split_type]

@@ -257,7 +257,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
                             columns=col_names, dtype=float)
     for method in methods:
         # Make sure the columns are in right order and we aren't mixing things
-        assert(list(log_pred_prob_table[method].columns) == range(n_labels))
+        assert(list(log_pred_prob_table[method].columns) == list(range(n_labels)))
 
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (n_samples, n_labels))
