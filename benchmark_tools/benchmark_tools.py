@@ -1,16 +1,15 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
-from builtins import range
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from benchmark_tools.constants import (
     METHOD, METRIC, STAT, STD_STATS, PAIRWISE_DEFAULT)
-import benchmark_tools.perf_curves as pc
 
 # ============================================================================
 # Statistical util functions
 # ============================================================================
+
 
 def ttest1(x, nan_on_zero=False):
     '''Perform a standard t-test to test if the values in `x` are sampled from

@@ -7,9 +7,11 @@ from sys import version_info
 import warnings
 import numpy as np
 import pandas as pd
-from benchmark_tools.constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
+from benchmark_tools.constants import (METHOD, METRIC, STAT,
+                                       STD_STATS, FMT_STATS)
 from benchmark_tools.constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
-from benchmark_tools.constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
+from benchmark_tools.constants import (GEN_FMT, ABOVE_FMT, BELOW_FMT,
+                                       _PREFIX, _PREFIX_TEX)
 
 # Some numeric constants
 NAN_STR = str(np.nan)
@@ -771,7 +773,8 @@ def format_table(perf_tbl_dec, shift_mod=None, pad=True,
             # Check all to dot, otherwise will get error. We could do this
             # check in an except block only to optimize computation.
             if not all(decimal_to_dot(x) for x in mean_series[idx]):
-                ValueError('shift_mod=None not possible for %s due to insufficient precision' % metric)
+                ValueError('shift_mod=None not possible for %s due to '
+                           'insufficient precision' % metric)
         else:
             # The .tolist() might not be needed, but doing anyway to be safe.
             best_shift = find_shift(mean_series[idx].tolist(),

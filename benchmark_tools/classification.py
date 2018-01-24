@@ -4,13 +4,14 @@ from joblib import Memory
 import numpy as np
 import pandas as pd
 from scipy.misc import logsumexp
-from benchmark_tools.benchmark_tools import loss_summary_table
+from benchmark_tools.benchmark_tools import (
+    loss_summary_table, get_mean_and_EB, ttest1)
 from benchmark_tools.constants import (
-    METHOD, STAT, CURVE_STATS, STD_STATS, METRIC, 
-    PVAL_COL, ERR_COL, PAIRWISE_DEFAULT)
+    METHOD, STAT, CURVE_STATS, STD_STATS, METRIC, PAIRWISE_DEFAULT)
 
 import benchmark_tools.perf_curves as pc
-from benchmark_tools.util import one_hot, normalize, eval_step_func, make_into_step
+from benchmark_tools.util import (one_hot, normalize, eval_step_func,
+                                  make_into_step)
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -257,7 +258,8 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
                             columns=col_names, dtype=float)
     for method in methods:
         # Make sure the columns are in right order and we aren't mixing things
-        assert(list(log_pred_prob_table[method].columns) == list(range(n_labels)))
+        assert(list(log_pred_prob_table[method].columns) ==
+               list(range(n_labels)))
 
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (n_samples, n_labels))
@@ -544,6 +546,7 @@ def curve_summary_table(log_pred_prob_table, y,
             assert((method == ref_method) == np.isnan(pval))
             perf_tbl.loc[method, metric] = (mu, EB, pval)
     return perf_tbl
+
 
 def summary_table(log_pred_prob_table, y,
                   loss_dict, curve_dict, ref_method, x_grid=None,
