@@ -1,8 +1,12 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
 from builtins import range
+import warnings
 import numpy as np
+import scipy.interpolate as si
 from scipy.misc import logsumexp
+
+STRICT_SPACING = False
 
 
 def one_hot(y, n_labels):
@@ -24,7 +28,7 @@ def one_hot(y, n_labels):
     '''
     N, = y.shape
     assert(n_labels >= 1)
-    assert(y.dtype.kind == 'i')
+    assert(y.dtype.kind == 'i')  # bool would confuse np indexing
     assert(np.all(0 <= y) and np.all(y < n_labels))
 
     y_bin = np.zeros((N, n_labels), dtype=bool)
@@ -88,6 +92,67 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
     x = x + delta * (np.random.rand(len(x)) - 0.5)
     return x
 
+# ============================================================================
+# Interpolation utils
+# Everything in here will be obsolete once various enhancements get merged
+# into scipy for scipy.interpolate.interp1d.
+# ============================================================================
+
+
+def unique_take_last(xp, yp=None):
+    """Make pairs of `xp` and `yp` vectors into proper step function. That is,
+    remove NaN `xp` values and multiple steps at same location.
+
+    Parameters
+    ----------
+    xp : ndarray, shape (n_samples,)
+        The sample points corresponding to the y values. Must be sorted.
+    yp : ndarray, shape (n_samples,)
+        Values in y-axis for step function.
+
+    Returns
+    -------
+    xp : ndarray, shape (m_samples,)
+        Input `xp` after removing extra points. m_samples <= n_samples.
+    yp : ndarray, shape (m_samples,)
+        Input `yp` after removing extra points. m_samples <= n_samples.
+
+    Notes
+    -----
+    Keeps last value in list when multiple steps happen at the same x-value.
+    """
+    # TODO update doc string
+    assert(xp.ndim == 1)
+    assert(yp is None or xp.shape == yp.shape)
+
+    # TODO consider just changing to error if never needed
+    idx = ~np.isnan(xp)
+    if ~np.all(idx):
+        warnings.warn('NaN value encountered in unique_take_last.')
+        xp = xp[idx]
+        yp = None if yp is None else yp[idx]
+
+    deltas = np.diff(xp)
+    assert(not np.any(deltas < 0))  # Should be sorted exactly
+
+    idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
+    xp = xp[idx]
+    yp = None if yp is None else yp[idx]
+    return xp, yp
+
+
+def cummax_strict(x, copy=True):
+    '''Minimally increase array elements to make the array strictly increasing.
+    '''
+    # TODO doc string, tests
+    assert(x.ndim == 1)
+
+    x = np.copy(x) if copy else x
+    for ii in xrange(1, len(x)):
+        x[ii] = np.maximum(np.nextafter(x[ii - 1], np.inf), x[ii])
+    assert(np.all(np.diff(x) > 0))
+    return x  # return even though inplace
+
 
 def eval_step_func(x_grid, xp, yp, ival=None,
                    assume_sorted=False, skip_unique_chk=False):
@@ -145,35 +210,85 @@ def eval_step_func(x_grid, xp, yp, ival=None,
     return y_grid
 
 
-def make_into_step(xp, yp):
-    """Make pairs of `xp` and `yp` vectors into proper step function. That is,
-    remove NaN `xp` values and multiple steps at same location.
+def interp1d(x_grid, xp, yp, kind='linear'):
+    """Wrap `scipy.interpolate.interp1d` so it can handle ``'previous'`` like
+    MATLAB's `interp1` function. ``'next'`` may be added in future.
+
+    This wrapper does not support extrapolation at the moment. Scipy ENH such
+    as #6718 may be merged to scipy master in the near future and make this
+    wrapper obsolete.
 
     Parameters
     ----------
+    x_grid : ndarray, shape (n_grid,)
+        Values to evaluate the stepwise function at.
     xp : ndarray, shape (n_samples,)
-        The sample points corresponding to the y values. Must be sorted.
+        Points at which the step function changes. Typically of type float.
     yp : ndarray, shape (n_samples,)
-        Values in y-axis for step function.
+        The new values at each of the steps
+    kind : str
+        Type of interpolation scheme, must be ``'previous'`` or any method that
+        `scipy.interpolate.interp1d` can process such as ``'linear'``.
 
     Returns
     -------
-    xp : ndarray, shape (m_samples,)
-        Input `xp` after removing extra points. m_samples <= n_samples.
-    yp : ndarray, shape (m_samples,)
-        Input `yp` after removing extra points. m_samples <= n_samples.
-
-    Notes
-    -----
-    Keeps last value in list when multiple steps happen at the same x-value.
+    y_grid : ndarray, shape (n_grid,)
+        Interpolation `xp` and `yp` evaluated at the points in `x_grid`.
     """
-    assert(xp.ndim == 1 and xp.shape == yp.shape)
+    # TODO use np vectorize to make vectorized version
+    if kind == 'previous':
+        # eval_step_func does not work when x points overlap so need to call
+        # unique_take_last to get final one.
+        xp, yp = unique_take_last(xp, yp)
+        y_grid = eval_step_func(x_grid, xp, yp, assume_sorted=True)
+    elif kind == 'next':
+        # It would be easy to modify eval_step_func to handle this case, but we
+        # don't have any need for it right now.
+        raise NotImplementedError
+    else:
+        # interp1d appears to do the right thing with points on top of each
+        # other if assume_sorted=True and given sorted data, but can apply
+        # cummax strict to make all points exactly unique to be extra safe.
+        assert(np.all(np.diff(xp) >= 0))
+        # TODO assert func gives same result with either spacing mode
+        xp = cummax_strict(xp) if STRICT_SPACING else xp
+        f = si.interp1d(xp, yp, kind=kind, assume_sorted=True)
+        y_grid = f(x_grid)
+    return y_grid
 
-    idx = ~np.isnan(xp)
-    xp, yp = xp[idx], yp[idx]
 
-    deltas = np.diff(xp)
-    assert(not np.any(deltas < -1e-10))
+def area(x_curve, y_curve, kind):
+    """Compute area under function in vectorized way.
 
-    idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
-    return xp[idx], yp[idx]
+    Parameters
+    ----------
+    x_curve : ndarray, shape (n_thresholds, n_boot)
+        The sample points corresponding to the y values. Must be sorted.
+    y_curve : ndarray, shape (n_thresholds, n_boot)
+        Input array to integrate. Must be same size as `x_curve`. Operation
+        performed independently for each column.
+    kind : {'linear', 'kind'}
+        Type of interpolation scheme to turn points into lines.
+
+    Returns
+    -------
+    auc : ndarray, shape (n_boot,)
+        Area under curve. Has same length as `x_curve` has columns.
+    """
+    # TODO move test for this to right file
+    # TODO test that this agrees with interp1d for tight interp grid
+    # TODO assert shapes
+    assert(not np.any(np.isnan(x_curve)))
+    assert(not np.any(np.isnan(y_curve)))
+
+    if kind == 'previous':
+        # Treat 0*inf as 0:
+        with np.errstate(invalid='ignore'):
+            auc = np.nansum(y_curve[:-1, :] * np.diff(x_curve, axis=0), axis=0)
+    elif kind == 'linear':
+        auc = np.trapz(y_curve, x_curve, axis=0)
+    else:
+        raise NotImplementedError
+
+    assert(not np.any(np.isnan(auc)))  # Make sure we have legit area
+    return auc

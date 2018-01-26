@@ -4,12 +4,16 @@ import numpy as np
 
 EPSILON = 1e-10  # Size of pseudo-point to add to true/false positive count.
 
+# Interpolation kinds used here
+LINEAR = 'linear'
+PREV = 'previous'
+
 # ============================================================================
 # Create general binary count curves
 # ============================================================================
 
 
-def add_pseudo_points(fps, tps):
+def _add_pseudo_points(fps, tps):
     """Add pseudo-points that make ROC and PR analysis give sensible results in
     corner case there are no true positive or no false positives.
 
@@ -33,6 +37,9 @@ def add_pseudo_points(fps, tps):
     tps : ndarray, shape (n_thresholds, n_boot)
         If in corner case, `fps` after adding pseudo-points
     """
+    assert(fps.shape == tps.shape)
+    assert(fps.size > 0)  # Otherwise -1 index doesn't work
+
     fps_fix = (fps[-1, :] == 0)
     tps_fix = (tps[-1, :] == 0)
 
@@ -116,7 +123,7 @@ def _binary_clf_curve(y_true, y_score, sample_weight=None):
     thresholds = np.r_[np.inf, y_score[threshold_idxs]]
 
     # Clean up corner case
-    fps, tps = add_pseudo_points(fps, tps)
+    fps, tps = _add_pseudo_points(fps, tps)
     assert(np.all(fps[-1, :] > 0) and np.all(tps[-1, :] > 0))
     assert(fps.dtype == tps.dtype)
 
@@ -166,7 +173,7 @@ def roc_curve(y_true, y_score, sample_weight=None):
                                              sample_weight=sample_weight)
     fpr = np.true_divide(fps, fps[-1:, :])
     tpr = np.true_divide(tps, tps[-1:, :])
-    return fpr, tpr, thresholds
+    return (fpr, tpr, LINEAR), thresholds
 
 
 def recall_precision_curve(y_true, y_score, sample_weight=None):
@@ -210,7 +217,7 @@ def recall_precision_curve(y_true, y_score, sample_weight=None):
         precision = np.true_divide(tps, tps + fps)
     precision[0, :] = precision[1, :]
     assert(np.all(0.0 <= precision) and np.all(precision <= 1.0))
-    return recall, precision, thresholds
+    return (recall, precision, PREV), thresholds
 
 
 def prg_curve(y_true, y_score, sample_weight=None):
@@ -255,52 +262,4 @@ def prg_curve(y_true, y_score, sample_weight=None):
     rec_gain = np.maximum(0.0, rec_gain)
     assert(np.all(rec_gain <= 1.0))
     assert(np.all((rec_gain == 0.0) | (prec_gain <= 1.0)))
-    return rec_gain, prec_gain, thresholds
-
-# ============================================================================
-# Routines for area calculation
-# ============================================================================
-
-
-def auc_trapz(x_curve, y_curve):
-    """Compute area under function using trapezoid rule in vectorized way.
-
-    Parameters
-    ----------
-    x_curve : ndarray, shape (n_thresholds, n_boot)
-        The sample points corresponding to the y values. Must be sorted.
-    y_curve : ndarray, shape (n_thresholds, n_boot)
-        Input array to integrate. Must be same size as `x_curve`. Operation
-        performed independently for each column.
-
-    Returns
-    -------
-    auc : ndarray, shape (n_boot,)
-        Area under curve. Has same length as `x_curve` has columns.
-    """
-    auc = np.trapz(y_curve, x_curve, axis=0)
-    return auc
-
-
-def auc_left(x_curve, y_curve):
-    """Compute area under function using left Riemann sum in vectorized way.
-
-    Parameters
-    ----------
-    x_curve : ndarray, shape (n_thresholds, n_boot)
-        The sample points corresponding to the y values. Must be sorted.
-    y_curve : ndarray, shape (n_thresholds, n_boot)
-        Input array to integrate. Must be same size as `x_curve`. Operation
-        performed independently for each column.
-
-    Returns
-    -------
-    auc : ndarray, shape (n_boot,)
-        Area under curve. Has same length as `x_curve` has columns.
-    """
-    assert(not np.any(np.isnan(x_curve)))
-    assert(not np.any(np.isnan(y_curve)))
-    # Treat 0*inf as 0:
-    with np.errstate(invalid='ignore'):
-        auc = np.nansum(y_curve[:-1, :] * np.diff(x_curve, axis=0), axis=0)
-    return auc
+    return (rec_gain, prec_gain, PREV), thresholds

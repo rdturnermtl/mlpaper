@@ -131,7 +131,6 @@ def rand_mask(n_samples, frac):
         Random binary mask.
     """
     # Input validation on frac done in rand_subset()
-
     pos = rand_subset(range(n_samples), frac)
     mask = np.zeros(n_samples, dtype=bool)
     mask[pos] = True

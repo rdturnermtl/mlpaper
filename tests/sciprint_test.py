@@ -1,16 +1,63 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, division
 from builtins import range
-
 import decimal
 from string import ascii_letters
-import benchmark_tools.constants as constants
 import numpy as np
 import pandas as pd
 from scipy.special import expit as logistic
+import benchmark_tools.constants as constants
 import benchmark_tools.sciprint as sp
 
 ONE = decimal.Decimal('1')
+
+# ============================================================================
+# Decimal utils useful, but currently not used outside of test.
+# ============================================================================
+
+
+def decimal_left_digits(x_dec):
+    assert(sp.decimal_to_dot(x_dec))  # Should make exception
+    y = 1 + max(0, x_dec.adjusted())
+    return y
+
+
+def decimal_right_digits(x_dec):
+    assert(sp.decimal_to_dot(x_dec))  # Should make exception
+    x_tup = sp.as_tuple_chk(x_dec)
+    y = max(0, -x_tup.exponent)
+    return y
+
+
+def decimal_digits(x_dec):
+    assert(sp.decimal_to_dot(x_dec))  # Should make exception
+    x_tup = sp.as_tuple_chk(x_dec)
+    y = len(x_tup.digits) - min(0, x_dec.adjusted())
+    return y
+
+
+def decimal_floor_log10_abs(x_dec):
+    assert(x_dec.is_finite() and x_dec != 0)  # Should make exception
+    return x_dec.adjusted()
+
+
+def decimal_ceil_log10_abs(x_dec):
+    k = decimal_floor_log10_abs(x_dec)
+    assert(abs(sp.decimal_1ek(k)) <= abs(x_dec))
+    y = k + int(sp.decimal_1ek(k, signed=x_dec.is_signed()) != x_dec)
+    return y
+
+
+def decimal_next_pow10(x_dec):
+    if x_dec == 0:
+        return x_dec  # Note: this keeps sign and precision of original 0.
+    k = decimal_ceil_log10_abs(x_dec)
+    y = sp.decimal_1ek(k, signed=x_dec.is_signed())
+    return y
+
+# ============================================================================
+# Now the tests
+# ============================================================================
 
 
 def decimal_eq(x, y):
@@ -56,15 +103,15 @@ def test_decimal_shift():
 
     x_shifted = sp.decimal_1ek(-shift, signed=x.is_signed()) * x
     assert(1 <= x_shifted and x_shifted < 10)
-    assert(sp.decimal_floor_log10_abs(x_shifted) == 0)
-    assert(sp.decimal_left_digits(x_shifted) == 1)
+    assert(decimal_floor_log10_abs(x_shifted) == 0)
+    assert(decimal_left_digits(x_shifted) == 1)
 
 
 def test_decimal_left_digits():
     x = dec_rnd(to_dot=True, all_finite=True)
     str_x = str(abs(x))
     left_dig = len(str_x.split('.')[0])
-    assert(left_dig == sp.decimal_left_digits(x))
+    assert(left_dig == decimal_left_digits(x))
 
 
 def test_decimal_right_digits():
@@ -72,37 +119,37 @@ def test_decimal_right_digits():
     str_x = str(x)
     L = str_x.split('.')
     right_dig = 0 if len(L) <= 1 else len(L[1])
-    assert(right_dig == sp.decimal_right_digits(x))
+    assert(right_dig == decimal_right_digits(x))
 
 
 def test_decimal_digits():
     x = dec_rnd(to_dot=True, all_finite=True)
     str_x = str(abs(x))
     dig = sum(len(ss) for ss in str_x.split('.'))
-    assert(dig == sp.decimal_digits(x))
+    assert(dig == decimal_digits(x))
 
 
 def test_decimal_floor_log10():
     x = dec_rnd(no_zero=True, all_finite=True)
     y = int(np.floor(float(abs(x).log10())))
-    assert(y == sp.decimal_floor_log10_abs(x))
+    assert(y == decimal_floor_log10_abs(x))
 
 
 def test_decimal_ceil_log10():
     x = dec_rnd(no_zero=True, all_finite=True)
     y = int(np.ceil(float(abs(x).log10())))
-    assert(y == sp.decimal_ceil_log10_abs(x))
+    assert(y == decimal_ceil_log10_abs(x))
 
 
 def test_decimal_next_pow10():
     x = dec_rnd(all_finite=True)
-    y = sp.decimal_next_pow10(x)
+    y = decimal_next_pow10(x)
     assert(x.is_signed() == y.is_signed())
     assert(abs(x) <= abs(y))
     if x == 0:
         assert(decimal_eq(x, y))
     else:
-        assert(sp.decimal_ceil_log10_abs(x) == sp.decimal_ceil_log10_abs(y))
+        assert(decimal_ceil_log10_abs(x) == decimal_ceil_log10_abs(y))
 
 
 def test_decimal_to_dot():

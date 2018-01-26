@@ -1,13 +1,13 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, division
 from builtins import range
-
 import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
 import benchmark_tools.constants as constants
 import benchmark_tools.perf_curves as pc
+import benchmark_tools.util as util
 
 # @TODO(rdturnermtl): move MC tests into the respective test functions
 
@@ -117,6 +117,7 @@ def _nv_prg_curve(y_true, y_score, sample_weight=None):
     idx = np.searchsorted(rec_gain, 0.0, side='right')
     assert(idx == np.where(rec_gain > 0.0)[0][0])
     assert(idx > 0)  # Not selecting first point
+
     # Bring forward most recent negative point as point at 0
     rec_gain = np.concatenate(([0.0], rec_gain[idx:]))
     prec_gain = prec_gain[idx - 1:]
@@ -245,7 +246,7 @@ def test_nv_binary_clf_curve():
 
 
 def auc_trapz_test(x_curve, y_curve):
-    auc0 = pc.auc_trapz(x_curve, y_curve)
+    auc0 = util.area(x_curve, y_curve, 'linear')
     for ii in range(x_curve.shape[1]):
         auc1 = auc(x_curve[:, ii], y_curve[:, ii])
         assert(np.allclose(auc0[ii], auc1))
@@ -256,7 +257,7 @@ def auc_trapz_test(x_curve, y_curve):
 
 
 def auc_left_test(x_curve, y_curve):
-    auc0 = pc.auc_left(x_curve, y_curve)
+    auc0 = util.area(x_curve, y_curve, 'previous')
     for ii in range(x_curve.shape[1]):
         delta = np.diff(x_curve[:, ii])
         yv = y_curve[:-1, ii]
@@ -286,11 +287,15 @@ def test_binary_clf_curve():
                                    1e-6)
 
     fps, tps, thresholds = pc._binary_clf_curve(y_bool, y_pred, sample_weight)
-    fpr, tpr, thresholds_roc = pc.roc_curve(y_bool, y_pred, sample_weight)
-    rec, prec, thresholds_pr = pc.recall_precision_curve(y_bool, y_pred,
-                                                         sample_weight)
-    rec_gain, prec_gain, thresholds_prg = pc.prg_curve(y_bool, y_pred,
-                                                       sample_weight)
+    (fpr, tpr, kind), thresholds_roc = \
+        pc.roc_curve(y_bool, y_pred, sample_weight)
+    assert(kind == 'linear')
+    (rec, prec, kind), thresholds_pr = \
+        pc.recall_precision_curve(y_bool, y_pred, sample_weight)
+    assert(kind == 'previous')
+    (rec_gain, prec_gain, kind), thresholds_prg = \
+        pc.prg_curve(y_bool, y_pred, sample_weight)
+    assert(kind == 'previous')
 
     auc_trapz_test(fpr, tpr)
     auc_left_test(rec, prec)

@@ -1,7 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
 from builtins import range
-
 import decimal
 from sys import version_info
 import warnings
@@ -13,8 +12,8 @@ from benchmark_tools.constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
 from benchmark_tools.constants import (GEN_FMT, ABOVE_FMT, BELOW_FMT,
                                        _PREFIX, _PREFIX_TEX)
 
-# Some numeric constants
-NAN_STR = str(np.nan)
+NAN_STR = str(np.nan)  # Our string rep of NaN
+# Constants of Decimal type
 D_INF = decimal.Decimal('Infinity')
 D_NINF = decimal.Decimal('-Infinity')
 
@@ -38,20 +37,77 @@ remove_chars = remove_chars_py3 if version_info[0] >= 3 else remove_chars_py2
 
 
 def all_same(L):
-    return len(L) == 0 or all(x == L[0] for x in L)
+    '''Check if all elements in list are equal.
+
+    Parameters
+    ----------
+    L : array-like, shape (n,)
+        List of objects of any type.
+
+    Returns
+    -------
+    y : bool
+        True if all elements are equal.
+    '''
+    y = len(L) == 0 or all(x == L[0] for x in L)
+    return y
 
 
 def floor_mod(x, mod):
-    return (x // mod) * mod
+    '''Do floor in base mod instead of to nearest integer.
+
+    Parameters
+    ----------
+    x : int
+        Number to floor.
+    mod : int
+        Positive number (`x` >= 1) to use as modulus.
+
+    Returns
+    -------
+    y : int
+        Largest number ``y <= x`` such that ``y % mod = 0``.
+    '''
+    y = (x // mod) * mod
+    return y
 
 
 def ceil_mod(x, mod):
-    return floor_mod(x, -mod)
+    '''Do ceil in base mod instead of to nearest integer.
+
+    Parameters
+    ----------
+    x : int
+        Number to ceil.
+    mod : int
+        Positive number (`x` >= 1) to use as modulus.
+
+    Returns
+    -------
+    y : int
+        Smallest number ``y >= x`` such that ``y % mod = 0``.
+    '''
+    y = floor_mod(x, -mod)
+    return y
 
 
 def str_print_len(x_str):
-    x_len = len(remove_chars(x_str, ',.'))
-    return x_len
+    '''Estimated width of formatted number of string when *not* displayed using
+    a fixed width font. This is the number of characters not including ``.``
+    and ``,`` because they are assumed to be of negligible width.
+
+    Parameters
+    ----------
+    x_str : str
+        Already formatted number string.
+
+    Returns
+    -------
+    str_len : int
+        Length of string without negligible width characters ``.`` and ``,``.
+    '''
+    str_len = len(remove_chars(x_str, ',.'))
+    return str_len
 
 
 def ensure_tuple_of_ints(L):
@@ -79,7 +135,8 @@ def decimal_all_finite(x_dec_list):
     y : bool
         True if all elements are finite.
     '''
-    return all(x.is_finite() for x in x_dec_list)
+    y = all(x.is_finite() for x in x_dec_list)
+    return y
 
 
 def decimal_from_tuple(signed, digits, expo):
@@ -104,8 +161,8 @@ def decimal_from_tuple(signed, digits, expo):
     digits = ensure_tuple_of_ints(digits)
     expo = expo if expo in ('F', 'n', 'N') else int(expo)
 
-    x = decimal.Decimal(decimal.DecimalTuple(signed, digits, expo))
-    return x
+    y = decimal.Decimal(decimal.DecimalTuple(signed, digits, expo))
+    return y
 
 
 def as_tuple_chk(x_dec):
@@ -128,7 +185,7 @@ def as_tuple_chk(x_dec):
 
 
 def decimal_1ek(k, signed=False):
-    '''Return ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
+    '''Returns ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
 
     Parameters
     ----------
@@ -142,7 +199,8 @@ def decimal_1ek(k, signed=False):
     y : Decimal
         ``10 ** k`` or ``-1 * 10 ** k`` in `Decimal`.
     '''
-    return decimal_from_tuple(signed, (1,), k)
+    y = decimal_from_tuple(signed, (1,), k)
+    return y
 
 
 def decimal_eps(x_dec):
@@ -158,54 +216,7 @@ def decimal_eps(x_dec):
     y : Decimal
         Smallest value that can be added to `x_dec`.
     '''
-    return decimal_1ek(x_dec.as_tuple().exponent)
-
-# TODO move these
-
-
-def decimal_left_digits(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(decimal_to_dot(x_dec))  # Should make exception
-    y = 1 + max(0, x_dec.adjusted())
-    return y
-
-
-def decimal_right_digits(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(decimal_to_dot(x_dec))  # Should make exception
-    x_tup = as_tuple_chk(x_dec)
-    y = max(0, -x_tup.exponent)
-    return y
-
-
-def decimal_digits(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(decimal_to_dot(x_dec))  # Should make exception
-    x_tup = as_tuple_chk(x_dec)
-    y = len(x_tup.digits) - min(0, x_dec.adjusted())
-    return y
-
-
-def decimal_floor_log10_abs(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    assert(x_dec.is_finite() and x_dec != 0)  # Should make exception
-    return x_dec.adjusted()
-
-
-def decimal_ceil_log10_abs(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    k = decimal_floor_log10_abs(x_dec)
-    assert(abs(decimal_1ek(k)) <= abs(x_dec))
-    y = k + int(decimal_1ek(k, signed=x_dec.is_signed()) != x_dec)
-    return y
-
-
-def decimal_next_pow10(x_dec):
-    '''Not currently used, could be moved into test files.'''
-    if x_dec == 0:
-        return x_dec  # Note: this keeps sign and precision of original 0.
-    k = decimal_ceil_log10_abs(x_dec)
-    y = decimal_1ek(k, signed=x_dec.is_signed())
+    y = decimal_1ek(x_dec.as_tuple().exponent)
     return y
 
 
@@ -232,7 +243,8 @@ def decimal_to_dot(x_dec):
     >>> decimal_to_dot(Decimal('1.23E+3'))
     False
     '''
-    return x_dec.is_finite() and (x_dec.as_tuple().exponent <= 0)
+    y = x_dec.is_finite() and (x_dec.as_tuple().exponent <= 0)
+    return y
 
 
 def create_decimal(x, digits, rounding=decimal.ROUND_HALF_UP):
@@ -275,7 +287,8 @@ def digit_str(x_dec):
         String of digits in `x_dec`.
     '''
     x_tup = as_tuple_chk(x_dec)
-    return ''.join(str(digit) for digit in x_tup.digits)
+    y = ''.join(str(digit) for digit in x_tup.digits)
+    return y
 
 # ============================================================================
 # Convert into decimal
@@ -455,7 +468,7 @@ def print_pval(pval, below_fmt=BELOW_FMT, non_finite_fmt={}):
         Decimal p-value to represent as string. Must be in [0,1] or nan.
     below_fmt : str (format string)
         Format string to display when p-value is lower limit clipped, often:
-        '<{0:,f}'.
+        ``'<{0:,f}'``.
     non_finite_fmt : dict of str to str
         Display format when estimate is non-finite. For example, for latex
         looking output, one could use: ``{'nan': '--'}``.
@@ -465,7 +478,7 @@ def print_pval(pval, below_fmt=BELOW_FMT, non_finite_fmt={}):
     pval_str : str
         String representation of p-value. If p-value is zero or minimum
         Decimal value allowable in precision of pval. We simply return clipped
-        string, e.g. '<0.0001', as value.
+        string, e.g. ``'<0.0001'``, as value.
     '''
     pval_eps = decimal_eps(pval)
     if pval.is_nan():
@@ -654,7 +667,9 @@ def find_last_dig(num_str):
     if pos < 0:
         pos = len(num_str)
         assert(pos != 0)
-    return pos - 1
+
+    pos = pos - 1  # Indexing adjust
+    return pos
 
 
 def pad_num_str(num_str_list, pad=' '):

@@ -68,7 +68,7 @@ def eval_step_func_test():
     assert(np.allclose(y_grid, y_grid2))
 
 
-def make_into_step_test():
+def unique_take_last_test():
     N = np.random.randint(low=0, high=10)
 
     xp = np.sort(np.random.choice(np.random.randn(N + 1),
@@ -76,11 +76,23 @@ def make_into_step_test():
     yp = np.random.randn(N)
     D = {xp[ii]: yp[ii] for ii in range(N)}
 
-    xp2, yp2 = util.make_into_step(xp, yp)
+    xp2, yp2 = util.unique_take_last(xp, yp)
     assert(xp2.shape == yp2.shape)
     assert(np.all(np.unique(xp) == xp2))
     D2 = {xp2[ii]: yp2[ii] for ii in range(len(xp2))}
     assert(D == D2)
+
+    xp3, yp3 = util.unique_take_last(xp)
+    assert(np.all(xp2 == xp3))
+    assert(yp3 is None)
+
+    # Func basically same as using unique, but unique returns first occurance
+    xp_rev = xp[::-1]
+    _, idx = np.unique(xp_rev, return_index=True)
+    xp4 = xp_rev[idx]
+    yp4 = yp[::-1][idx]
+    assert(np.all(xp2 == xp4))
+    assert(np.all(yp2 == yp4))
 
 if __name__ == '__main__':
     np.random.seed(75675)
@@ -90,5 +102,5 @@ if __name__ == '__main__':
         test_normalize()
         epsilon_noise_test()
         eval_step_func_test()
-        make_into_step_test()
+        unique_take_last_test()
     print('passed')

@@ -14,6 +14,8 @@ import benchmark_tools.sciprint as sp
 
 rng = np.random.RandomState(0)
 
+# TODO set general random seed too
+
 
 def simple_data():
     X = 15 * rng.rand(100, 1)

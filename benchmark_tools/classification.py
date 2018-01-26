@@ -4,14 +4,12 @@ from joblib import Memory
 import numpy as np
 import pandas as pd
 from scipy.misc import logsumexp
-from benchmark_tools.benchmark_tools import (
-    loss_summary_table, get_mean_and_EB, ttest1)
+from benchmark_tools.benchmark_tools import loss_summary_table
 from benchmark_tools.constants import (
-    METHOD, STAT, CURVE_STATS, STD_STATS, METRIC, PAIRWISE_DEFAULT)
-
+    STAT, CURVE_STATS, STD_STATS, ERR_COL, PVAL_COL,
+    METHOD, METRIC, PAIRWISE_DEFAULT)
 import benchmark_tools.perf_curves as pc
-from benchmark_tools.util import (one_hot, normalize, eval_step_func,
-                                  make_into_step)
+from benchmark_tools.util import one_hot, normalize, interp1d, area
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -212,12 +210,7 @@ def spherical_loss(y, log_pred_prob, rescale=True):
 
 
 def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
-    '''Build table with mean and error bar summaries from a loss table that
-    contains losses on a per data point basis.
-
-    Parameters
-    ----------
-    Compute loss table from table of probalistic predictions.
+    '''Compute loss table from table of probalistic predictions.
 
     Parameters
     ----------
@@ -277,7 +270,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
 # ============================================================================
 
 
-def check_curve(curve):
+def check_curve(result, singleton=False):
     '''Check result performance curve output matches expected format and
     return the curve.
 
@@ -292,40 +285,80 @@ def check_curve(curve):
     curve : tuple of (2d ndarray, 2d ndarray, 2d ndarray)
         Returns same object passed in after some input checks.
     '''
-    x_curve, y_curve, _ = curve  # Skipping tholds since not used here
+    # TODO update doc-string
+    curve, _ = result  # Skipping tholds since not used here
+    x_curve, y_curve, kind = curve
+
+    # Check shape
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
+    assert((not singleton) or x_curve.shape[1] == 1)
+    assert(x_curve.shape[0] >= 2)  # Otherwise not curve
+
+    # Check values
+    # TODO check all have same start and end
     assert(np.all(np.isfinite(x_curve)))
-    # PRG can be -inf, but all curves should be < inf
-    assert(np.all(y_curve < np.inf))
-    # x should be sorted
-    assert(np.all(np.diff(x_curve, axis=0) >= 0.0))
+    assert(np.all(y_curve < np.inf))  # PRG can be -inf, but all curves < inf
+    assert(np.all(np.diff(x_curve, axis=0) >= 0.0))  # sorted
     return curve
 
 
-def check_summary(cs):
-    '''Check result performance curve summary matches expected format and
-    return it.
+def confidence_to_percentiles(confidence):
+    assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
 
-    Parameters
-    ----------
-    cs : ndarray, shape (n_boot,)
-        Curve summary scalar
-
-    Returns
-    -------
-    cs : ndarray, shape (n_boot,)
-        Returns same object passed in after some input checks.
-    '''
-    assert(cs.ndim == 1)
-    # PRG can be -inf, but all curves should be < inf
-    assert(np.all(cs < np.inf))
-    return cs
+    alpha = 0.5 * (1.0 - confidence)
+    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
+    return q_levels
 
 
-def curve_boot(y, log_pred_prob,
-               log_pred_prob_ref=None, default_summary_ref=np.nan,
-               curve_f=pc.roc_curve, summary_f=pc.auc_trapz, x_grid=None,
+def boot_samples_to_CI(boot_samples, confidence):
+    assert(boot_samples.ndim >= 1)
+
+    q_levels = confidence_to_percentiles(confidence)
+    LB, UB = np.percentile(boot_samples, q_levels, axis=-1)
+    assert(LB.shape == boot_samples.shape[:-1])
+    assert(LB.shape == UB.shape)
+    return LB, UB
+
+
+def boot_samples_to_EB(boot_samples, ref=0.0, confidence=0.95):
+    assert(boot_samples.ndim == 1)
+    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
+
+    delta = boot_samples - ref
+    mu_delta = np.mean(delta)
+    LB, UB = boot_samples_to_CI(delta, confidence)
+    EB = np.fmax(UB - mu_delta, mu_delta - LB)
+    assert(EB >= 0.0 or np.isnan(EB))
+    # NaN EB only ever occurs when ref is infinite and so are some samples
+    assert(np.all(np.isfinite(ref)) <= ~np.isnan(EB))
+    return EB
+
+
+def boot_samples_to_pval(boot_samples, ref):
+    assert(boot_samples.ndim == 1)
+    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
+
+    pval = 2.0 * np.minimum(np.mean(boot_samples <= ref),
+                            np.mean(ref <= boot_samples))
+    pval = np.minimum(1.0, pval)  # Only needed when some auc == ref exactly
+    return pval
+
+
+def interp1d_(x_grid, x_boot, y_boot, kind):
+    # TODO just use np vectorize
+    n_boot = x_boot.shape[1]
+
+    y_grid_boot = np.zeros((x_grid.size, n_boot))
+    for nn in xrange(n_boot):
+        y_grid_boot[:, nn] = \
+            interp1d(x_grid, x_boot[:, nn], y_boot[:, nn], kind)
+    assert(y_grid_boot.shape == (x_grid.size, n_boot))
+    return y_grid_boot
+
+
+def curve_boot(y, log_pred_prob, ref,
+               curve_f=pc.roc_curve, x_grid=None,
                n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
     '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
     For binary classification only.
@@ -352,11 +385,6 @@ def curve_boot(y, log_pred_prob,
     curve_f : callable
         Function to compute the performance curve. Standard choices are:
         `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
-    summary_f : callable
-        Function that computes scalar summary (e.g., AUC) of performance curve.
-        Standard choices are: `perf_curves.auc_trapz`, `perf_curves.auc_left`.
-        Different choices are needed for different curves as it can effect
-        estimator bias.
     x_grid : None or ndarray of shape (n_grid,)
         Grid of points to evaluate curve in results. If `None`, defaults to
         linear grid on [0,1].
@@ -381,82 +409,55 @@ def curve_boot(y, log_pred_prob,
         end of confidence envelope, and the upper end of the confidence
         envelope.
     '''
+    # TODO update doc string
     N, n_labels = shape_and_validate(y, log_pred_prob)
     assert(n_labels == 2)
-    assert(log_pred_prob_ref is None or
-           log_pred_prob_ref.shape == log_pred_prob.shape)
+    assert(np.ndim(ref) == 0 or ref.shape == log_pred_prob.shape)
+    assert(not np.any(np.isnan(ref)))
     assert(n_boot >= 1)
-    assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
     assert(not np.any(np.isnan(log_pred_prob)))  # Would let method cheat
 
-    # Set weights to at least epsilon instead of zero in bootstrap since some
-    # routines have trouble with zero weight.
-    epsilon = 1e-10
-
+    # Setup constants
+    epsilon = 1e-10  # Min bootstrap weight since 0 weight can cause problems
     x_grid = np.linspace(0.0, 1.0, DEFAULT_NGRID) if x_grid is None else x_grid
     assert(np.ndim(x_grid) == 1)
 
-    # Setup levels for percentile function
-    alpha = 0.5 * (1.0 - confidence)
-    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
-
-    # Make everything a vector
+    # Put everything into a vector of right type for binary classification
     y = y.astype(bool)
     log_pred_prob = log_pred_prob[:, 1]
 
-    # Basic no-boot strap result
-    x_curve, y_curve, _ = check_curve(curve_f(y, log_pred_prob))
-    mu, = check_summary(summary_f(x_curve, y_curve))
-    assert(mu.ndim == 0)
+    # Get estimator on original data (before boot strap)
+    curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
+    auc, = area(*curve)
+    assert(auc.ndim == 0)
+    # TODO make uneeded with singleton arg
+    y_grid = interp1d_(x_grid, *curve)[:, 0]  # Use fixed grid
+    assert(x_grid.shape == y_grid.shape)
 
-    # To really plot curve at full precision we should use union of x_curve
-    # and x_grid, but if x_grid is also random the validity of the following
-    # bootstrap procedure is more difficult to determine.
-    x_curve_, y_curve_ = make_into_step(x_curve[:, 0], y_curve[:, 0])
-    y_curve = eval_step_func(x_grid, x_curve_, y_curve_)
-
+    # Setup boot strap weights
     p_BS = np.ones(N) / N
     weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot).T)
 
-    xp_boot, yp_boot, _ = check_curve(curve_f(y, log_pred_prob, weight))
-    curve_summary = check_summary(summary_f(xp_boot, yp_boot))
+    # Get boot strapped scores
+    curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))
+    auc_boot = area(*curve_boot_)
+    assert(auc_boot.shape == (n_boot,))
+    y_grid_boot = interp1d_(x_grid, *curve_boot_)
 
-    curve_summary_ref = default_summary_ref
-    if log_pred_prob_ref is not None:
-        assert(not np.any(np.isnan(log_pred_prob_ref)))
-        log_pred_prob_ref = log_pred_prob_ref[:, 1]
+    # Repeat area boot strap with reference predictor
+    if np.ndim(ref) == 2:  # Note dim must be 0 or 2
+        ref = area(*check_curve(curve_f(y, ref[:, 1], weight)))
+        assert(ref.shape == (n_boot,))
 
-        xp_boot_ref, yp_boot_ref, _ = \
-            check_curve(curve_f(y, log_pred_prob_ref, weight))
-        curve_summary_ref = check_summary(summary_f(xp_boot_ref, yp_boot_ref))
+    # Pack up standard numeric summary triple
+    EB = boot_samples_to_EB(auc_boot, ref, confidence) if pairwise_CI \
+        else boot_samples_to_EB(auc_boot, confidence=confidence)
+    pval = boot_samples_to_pval(auc_boot, ref)
+    summary = (auc, EB, pval)
 
-    # Unclear if there is efficient way to vectorize this
-    yp_boot_grid = np.zeros((x_grid.size, n_boot))
-    for nn in xrange(n_boot):
-        x_curve_, y_curve_ = make_into_step(xp_boot[:, nn], yp_boot[:, nn])
-        yp_boot_grid[:, nn] = eval_step_func(x_grid, x_curve_, y_curve_)
-
-    # Summary stat: Get EB
-    # This could create problems if curve_summary and curve_summary_ref both
-    # have inf values.
-    delta = curve_summary - curve_summary_ref if pairwise_CI else curve_summary
-    mu_delta = np.mean(delta)
-    LB, UB = np.percentile(delta, q_levels)
-    # This could nan-out if everything is inf
-    EB = np.fmax(UB - mu_delta, mu_delta - LB)
-    assert(EB >= 0.0 or np.isnan(EB))
-
-    # Summary stat: Get p-val (two-sided)
-    pval = 2.0 * np.minimum(np.mean(curve_summary <= curve_summary_ref),
-                            np.mean(curve_summary_ref <= curve_summary))
-    pval = np.minimum(1.0, pval)
-
-    summary = (mu, EB, pval)
-
-    # Summarize the curves
-    y_LB = np.percentile(yp_boot_grid, q_levels[0], axis=1)
-    y_UB = np.percentile(yp_boot_grid, q_levels[1], axis=1)
-    curve = pd.DataFrame(data=np.stack((x_grid, y_curve, y_LB, y_UB), axis=1),
+    # Pack up data frame with graphical summaries (performance curves)
+    y_LB, y_UB = boot_samples_to_CI(y_grid_boot, confidence)
+    curve = pd.DataFrame(data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1),
                          index=xrange(x_grid.size), columns=CURVE_STATS,
                          dtype=float)
     return summary, curve
@@ -480,13 +481,9 @@ def curve_summary_table(log_pred_prob_table, y,
     y : ndarray of type int or bool, shape (n_samples,)
         True labels for each classication data point. Must be of same length as
         DataFrame `log_pred_prob_table`.
-    curve_dict : dict of str to (callable, callable)
-        Dictionary mapping curve name to tuple of two functions:
-        (`curve_f`, `summary_f`). The first `curve_f` computes the curve
-        (e.g., ROC) and the second `summary_f` computes the summary
-        (e.g., AUC). Standard choices are:
-        ``(perf_curves.roc_curve, perf_curves.auc_trapz)`` or
-        ``(perf_curves.recall_precision_curve, perf_curves.auc_left)``
+    curve_dict : dict of str to callable
+        Dictionary mapping curve name to performance curve. Standard choices:
+        `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
     ref_method : str
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
@@ -504,48 +501,59 @@ def curve_summary_table(log_pred_prob_table, y,
 
     Returns
     -------
-    perf_tbl : DataFrame, shape (n_methods, n_metrics * 3)
-        DataFrame with mean loss of each method according to each loss
-        function. The rows are the methods. The columns are a hierarchical
-        index that is the cartesian product of
-        loss x (mean, error bar, p-value). That is,
-        ``perf_tbl.loc['foo', 'bar']`` is a pandas series with
-        (mean loss of foo on bar, corresponding error bar, statistical sig)
+    curve_tbl : DataFrame, shape (n_methods, n_metrics * 3)
+        DataFrame with curve summary of each method according to each curve.
+        The rows are the methods. The columns are a hierarchical index that is
+        the cartesian product of curve x (summary, error bar, p-value).
+        That is, ``curve_tbl.loc['foo', 'bar']`` is a pandas series with
+        (summary of bar curve on foo, corresponding error bar, statistical sig)
         The statistical significance is a p-value from a two-sided hypothesis
-        test on the hypothesis H0 that foo has the same mean loss as the
+        test on the hypothesis H0 that foo has the same curve summary as the
         reference method `ref_method`.
+    curve_dump : dict of (str, str) to DataFrame of shape (n_grid, 4)
+        Each key is a pair of (method name, curve name) with the value being
+        a pandas dataframe with the performance curve, which has four columns:
+        `x_grid`, the curve value, the lower end of confidence envelope,
+        and the upper end of the confidence envelope.
     '''
-    assert(loss_table.columns.names == (METRIC, METHOD))
-    metrics, methods = loss_table.columns.levels
+    methods, labels = log_pred_prob_table.columns.levels
+    N, n_labels = len(log_pred_prob_table), len(labels)
+    assert(y.shape == (N,))
     assert(ref_method in methods)  # ==> len(methods) >= 1
-    assert(len(loss_table) >= 1 and len(metrics) >= 1)
-    # Could also test these are cartesian product if we wanted to be exhaustive
+    assert(N >= 1 and n_labels >= 1 and len(curve_dict) >= 1)
 
-    col_names = pd.MultiIndex.from_product([metrics, STD_STATS],
+    assert(list(log_pred_prob_table[ref_method].columns) ==
+           list(range(n_labels)))
+    log_pred_prob_ref = log_pred_prob_table[ref_method].values
+    assert(log_pred_prob_ref.shape == (N, n_labels))
+    # Note: Most curve methods are rank based and so normalization is not
+    # needed to prevent cheating. However, if we expect non-normalized methods
+    # they should be normalized before to keep consistency with loss metrics.
+
+    col_names = pd.MultiIndex.from_product([curve_dict.keys(), STD_STATS],
                                            names=[METRIC, STAT])
-    perf_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
-    perf_tbl.index.name = METHOD
-    for metric in metrics:
-        loss_ref = loss_table.loc[:, (metric, ref_method)]
-        assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
-        for method in methods:
-            loss = loss_table.loc[:, (metric, method)]
-            assert(loss.ndim == 1)  # Weird stuff happens if names not unique
-            assert(not np.any(np.isnan(loss)))  # Would let method cheat
+    curve_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
+    curve_tbl.index.name = METHOD
 
-            # get_mean_and_EB() supports other EB metrics already, they could
-            # be added here if needed.
-            if pairwise_CI:
-                mu, EB = get_mean_and_EB(loss, loss_ref, confidence)
-                EB = np.nan if method == ref_method else EB
-            else:
-                mu, EB = get_mean_and_EB(loss, confidence)
+    curve_dump = {}
+    for method in methods:
+        assert(list(log_pred_prob_table[method].columns) ==
+               list(range(n_labels)))
+        log_pred_prob = log_pred_prob_table[method].values
+        assert(log_pred_prob.shape == (N, n_labels))
 
-            # This is two-sided, could include one-sided option too.
-            pval = ttest1(loss - loss_ref, nan_on_zero=(method == ref_method))
-            assert((method == ref_method) == np.isnan(pval))
-            perf_tbl.loc[method, metric] = (mu, EB, pval)
-    return perf_tbl
+        for curve_name, curve_f in curve_dict.items():
+            R = curve_boot(y, log_pred_prob, ref=log_pred_prob_ref,
+                           curve_f=curve_f, x_grid=x_grid, n_boot=n_boot,
+                           pairwise_CI=pairwise_CI, confidence=confidence)
+            curve_summary, curr_curve = R
+            curve_tbl.loc[method, curve_name] = curve_summary
+            if pairwise_CI and method == ref_method:
+                curve_tbl.loc[method, (curve_name, ERR_COL)] = np.nan
+            if method == ref_method:  # NaN probably makes more sense than 1
+                curve_tbl.loc[method, (curve_name, PVAL_COL)] = np.nan
+            curve_dump[(method, curve_name)] = curr_curve
+    return curve_tbl, curve_dump
 
 
 def summary_table(log_pred_prob_table, y,
@@ -568,13 +576,9 @@ def summary_table(log_pred_prob_table, y,
     loss_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `brier_loss`, ...
-    curve_dict : dict of str to (callable, callable)
-        Dictionary mapping curve name to tuple of two functions:
-        (`curve_f`, `summary_f`). The first `curve_f` computes the curve
-        (e.g., ROC) and the second `summary_f` computes the summary
-        (e.g., AUC). Standard choices are:
-        ``(perf_curves.roc_curve, perf_curves.auc_trapz)`` or
-        ``(perf_curves.recall_precision_curve, perf_curves.auc_left)``
+    curve_dict : dict of str to callable
+        Dictionary mapping curve name to performance curve. Standard choices:
+        `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
     ref_method : str
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
@@ -634,20 +638,21 @@ def summary_table(log_pred_prob_table, y,
 STD_CLASS_LOSS = {'NLL': log_loss, 'Brier': brier_loss,
                   'sphere': spherical_loss, 'zero_one': hard_loss}
 
-STD_BINARY_CURVES = {'AUC': (pc.roc_curve, pc.auc_trapz),
-                     'AP': (pc.recall_precision_curve, pc.auc_left),
-                     'AUPRG': (pc.prg_curve, pc.auc_left)}
+STD_BINARY_CURVES = {'AUC': pc.roc_curve, 'AP': pc.recall_precision_curve,
+                     'AUPRG': pc.prg_curve}
 
 
 class JustNoise:
-    '''Class version of iid predictor compatible with sklearn interface.'''
+    '''Class version of iid predictor compatible with sklearn interface. Same
+    as ``sklearn.dummy.DummyClassifier(strategy='prior').``'''
 
-    def __init__(self):
-        self.pred = [np.nan, np.nan]
+    def __init__(self, n_labels=2):
+        self.pred = np.nan + np.zeros(n_labels)
 
     def fit(self, X_train, y_train):
-        P = np.mean(y_train)
-        self.pred = [np.log(1.0 - P), np.log(P)]
+        n_labels = len(self.pred)
+        self.pred = np.log(np.mean(one_hot(y_train, n_labels), axis=0))
+        assert(self.pred.shape == (n_labels,))
 
     def predict_log_proba(self, X_test):
         n_samples = X_test.shape[0]
@@ -740,7 +745,7 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
 def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
                    methods, loss_dict, curve_dict, ref_method,
-                   min_pred_log_prob=-np.inf):
+                   min_pred_log_prob=-np.inf, pairwise_CI=PAIRWISE_DEFAULT):
     '''Simplest one-call interface to this package. Just pass it data and
     method objects and a performance summary DataFrame is returned.
 
@@ -769,13 +774,9 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     loss_dict : dict of str to callable
         Dictionary mapping loss function name to function that computes loss,
         e.g., `log_loss`, `brier_loss`, ...
-    curve_dict : dict of str to (callable, callable)
-        Dictionary mapping curve name to tuple of two functions:
-        (`curve_f`, `summary_f`). The first `curve_f` computes the curve
-        (e.g., ROC) and the second `summary_f` computes the summary
-        (e.g., AUC). Standard choices are:
-        ``(perf_curves.roc_curve, perf_curves.auc_trapz)`` or
-        ``(perf_curves.recall_precision_curve, perf_curves.auc_left)``
+    curve_dict : dict of str to callable
+        Dictionary mapping curve name to performance curve. Standard choices:
+        `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
     ref_method : str
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
@@ -783,6 +784,9 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     min_log_prob : float
         Minimum value to floor the predictive log probabilities (while still
         normalizing). Must be < 0. Useful to prevent inf log loss penalties.
+    pairwise_CI : bool
+        If True, compute error bars on the mean of ``loss - loss_ref`` instead
+        of just the mean of `loss`. This typically gives smaller error bars.
 
     Returns
     -------
@@ -807,5 +811,5 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
                                  methods, min_log_prob=min_pred_log_prob)
     full_tbl, dump = summary_table(pred_tbl, y_test, loss_dict, curve_dict,
-                                   ref_method)
+                                   ref_method, pairwise_CI=pairwise_CI)
     return full_tbl, dump
