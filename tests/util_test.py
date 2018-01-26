@@ -1,8 +1,10 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, division
+from builtins import range
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder, normalize
 from statsmodels.distributions.empirical_distribution import StepFunction
-import util
+from benchmark_tools import util
 
 
 def test_one_hot():
@@ -72,12 +74,12 @@ def unique_take_last_test():
     xp = np.sort(np.random.choice(np.random.randn(N + 1),
                                   size=N, replace=True))
     yp = np.random.randn(N)
-    D = {xp[ii]: yp[ii] for ii in xrange(N)}
+    D = {xp[ii]: yp[ii] for ii in range(N)}
 
     xp2, yp2 = util.unique_take_last(xp, yp)
     assert(xp2.shape == yp2.shape)
     assert(np.all(np.unique(xp) == xp2))
-    D2 = {xp2[ii]: yp2[ii] for ii in xrange(len(xp2))}
+    D2 = {xp2[ii]: yp2[ii] for ii in range(len(xp2))}
     assert(D == D2)
 
     xp3, yp3 = util.unique_take_last(xp)
@@ -92,12 +94,13 @@ def unique_take_last_test():
     assert(np.all(xp2 == xp4))
     assert(np.all(yp2 == yp4))
 
-np.random.seed(75675)
+if __name__ == '__main__':
+    np.random.seed(75675)
 
-for _ in xrange(1000):
-    test_one_hot()
-    test_normalize()
-    epsilon_noise_test()
-    eval_step_func_test()
-    unique_take_last_test()
-print 'passed'
+    for _ in range(1000):
+        test_one_hot()
+        test_normalize()
+        epsilon_noise_test()
+        eval_step_func_test()
+        unique_take_last_test()
+    print('passed')

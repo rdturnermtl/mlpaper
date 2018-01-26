@@ -1,10 +1,12 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import, division
 from joblib import Memory
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from constants import METHOD, METRIC
-from benchmark_tools import loss_summary_table, PAIRWISE_DEFAULT
+from benchmark_tools.constants import METHOD, METRIC
+from benchmark_tools.benchmark_tools import (loss_summary_table,
+                                             PAIRWISE_DEFAULT)
 
 MOMENT = 'moment'  # Don't put in constants since only needed for regression
 
@@ -264,7 +266,7 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
                             dtype=float)
     for method_name, method_obj in methods.iteritems():
         if verbose:
-            print 'Running fit/predict for %s' % method_name
+            print('Running fit/predict for %s' % method_name)
         mu, std = train_predict(method_obj, X_train, y_train, X_test)
         assert(mu.shape == (n_test,) and std.shape == (n_test,))
 

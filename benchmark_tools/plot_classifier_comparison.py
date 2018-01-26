@@ -4,6 +4,7 @@
 #              Andreas Muller
 # Modified for documentation by Jaques Grobler
 # License: BSD 3 clause
+from __future__ import print_function, absolute_import, division
 import numpy as np
 from matplotlib import use
 use('pdf')
@@ -21,9 +22,9 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-import classification as btc
-from classification import STD_CLASS_LOSS, STD_BINARY_CURVES
-import sciprint as sp
+import benchmark_tools.classification as btc
+from benchmark_tools.classification import STD_CLASS_LOSS, STD_BINARY_CURVES
+import benchmark_tools.sciprint as sp
 
 h = 0.02  # step size in the mesh
 
@@ -93,18 +94,18 @@ for ds_cnt, ds in enumerate(datasets):
         btc.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
                            STD_CLASS_LOSS, STD_BINARY_CURVES, ref_method,
                            min_pred_log_prob=min_pred_log_prob)
-    print '-' * 20
-    print 'DATASET %d Results' % ds_cnt
-    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+    print('-' * 20)
+    print('DATASET %d Results' % ds_cnt)
+    print(sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
                             EB_limit={'AUPRG': -1},
-                            non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
-    print ''
-    print 'DATASET %d Results in LaTeX' % ds_cnt
-    print sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
+                            non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False))
+    print('')
+    print('DATASET %d Results in LaTeX' % ds_cnt)
+    print(sp.just_format_it(full_tbl, shift_mod=3, unit_dict={'NLL': 'nats'},
                             crap_limit_min={'AUPRG': -1},
                             EB_limit={'AUPRG': -1},
-                            non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True)
+                            non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True))
 
     # iterate over classifiers
     for name, clf in classifiers.iteritems():

@@ -1,12 +1,15 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, division
+from builtins import range
 from string import ascii_letters
+import benchmark_tools.constants as constants
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
-import benchmark_tools as bt
-import classification as btc
-import util
+import benchmark_tools.benchmark_tools as bt
+import benchmark_tools.classification as btc
+from benchmark_tools import util
 
 
 def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
@@ -27,7 +30,7 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     return loss
 
 
-def test_t_EB(runs=100, trials=1000):
+def test_t_EB(runs=10, trials=100):
     pval = []
     while len(pval) < runs:
         N = np.random.randint(low=0, high=10)
@@ -39,7 +42,7 @@ def test_t_EB(runs=100, trials=1000):
             assert(EB == np.inf)
         else:
             fail = 0
-            for tt in xrange(trials):
+            for tt in range(trials):
                 x = np.random.randn(N)
 
                 EB = bt.t_EB(x, confidence=confidence)
@@ -52,7 +55,7 @@ def test_t_EB(runs=100, trials=1000):
     return pval_agg
 
 
-def test_get_mean_and_EB(runs=100, trials=1000):
+def test_get_mean_and_EB(runs=10, trials=100):
     pval = []
     while len(pval) < runs:
         N = np.random.randint(low=0, high=10)
@@ -73,7 +76,7 @@ def test_get_mean_and_EB(runs=100, trials=1000):
             assert(np.allclose(EB, np.nanmean(EB2), equal_nan=True))
         else:
             fail = 0
-            for tt in xrange(trials):
+            for tt in range(trials):
                 x = 2.0 + np.random.randn(N)
                 x_ref = 1.5 + np.random.randn(N)
 
@@ -141,7 +144,8 @@ def log_loss_test():
 
     if n_labels >= 2:
         loss = btc.log_loss(y, y_pred)
-        loss2 = log_loss(y, np.exp(y_pred), labels=xrange(n_labels))
+
+        loss2 = log_loss(y, np.exp(y_pred), labels=range(n_labels))
         assert(np.allclose(np.mean(loss), loss2))
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -207,19 +211,19 @@ def loss_summary_table_test():
     methods = np.random.choice(list(ascii_letters), n_methods, replace=False)
     ref = np.random.choice(methods)
     metrics = btc.STD_CLASS_LOSS
-    labels = xrange(n_labels)
+    labels = range(n_labels)
 
     col_names = pd.MultiIndex.from_product([methods, labels],
                                            names=[bt.METHOD, btc.LABEL])
     dat = np.random.randn(N, n_labels * len(methods))
-    tbl = pd.DataFrame(data=dat, index=xrange(N), columns=col_names,
+    tbl = pd.DataFrame(data=dat, index=range(N), columns=col_names,
                        dtype=float)
 
     y = np.random.randint(low=0, high=n_labels, size=N)
     loss_tbl = btc.loss_table(tbl, y, metrics_dict=metrics)
     perf_tbl = bt.loss_summary_table(loss_tbl, ref, pairwise_CI=pairwise_CI,
                                      confidence=confidence)
-    for metric, metric_f in metrics.iteritems():
+    for metric, metric_f in metrics.items():
         loss_ref = metric_f(y, util.normalize(tbl[ref].values))
         for method in methods:
             loss = metric_f(y, util.normalize(tbl[method].values))
@@ -242,17 +246,18 @@ def loss_summary_table_test():
             assert(np.allclose(perf_tbl.loc[method, metric].values,
                                [mu, EB, pval], equal_nan=True))
 
-np.random.seed(53634)
+if __name__ == '__main__':
+    np.random.seed(53634)
 
-for _ in xrange(1000):
-    hard_loss_binary_test()
-    hard_loss_decision_test()
-    log_loss_test()
-    brier_loss_test()
-    spherical_loss_test()
-    loss_summary_table_test()
+    for _ in range(constants.MC_REPEATS_1K):
+        hard_loss_binary_test()
+        hard_loss_decision_test()
+        log_loss_test()
+        brier_loss_test()
+        spherical_loss_test()
+        loss_summary_table_test()
 
-print 'Now running MC tests'
-print test_t_EB()
-print test_get_mean_and_EB()
-print 'passed'
+    print('Now running MC tests')
+    print(test_t_EB(trials=constants.MC_REPEATS_1K))
+    print(test_get_mean_and_EB(trials=constants.MC_REPEATS_1K))
+    print('passed')

@@ -1,4 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import, division
+from builtins import range
 import numpy as np
 import pandas as pd
 
@@ -52,7 +54,7 @@ def build_lag_df(df, n_lags, stride=1, features=None):
          3    3  5  6   8   4   2   9
     """
     df_sub = df if features is None else df[list(features)]  # Take all if None
-    D = {(SFT_FMT % nn): df_sub.shift(stride * nn) for nn in xrange(1, n_lags)}
+    D = {(SFT_FMT % nn): df_sub.shift(stride * nn) for nn in range(1, n_lags)}
     D[SFT_FMT % 0] = df
 
     df = pd.concat(D, axis=1, names=['lag'])
@@ -129,7 +131,7 @@ def rand_mask(n_samples, frac):
         Random binary mask.
     """
     # Input validation on frac done in rand_subset()
-    pos = rand_subset(xrange(n_samples), frac)
+    pos = rand_subset(range(n_samples), frac)
     mask = np.zeros(n_samples, dtype=bool)
     mask[pos] = True
     assert(np.sum(mask) >= n_samples * frac)
@@ -313,7 +315,7 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
 
     train_series = pd.Series(index=df.index, data=True)
     test_series = pd.Series(index=df.index, data=True)
-    for feature, how in splits.iteritems():
+    for feature, how in splits.items():
         split_type, frac = how
         # Could throw exception for unknown splitter type
         splitter_f = SPLITTER_LIB[split_type]

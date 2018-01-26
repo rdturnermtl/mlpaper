@@ -1,0 +1,71 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+# Multiple versions of python from: https://github.com/adambrenecki/virtualfish/blob/aa3d6271bcb86ad27b6d24f96b5bd386d176f588/.circleci/config.yml
+version: 2
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-3.6
+      - test-3.5
+      - test-2.7
+
+jobs:
+  test-3.6: &test-template
+    docker:
+      # specify the version you desire here
+      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
+      - image: circleci/python:3.6.1
+      
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
+
+    working_directory: ~/benchmark_tools
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            export PATH=$PATH:~/.local/bin
+            pip install -r requirements.txt --user
+            pip install -r test_requirements.txt --user
+
+      - save_cache:
+          paths:
+            - ./
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+        
+      # run tests!
+      # this example uses Django's built-in test-runner
+      # other common Python testing frameworks include pytest and nose
+      # https://pytest.org
+      # https://nose.readthedocs.io
+      - run:
+          name: run tests
+          command: |
+            export PATH=$PATH:~/.local/bin
+            python -m pytest tests/ --verbose
+
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
+  test-3.5:
+    <<: *test-template
+    docker:
+      - image: circleci/python:3.5.3
+  test-2.7:
+    <<: *test-template
+    docker:
+      - image: circleci/python:2.7.13

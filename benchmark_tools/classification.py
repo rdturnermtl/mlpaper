@@ -1,13 +1,15 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import, division
 from joblib import Memory
 import numpy as np
 import pandas as pd
 from scipy.misc import logsumexp
-from benchmark_tools import loss_summary_table
-from constants import METHOD, METRIC, STAT, CURVE_STATS
-from constants import STD_STATS, PVAL_COL, ERR_COL, PAIRWISE_DEFAULT
-import perf_curves as pc
-from util import one_hot, normalize, interp1d, area
+from benchmark_tools.benchmark_tools import (
+    loss_summary_table, get_mean_and_EB, ttest1)
+from benchmark_tools.constants import (
+    METHOD, STAT, CURVE_STATS, STD_STATS, METRIC, PAIRWISE_DEFAULT)
+import benchmark_tools.perf_curves as pc
+from benchmark_tools.util import one_hot, normalize, interp1d, area
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -203,7 +205,7 @@ def spherical_loss(y, log_pred_prob, rescale=True):
     return loss
 
 # ============================================================================
-# Use and summarize loss functions
+# Loss summary: the main purpose of this file.
 # ============================================================================
 
 
@@ -249,7 +251,8 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
                             columns=col_names, dtype=float)
     for method in methods:
         # Make sure the columns are in right order and we aren't mixing things
-        assert(list(log_pred_prob_table[method].columns) == range(n_labels))
+        assert(list(log_pred_prob_table[method].columns) ==
+               list(range(n_labels)))
 
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (n_samples, n_labels))
@@ -258,7 +261,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
         if not assume_normalized:
             log_pred_prob = normalize(log_pred_prob)
 
-        for metric, metric_f in metrics_dict.iteritems():
+        for metric, metric_f in metrics_dict.items():
             loss_tbl.loc[:, (metric, method)] = metric_f(y, log_pred_prob)
     return loss_tbl
 
@@ -519,7 +522,7 @@ def curve_summary_table(log_pred_prob_table, y,
     assert(ref_method in methods)  # ==> len(methods) >= 1
     assert(N >= 1 and n_labels >= 1 and len(curve_dict) >= 1)
 
-    assert(list(log_pred_prob_table[ref_method].columns) == range(n_labels))
+    assert(list(log_pred_prob_table[ref_method].columns) == list(range(n_labels)))
     log_pred_prob_ref = log_pred_prob_table[ref_method].values
     assert(log_pred_prob_ref.shape == (N, n_labels))
     # Note: Most curve methods are rank based and so normalization is not
@@ -533,11 +536,11 @@ def curve_summary_table(log_pred_prob_table, y,
 
     curve_dump = {}
     for method in methods:
-        assert(list(log_pred_prob_table[method].columns) == range(n_labels))
+        assert(list(log_pred_prob_table[method].columns) == list(range(n_labels)))
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (N, n_labels))
 
-        for curve_name, curve_f in curve_dict.iteritems():
+        for curve_name, curve_f in curve_dict.items():
             R = curve_boot(y, log_pred_prob, ref=log_pred_prob_ref,
                            curve_f=curve_f, x_grid=x_grid, n_boot=n_boot,
                            pairwise_CI=pairwise_CI, confidence=confidence)
@@ -727,9 +730,9 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
                                            names=[METHOD, LABEL])
     log_pred_prob_table = pd.DataFrame(index=xrange(n_test), columns=col_names,
                                        dtype=float)
-    for method_name, method_obj in methods.iteritems():
+    for method_name, method_obj in methods.items():
         if verbose:
-            print 'Running fit/predict for %s' % method_name
+            print('Running fit/predict for {}'.format(method_name))
         pred_log_prob = train_predict(method_obj, X_train, y_train, X_test)
         assert(pred_log_prob.shape == (n_test, n_labels))
 

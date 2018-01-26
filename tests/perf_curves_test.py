@@ -1,10 +1,15 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, division
+from builtins import range
 import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
-import perf_curves as pc
-import util
+import benchmark_tools.constants as constants
+import benchmark_tools.perf_curves as pc
+import benchmark_tools_test.util as util
+
+# @TODO(rdturnermtl): move MC tests into the respective test functions
 
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.
@@ -68,6 +73,10 @@ def _nv_binary_clf_curve(y_true, y_score, sample_weight=None):
     assert(np.all((np.diff(fps) >= 0.0) & (np.diff(tps) >= 0.0)))
     return fps, tps, thresholds
 
+# ============================================================================
+# Non-vectorized versions of routines in perf_curves for testing.
+# ============================================================================
+
 
 def _nv_roc_curve(y_true, y_score, sample_weight=None):
     fps, tps, thresholds = _nv_binary_clf_curve(y_true, y_score,
@@ -120,7 +129,7 @@ def _nv_prg_curve(y_true, y_score, sample_weight=None):
 # ============================================================================
 
 
-def nv_binary_clf_curve_test():
+def test_nv_binary_clf_curve():
     N = np.random.randint(low=1, high=10)
 
     y_bool = np.random.rand(N) <= 0.5
@@ -238,7 +247,7 @@ def nv_binary_clf_curve_test():
 
 def auc_trapz_test(x_curve, y_curve):
     auc0 = util.area(x_curve, y_curve, 'linear')
-    for ii in xrange(x_curve.shape[1]):
+    for ii in range(x_curve.shape[1]):
         auc1 = auc(x_curve[:, ii], y_curve[:, ii])
         assert(np.allclose(auc0[ii], auc1))
 
@@ -249,7 +258,7 @@ def auc_trapz_test(x_curve, y_curve):
 
 def auc_left_test(x_curve, y_curve):
     auc0 = util.area(x_curve, y_curve, 'previous')
-    for ii in xrange(x_curve.shape[1]):
+    for ii in range(x_curve.shape[1]):
         delta = np.diff(x_curve[:, ii])
         yv = y_curve[:-1, ii]
 
@@ -260,7 +269,7 @@ def auc_left_test(x_curve, y_curve):
         assert(np.allclose(auc0[ii], auc1))
 
 
-def binary_clf_curve_test():
+def test_binary_clf_curve():
     N = np.random.randint(low=1, high=10)
     n_boot = np.random.randint(low=1, high=10)
 
@@ -322,7 +331,7 @@ def binary_clf_curve_test():
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
         return
 
-    for ii in xrange(n_boot):
+    for ii in range(n_boot):
         weight_curr = sample_weight[:, ii]
 
         fpr2, tpr2, thresholds_roc2 = \
@@ -347,7 +356,7 @@ def binary_clf_curve_test():
 if __name__ == '__main__':
     np.random.seed(89254)
 
-    for rr in xrange(100000):
-        nv_binary_clf_curve_test()
-        binary_clf_curve_test()
-    print 'passed'
+    for rr in range(constants.MC_REPEATS_LARGE):
+        test_nv_binary_clf_curve()
+        test_binary_clf_curve()
+    print('passed')
