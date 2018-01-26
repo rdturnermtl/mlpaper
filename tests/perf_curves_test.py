@@ -7,7 +7,7 @@ from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
 import benchmark_tools.constants as constants
 import benchmark_tools.perf_curves as pc
-import benchmark_tools_test.util as util
+import benchmark_tools.util as util
 
 # @TODO(rdturnermtl): move MC tests into the respective test functions
 
