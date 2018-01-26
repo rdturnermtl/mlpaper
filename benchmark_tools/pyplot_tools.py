@@ -1,7 +1,8 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import, division
 import matplotlib.pyplot as plt
-from constants import METHOD, METRIC, STAT, HORIZON
-from constants import MEAN_COL, ERR_COL
+from benchmark_tools.constants import METHOD, METRIC, STAT, HORIZON
+from benchmark_tools.constants import MEAN_COL, ERR_COL
 
 DATASET = 'dataset'  # TODO move to constants
 UNIT_FMT = '%s (%s)'

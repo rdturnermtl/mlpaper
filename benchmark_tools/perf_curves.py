@@ -1,4 +1,5 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import
 import numpy as np
 
 EPSILON = 1e-10  # Size of pseudo-point to add to true/false positive count.
@@ -78,7 +79,7 @@ def _binary_clf_curve(y_true, y_score, sample_weight=None):
     """
     assert(y_true.ndim == 1 and y_true.dtype.kind == 'b')
     assert(y_score.shape == y_true.shape and np.all(np.isfinite(y_score)))
-    assert(y_true.size >= 1)
+    assert(y_true.size >= 1), 'y_true.size {}'.format(y_true.size)
 
     # sort scores and corresponding truth values
     desc_score_indices = np.argsort(y_score, kind='mergesort')[::-1]

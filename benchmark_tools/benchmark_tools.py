@@ -1,8 +1,10 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import, division
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from constants import METHOD, METRIC, STAT, STD_STATS, PAIRWISE_DEFAULT
+from benchmark_tools.constants import (
+    METHOD, METRIC, STAT, STD_STATS, PAIRWISE_DEFAULT)
 
 # ============================================================================
 # Statistical util functions

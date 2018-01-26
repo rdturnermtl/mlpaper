@@ -1,16 +1,36 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import, division
+from builtins import range
+
+import decimal
+from sys import version_info
 import warnings
 import numpy as np
 import pandas as pd
-import decimal
-from constants import METHOD, METRIC, STAT, STD_STATS, FMT_STATS
-from constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
-from constants import GEN_FMT, ABOVE_FMT, BELOW_FMT, _PREFIX, _PREFIX_TEX
+from benchmark_tools.constants import (METHOD, METRIC, STAT,
+                                       STD_STATS, FMT_STATS)
+from benchmark_tools.constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
+from benchmark_tools.constants import (GEN_FMT, ABOVE_FMT, BELOW_FMT,
+                                       _PREFIX, _PREFIX_TEX)
 
 # Some numeric constants
 NAN_STR = str(np.nan)
 D_INF = decimal.Decimal('Infinity')
 D_NINF = decimal.Decimal('-Infinity')
+
+
+def remove_chars_py2(x_str, del_chars):
+    x_str = x_str.translate(None, del_chars)
+    return x_str
+
+
+def remove_chars_py3(x_str, del_chars):
+    translator = str.maketrans('', '', del_chars)
+    x_str = x_str.translate(translator)
+    return x_str
+
+# TODO figure out how to make some routine work in py2 and 3, move to util.
+remove_chars = remove_chars_py3 if version_info[0] >= 3 else remove_chars_py2
 
 # ============================================================================
 # General utils
@@ -30,7 +50,16 @@ def ceil_mod(x, mod):
 
 
 def str_print_len(x_str):
-    return len(x_str.translate(None, ',.'))
+    x_len = len(remove_chars(x_str, ',.'))
+    return x_len
+
+
+def ensure_tuple_of_ints(L):
+    '''This could possibly be done more efficiently with `tolist` if L is
+    np or pd array, but will stick with this simple solution for now.
+    '''
+    T = tuple([int(mm) for mm in L])
+    return T
 
 # ============================================================================
 # Decimal utils
@@ -60,9 +89,9 @@ def decimal_from_tuple(signed, digits, expo):
     ----------
     signed : bool
         True for negative values.
-    digits : tuple of ints
+    digits : iterable of ints
         digits of value each in [0,10).
-    expo : int
+    expo : int or {'F', 'n', 'N'}
         exponent of decimal.
 
     Returns
@@ -70,7 +99,13 @@ def decimal_from_tuple(signed, digits, expo):
     y : Decimal
         corresponding decimal object.
     '''
-    return decimal.Decimal(decimal.DecimalTuple(int(signed), digits, expo))
+    # Get everything in correct type because the Py3 decimal package is anal
+    signed = int(signed)
+    digits = ensure_tuple_of_ints(digits)
+    expo = expo if expo in ('F', 'n', 'N') else int(expo)
+
+    x = decimal.Decimal(decimal.DecimalTuple(signed, digits, expo))
+    return x
 
 
 def as_tuple_chk(x_dec):
@@ -379,6 +414,8 @@ def print_estimate(mu, EB, shift=0, min_clip=D_NINF, max_clip=D_INF,
     assert(max_clip == D_INF or max_clip.is_finite())
     assert(min_clip < max_clip)
 
+    shift = int(shift)  # scaleb doesn't like np ints in Py3 => cast to int
+
     # First check the clipped case
     if (not mu.is_nan()) and max_clip < mu:  # above max
         assert(max_clip.is_finite())
@@ -503,7 +540,7 @@ def get_shift_range(x_dec_list, shift_mod=1):
         min_shift = max_shift
 
     assert(min_shift <= max_shift)
-    assert(any(k % shift_mod == 0 for k in xrange(min_shift, max_shift + 1)))
+    assert(any(k % shift_mod == 0 for k in range(min_shift, max_shift + 1)))
     return min_shift, max_shift, all_small
 
 
@@ -558,13 +595,14 @@ def find_shift(mean_list, err_list, shift_mod=1):
     min_shift, max_shift, _ = get_shift_range(mean_list, shift_mod)
 
     # Build an order that prefers small magnitude shifts as tie breaker
-    L = np.array(xrange(min_shift, max_shift + 1))
+    L = np.array(range(min_shift, max_shift + 1))
     idx = np.argsort(np.abs(L))
     L = L[idx]
 
     best_shift = None
     best_len = np.inf
-    zip_list = zip(mean_list, err_list)
+    # Must cast to list for Py3 compatibility
+    zip_list = list(zip(mean_list, err_list))
     for shift in L:
         if shift % shift_mod != 0:
             continue
@@ -730,8 +768,14 @@ def format_table(perf_tbl_dec, shift_mod=None, pad=True,
             warnings.warn('no non-clipped values for metric %s' % str(metric))
 
         # Find the best shift
-        best_shift = 0
-        if shift_mod is not None:
+        if shift_mod is None:  # => no shifting at all
+            best_shift = 0
+            # Check all to dot, otherwise will get error. We could do this
+            # check in an except block only to optimize computation.
+            if not all(decimal_to_dot(x) for x in mean_series[idx]):
+                ValueError('shift_mod=None not possible for %s due to '
+                           'insufficient precision' % metric)
+        else:
             # The .tolist() might not be needed, but doing anyway to be safe.
             best_shift = find_shift(mean_series[idx].tolist(),
                                     err_series[idx].tolist(),
@@ -920,7 +964,7 @@ def table_to_string(perf_tbl_str, shifts, unit_dict, use_prefix=True):
 def just_format_it(perf_tbl_fp, unit_dict={}, shift_mod=None,
                    crap_limit_max={}, crap_limit_min={}, EB_limit={},
                    non_finite_fmt={}, use_tex=False, use_prefix=True):
-    '''One stop function call to format a results table and get the output as
+    r'''One stop function call to format a results table and get the output as
     a string in readable human plain text or as LaTeX source.
 
     Parameters

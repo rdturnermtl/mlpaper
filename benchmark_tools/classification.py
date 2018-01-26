@@ -1,13 +1,17 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, absolute_import, division
 from joblib import Memory
 import numpy as np
 import pandas as pd
 from scipy.misc import logsumexp
-from benchmark_tools import loss_summary_table
-from constants import METHOD, METRIC, STAT, CURVE_STATS
-from constants import STD_STATS, PVAL_COL, ERR_COL, PAIRWISE_DEFAULT
-import perf_curves as pc
-from util import one_hot, normalize, eval_step_func, make_into_step
+from benchmark_tools.benchmark_tools import (
+    loss_summary_table, get_mean_and_EB, ttest1)
+from benchmark_tools.constants import (
+    METHOD, STAT, CURVE_STATS, STD_STATS, METRIC, PAIRWISE_DEFAULT)
+
+import benchmark_tools.perf_curves as pc
+from benchmark_tools.util import (one_hot, normalize, eval_step_func,
+                                  make_into_step)
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -203,12 +207,17 @@ def spherical_loss(y, log_pred_prob, rescale=True):
     return loss
 
 # ============================================================================
-# Use and summarize loss functions
+# Loss summary: the main purpose of this file.
 # ============================================================================
 
 
 def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
-    '''Compute loss table from table of probalistic predictions.
+    '''Build table with mean and error bar summaries from a loss table that
+    contains losses on a per data point basis.
+
+    Parameters
+    ----------
+    Compute loss table from table of probalistic predictions.
 
     Parameters
     ----------
@@ -249,7 +258,8 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
                             columns=col_names, dtype=float)
     for method in methods:
         # Make sure the columns are in right order and we aren't mixing things
-        assert(list(log_pred_prob_table[method].columns) == range(n_labels))
+        assert(list(log_pred_prob_table[method].columns) ==
+               list(range(n_labels)))
 
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (n_samples, n_labels))
@@ -258,7 +268,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
         if not assume_normalized:
             log_pred_prob = normalize(log_pred_prob)
 
-        for metric, metric_f in metrics_dict.iteritems():
+        for metric, metric_f in metrics_dict.items():
             loss_tbl.loc[:, (metric, method)] = metric_f(y, log_pred_prob)
     return loss_tbl
 
@@ -494,60 +504,48 @@ def curve_summary_table(log_pred_prob_table, y,
 
     Returns
     -------
-    curve_tbl : DataFrame, shape (n_methods, n_metrics * 3)
-        DataFrame with curve summary of each method according to each curve.
-        The rows are the methods. The columns are a hierarchical index that is
-        the cartesian product of curve x (summary, error bar, p-value).
-        That is, ``curve_tbl.loc['foo', 'bar']`` is a pandas series with
-        (summary of bar curve on foo, corresponding error bar, statistical sig)
+    perf_tbl : DataFrame, shape (n_methods, n_metrics * 3)
+        DataFrame with mean loss of each method according to each loss
+        function. The rows are the methods. The columns are a hierarchical
+        index that is the cartesian product of
+        loss x (mean, error bar, p-value). That is,
+        ``perf_tbl.loc['foo', 'bar']`` is a pandas series with
+        (mean loss of foo on bar, corresponding error bar, statistical sig)
         The statistical significance is a p-value from a two-sided hypothesis
-        test on the hypothesis H0 that foo has the same curve summary as the
+        test on the hypothesis H0 that foo has the same mean loss as the
         reference method `ref_method`.
-    curve_dump : dict of (str, str) to DataFrame of shape (n_grid, 4)
-        Each key is a pair of (method name, curve name) with the value being
-        a pandas dataframe with the performance curve, which has four columns:
-        `x_grid`, the curve value, the lower end of confidence envelope,
-        and the upper end of the confidence envelope.
     '''
-    methods, labels = log_pred_prob_table.columns.levels
-    N, n_labels = len(log_pred_prob_table), len(labels)
-    assert(y.shape == (N,))
+    assert(loss_table.columns.names == (METRIC, METHOD))
+    metrics, methods = loss_table.columns.levels
     assert(ref_method in methods)  # ==> len(methods) >= 1
-    assert(N >= 1 and n_labels >= 1 and len(curve_dict) >= 1)
+    assert(len(loss_table) >= 1 and len(metrics) >= 1)
+    # Could also test these are cartesian product if we wanted to be exhaustive
 
-    assert(list(log_pred_prob_table[ref_method].columns) == range(n_labels))
-    log_pred_prob_ref = log_pred_prob_table[ref_method].values
-    assert(log_pred_prob_ref.shape == (N, n_labels))
-    # Note: Most curve methods are rank based and so normalization is not
-    # needed to prevent cheating. However, if we expect non-normalized methods
-    # they should be normalized before to keep consistency with loss metrics.
-
-    col_names = pd.MultiIndex.from_product([curve_dict.keys(), STD_STATS],
+    col_names = pd.MultiIndex.from_product([metrics, STD_STATS],
                                            names=[METRIC, STAT])
-    curve_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
-    curve_tbl.index.name = METHOD
+    perf_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
+    perf_tbl.index.name = METHOD
+    for metric in metrics:
+        loss_ref = loss_table.loc[:, (metric, ref_method)]
+        assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
+        for method in methods:
+            loss = loss_table.loc[:, (metric, method)]
+            assert(loss.ndim == 1)  # Weird stuff happens if names not unique
+            assert(not np.any(np.isnan(loss)))  # Would let method cheat
 
-    curve_dump = {}
-    for method in methods:
-        assert(list(log_pred_prob_table[method].columns) == range(n_labels))
-        log_pred_prob = log_pred_prob_table[method].values
-        assert(log_pred_prob.shape == (N, n_labels))
+            # get_mean_and_EB() supports other EB metrics already, they could
+            # be added here if needed.
+            if pairwise_CI:
+                mu, EB = get_mean_and_EB(loss, loss_ref, confidence)
+                EB = np.nan if method == ref_method else EB
+            else:
+                mu, EB = get_mean_and_EB(loss, confidence)
 
-        for curve_name, curve_and_area_f in curve_dict.iteritems():
-            curve_f, summary_f = curve_and_area_f
-            R = curve_boot(y, log_pred_prob,
-                           log_pred_prob_ref=log_pred_prob_ref,
-                           curve_f=curve_f, summary_f=summary_f, x_grid=x_grid,
-                           n_boot=n_boot, pairwise_CI=pairwise_CI,
-                           confidence=confidence)
-            curve_summary, curr_curve = R
-            curve_tbl.loc[method, curve_name] = curve_summary
-            if pairwise_CI and method == ref_method:
-                curve_tbl.loc[method, (curve_name, ERR_COL)] = np.nan
-            if method == ref_method:  # NaN probably makes more sense than 1
-                curve_tbl.loc[method, (curve_name, PVAL_COL)] = np.nan
-            curve_dump[(method, curve_name)] = curr_curve
-    return curve_tbl, curve_dump
+            # This is two-sided, could include one-sided option too.
+            pval = ttest1(loss - loss_ref, nan_on_zero=(method == ref_method))
+            assert((method == ref_method) == np.isnan(pval))
+            perf_tbl.loc[method, metric] = (mu, EB, pval)
+    return perf_tbl
 
 
 def summary_table(log_pred_prob_table, y,
@@ -729,9 +727,9 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
                                            names=[METHOD, LABEL])
     log_pred_prob_table = pd.DataFrame(index=xrange(n_test), columns=col_names,
                                        dtype=float)
-    for method_name, method_obj in methods.iteritems():
+    for method_name, method_obj in methods.items():
         if verbose:
-            print 'Running fit/predict for %s' % method_name
+            print('Running fit/predict for {}'.format(method_name))
         pred_log_prob = train_predict(method_obj, X_train, y_train, X_test)
         assert(pred_log_prob.shape == (n_test, n_labels))
 
