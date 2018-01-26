@@ -4,10 +4,10 @@ from joblib import Memory
 import numpy as np
 import pandas as pd
 from scipy.misc import logsumexp
-from benchmark_tools.benchmark_tools import (
-    loss_summary_table, get_mean_and_EB, ttest1)
+from benchmark_tools.benchmark_tools import loss_summary_table
 from benchmark_tools.constants import (
-    METHOD, STAT, CURVE_STATS, STD_STATS, METRIC, PAIRWISE_DEFAULT)
+    STAT, CURVE_STATS, STD_STATS, ERR_COL, PVAL_COL,
+    METHOD, METRIC, PAIRWISE_DEFAULT)
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import one_hot, normalize, interp1d, area
 
@@ -522,7 +522,8 @@ def curve_summary_table(log_pred_prob_table, y,
     assert(ref_method in methods)  # ==> len(methods) >= 1
     assert(N >= 1 and n_labels >= 1 and len(curve_dict) >= 1)
 
-    assert(list(log_pred_prob_table[ref_method].columns) == list(range(n_labels)))
+    assert(list(log_pred_prob_table[ref_method].columns) ==
+           list(range(n_labels)))
     log_pred_prob_ref = log_pred_prob_table[ref_method].values
     assert(log_pred_prob_ref.shape == (N, n_labels))
     # Note: Most curve methods are rank based and so normalization is not
@@ -536,7 +537,8 @@ def curve_summary_table(log_pred_prob_table, y,
 
     curve_dump = {}
     for method in methods:
-        assert(list(log_pred_prob_table[method].columns) == list(range(n_labels)))
+        assert(list(log_pred_prob_table[method].columns) ==
+               list(range(n_labels)))
         log_pred_prob = log_pred_prob_table[method].values
         assert(log_pred_prob.shape == (N, n_labels))
 
