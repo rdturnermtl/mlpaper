@@ -157,7 +157,10 @@ def test_interp1d_vec():
     x_grid = np.random.uniform(low=LB, high=UB, size=n_grid)
 
     yy = interp1d_vec(x_grid, xp, yp, kind)
-    yy2 = util.interp1d(x_grid, xp, yp, kind)
+    if np.random.rand() < 0.5:
+        yy2 = util.interp1d(x_grid, xp, yp, kind)
+    else:
+        yy2 = util.interp1d(x_grid, xp, yp, kind=kind)
     assert(np.all(yy == yy2))
 
 
