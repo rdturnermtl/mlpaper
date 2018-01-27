@@ -275,9 +275,9 @@ def area(x_curve, y_curve, kind):
 
     Parameters
     ----------
-    x_curve : ndarray, shape (n_thresholds, n_boot)
+    x_curve : ndarray, shape (n_boot, n_thresholds)
         The sample points corresponding to the y values. Must be sorted.
-    y_curve : ndarray, shape (n_thresholds, n_boot)
+    y_curve : ndarray, shape (n_boot, n_thresholds)
         Input array to integrate. Must be same size as `x_curve`. Operation
         performed independently for each column.
     kind : {'linear', 'kind'}
@@ -290,7 +290,7 @@ def area(x_curve, y_curve, kind):
     """
     # Note: has some tests in perf_curves_test in addition to util_test.
     assert(x_curve.ndim == 2)
-    assert(x_curve.shape[0] >= 2)  # at least 2 points need to do area
+    assert(x_curve.shape[1] >= 2)  # at least 2 points need to do area
     assert(not np.any(np.isnan(x_curve)))
     assert(y_curve.shape == x_curve.shape)
     assert(not np.any(np.isnan(y_curve)))
@@ -298,9 +298,9 @@ def area(x_curve, y_curve, kind):
     if kind == 'previous':
         with np.errstate(invalid='ignore'):
             # Use nansum so we consider inf y_curve for 0 width as 0 area
-            auc = np.nansum(y_curve[:-1, :] * np.diff(x_curve, axis=0), axis=0)
+            auc = np.nansum(y_curve[:, :-1] * np.diff(x_curve, axis=1), axis=1)
     elif kind == 'linear':
-        auc = np.trapz(y_curve, x_curve, axis=0)
+        auc = np.trapz(y_curve, x_curve, axis=1)
     else:
         # 'next' could easily be added, but others would be a pain. We could
         # simply use interp1d to make fine grid then use previous to get area.
