@@ -262,7 +262,7 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
     col_names = pd.MultiIndex.from_product([methods.keys(), ('mu', 'std')],
                                            names=[METHOD, MOMENT])
-    pred_tbl = pd.DataFrame(index=xrange(n_test), columns=col_names,
+    pred_tbl = pd.DataFrame(index=range(n_test), columns=col_names,
                             dtype=float)
     for method_name, method_obj in methods.iteritems():
         if verbose:

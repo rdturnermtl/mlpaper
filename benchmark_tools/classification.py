@@ -358,7 +358,7 @@ def interp1d_(x_grid, x_boot, y_boot, kind):
     n_boot = x_boot.shape[1]
 
     y_grid_boot = np.zeros((x_grid.size, n_boot))
-    for nn in xrange(n_boot):
+    for nn in range(n_boot):
         y_grid_boot[:, nn] = \
             interp1d(x_grid, x_boot[:, nn], y_boot[:, nn], kind)
     assert(y_grid_boot.shape == (x_grid.size, n_boot))
@@ -461,7 +461,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     # Pack up data frame with graphical summaries (performance curves)
     y_LB, y_UB = boot_samples_to_CI(y_grid_boot, confidence)
     curve = pd.DataFrame(data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1),
-                         index=xrange(x_grid.size), columns=CURVE_STATS,
+                         index=range(x_grid.size), columns=CURVE_STATS,
                          dtype=float)
     return summary, curve
 
@@ -731,9 +731,9 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
             pred_log_prob = np.log(method_obj.predict_proba(X_test))
         return pred_log_prob
 
-    col_names = pd.MultiIndex.from_product([methods.keys(), xrange(n_labels)],
+    col_names = pd.MultiIndex.from_product([methods.keys(), range(n_labels)],
                                            names=[METHOD, LABEL])
-    log_pred_prob_table = pd.DataFrame(index=xrange(n_test), columns=col_names,
+    log_pred_prob_table = pd.DataFrame(index=range(n_test), columns=col_names,
                                        dtype=float)
     for method_name, method_obj in methods.items():
         if verbose:

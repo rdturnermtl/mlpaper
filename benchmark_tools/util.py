@@ -158,7 +158,7 @@ def cummax_strict(x, copy=True):
     assert(x.ndim == 1)
 
     x = np.copy(x) if copy else x
-    for ii in xrange(1, len(x)):
+    for ii in range(1, len(x)):
         x[ii] = np.maximum(np.nextafter(x[ii - 1], np.inf), x[ii])
     assert(np.all(np.diff(x) > 0))
     return x
@@ -209,6 +209,7 @@ def eval_step_func(x_grid, xp, yp, ival=None,
     assert(skip_unique_chk or np.all(np.diff(xp) > 0.0))
 
     if ival is None:
+        # This will have error if xp is empty
         assert(len(x_grid) == 0 or np.all(xp[0] <= x_grid))
     else:
         assert(np.ndim(ival) == 0.0)
