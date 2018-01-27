@@ -1,7 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
 from builtins import range
-import warnings
 import numpy as np
 import scipy.interpolate as si
 from scipy.misc import logsumexp
@@ -100,15 +99,22 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
 
 
 def unique_take_last(xp, yp=None):
-    """Make pairs of `xp` and `yp` vectors into proper step function. That is,
-    remove NaN `xp` values and multiple steps at same location.
+    """Take unique points in a sorted list `xp`. When duplicates occur take the
+    last element and its corresponding element in an auxilary list `yp`.
+
+    This function is useful for taking a set of points and making a proper step
+    function from them. A step function is ambiguous when there are multiple
+    points at the same x coordinate. Similar functionality can be obtained from
+    `np.unique` but it takes the first rather than last element when duplicates
+    occur.
 
     Parameters
     ----------
     xp : ndarray, shape (n_samples,)
-        The sample points corresponding to the y values. Must be sorted.
-    yp : ndarray, shape (n_samples,)
-        Values in y-axis for step function.
+        A sorted list of points.
+    yp : None or ndarray of shape (n_samples,)
+        Optional points that must be kept allong with the x points. If `xp`
+        are points on the x-axis, then yp are the y coordinate points.
 
     Returns
     -------
@@ -116,24 +122,15 @@ def unique_take_last(xp, yp=None):
         Input `xp` after removing extra points. m_samples <= n_samples.
     yp : ndarray, shape (m_samples,)
         Input `yp` after removing extra points. m_samples <= n_samples.
-
-    Notes
-    -----
-    Keeps last value in list when multiple steps happen at the same x-value.
     """
-    # TODO update doc string
     assert(xp.ndim == 1)
+    assert(not np.any(np.isnan(xp)))
     assert(yp is None or xp.shape == yp.shape)
+    assert(yp is None or (not np.any(np.isnan(xp))))
 
-    # TODO consider just changing to error if never needed
-    idx = ~np.isnan(xp)
-    if ~np.all(idx):
-        warnings.warn('NaN value encountered in unique_take_last.')
-        xp = xp[idx]
-        yp = None if yp is None else yp[idx]
-
+    # Get deltas to determine unique points, and check pre-sorted exactly
     deltas = np.diff(xp)
-    assert(not np.any(deltas < 0))  # Should be sorted exactly
+    assert(np.all(deltas >= 0))
 
     idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
     xp = xp[idx]
@@ -143,15 +140,28 @@ def unique_take_last(xp, yp=None):
 
 def cummax_strict(x, copy=True):
     '''Minimally increase array elements to make the array strictly increasing.
+
+    Parameters
+    ----------
+    x : ndarray, shape (n_samples,)
+        A list of points.
+    copy : bool
+        If False, modify x in place.
+
+    Returns
+    -------
+    x : ndarray, shape (n_samples,)
+        A list of points that are now *strictly* sorted. If `x` was already
+        sorted then the new points will be as miniminally changed as the
+        floating point representation allows.
     '''
-    # TODO doc string, tests
     assert(x.ndim == 1)
 
     x = np.copy(x) if copy else x
     for ii in xrange(1, len(x)):
         x[ii] = np.maximum(np.nextafter(x[ii - 1], np.inf), x[ii])
     assert(np.all(np.diff(x) > 0))
-    return x  # return even though inplace
+    return x
 
 
 def eval_step_func(x_grid, xp, yp, ival=None,
@@ -212,7 +222,7 @@ def eval_step_func(x_grid, xp, yp, ival=None,
 
 def interp1d(x_grid, xp, yp, kind='linear'):
     """Wrap `scipy.interpolate.interp1d` so it can handle ``'previous'`` like
-    MATLAB's `interp1` function. ``'next'`` may be added in future.
+    MATLAB's `interp1` function. ``'next'`` may be added here in the future.
 
     This wrapper does not support extrapolation at the moment. Scipy ENH such
     as #6718 may be merged to scipy master in the near future and make this
@@ -235,7 +245,11 @@ def interp1d(x_grid, xp, yp, kind='linear'):
     y_grid : ndarray, shape (n_grid,)
         Interpolation `xp` and `yp` evaluated at the points in `x_grid`.
     """
-    # TODO use np vectorize to make vectorized version
+    assert(x_grid.ndim == 1)
+    assert(xp.ndim == 1 and xp.shape == yp.shape)
+    assert(xp.size >= 2)  # at least 2 points need to do area
+    assert(np.all(np.diff(xp) >= 0))
+
     if kind == 'previous':
         # eval_step_func does not work when x points overlap so need to call
         # unique_take_last to get final one.
@@ -249,8 +263,6 @@ def interp1d(x_grid, xp, yp, kind='linear'):
         # interp1d appears to do the right thing with points on top of each
         # other if assume_sorted=True and given sorted data, but can apply
         # cummax strict to make all points exactly unique to be extra safe.
-        assert(np.all(np.diff(xp) >= 0))
-        # TODO assert func gives same result with either spacing mode
         xp = cummax_strict(xp) if STRICT_SPACING else xp
         f = si.interp1d(xp, yp, kind=kind, assume_sorted=True)
         y_grid = f(x_grid)
@@ -275,20 +287,24 @@ def area(x_curve, y_curve, kind):
     auc : ndarray, shape (n_boot,)
         Area under curve. Has same length as `x_curve` has columns.
     """
-    # TODO move test for this to right file
-    # TODO test that this agrees with interp1d for tight interp grid
-    # TODO assert shapes
+    # Note: has some tests in perf_curves_test in addition to util_test.
+    assert(x_curve.ndim == 2)
+    assert(x_curve.shape[0] >= 2)  # at least 2 points need to do area
     assert(not np.any(np.isnan(x_curve)))
+    assert(y_curve.shape == x_curve.shape)
     assert(not np.any(np.isnan(y_curve)))
 
     if kind == 'previous':
-        # Treat 0*inf as 0:
         with np.errstate(invalid='ignore'):
+            # Use nansum so we consider inf y_curve for 0 width as 0 area
             auc = np.nansum(y_curve[:-1, :] * np.diff(x_curve, axis=0), axis=0)
     elif kind == 'linear':
         auc = np.trapz(y_curve, x_curve, axis=0)
     else:
+        # 'next' could easily be added, but others would be a pain. We could
+        # simply use interp1d to make fine grid then use previous to get area.
         raise NotImplementedError
 
-    assert(not np.any(np.isnan(auc)))  # Make sure we have legit area
+    # Make sure we have legit area, this could happen with inf & -inf in curves
+    assert(not np.any(np.isnan(auc)))
     return auc
