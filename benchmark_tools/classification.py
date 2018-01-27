@@ -418,11 +418,12 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     y = y.astype(bool)
     log_pred_prob = log_pred_prob[:, pos_label]
 
-    # Get estimator on original data (before boot strap)
+    # Get estimator on original data. Could use _interp1d directly since only 1
+    # curve, but this is more consistent with bootstrap version below.
     curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
     auc, = area(*curve)
     assert(auc.ndim == 0)
-    y_grid = np.squeeze(interp1d(x_grid, *curve), axis=0)  # Use fixed grid
+    y_grid, = interp1d(x_grid, *curve)
     assert(x_grid.shape == y_grid.shape)
 
     # Setup boot strap weights
