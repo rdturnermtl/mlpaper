@@ -44,6 +44,33 @@ def test_epsilon_noise():
     assert(np.all(idx0 == idx1))
 
 
+def test_unique_take_last():
+    N = np.random.randint(low=0, high=10)
+
+    xp = np.sort(np.random.choice(np.random.randn(N + 1),
+                                  size=N, replace=True))
+    yp = np.random.randn(N)
+    D = {xp[ii]: yp[ii] for ii in range(N)}
+
+    xp2, yp2 = util.unique_take_last(xp, yp)
+    assert(xp2.shape == yp2.shape)
+    assert(np.all(np.unique(xp) == xp2))
+    D2 = {xp2[ii]: yp2[ii] for ii in range(len(xp2))}
+    assert(D == D2)
+
+    xp3, yp3 = util.unique_take_last(xp)
+    assert(np.all(xp2 == xp3))
+    assert(yp3 is None)
+
+    # Func basically same as using unique, but unique returns first occurance
+    xp_rev = xp[::-1]
+    _, idx = np.unique(xp_rev, return_index=True)
+    xp4 = xp_rev[idx]
+    yp4 = yp[::-1][idx]
+    assert(np.all(xp2 == xp4))
+    assert(np.all(yp2 == yp4))
+
+
 def test_cummax_strict():
     N = np.random.randint(low=0, high=10)
     x = np.random.randn(N)
@@ -152,34 +179,6 @@ def test_interp1d_prev():
 
     y_grid3 = util.eval_step_func(x_grid, xp, yp)
     assert(np.all(y_grid == y_grid3))
-
-
-def test_unique_take_last():
-    # TODO move position in file
-    N = np.random.randint(low=0, high=10)
-
-    xp = np.sort(np.random.choice(np.random.randn(N + 1),
-                                  size=N, replace=True))
-    yp = np.random.randn(N)
-    D = {xp[ii]: yp[ii] for ii in range(N)}
-
-    xp2, yp2 = util.unique_take_last(xp, yp)
-    assert(xp2.shape == yp2.shape)
-    assert(np.all(np.unique(xp) == xp2))
-    D2 = {xp2[ii]: yp2[ii] for ii in range(len(xp2))}
-    assert(D == D2)
-
-    xp3, yp3 = util.unique_take_last(xp)
-    assert(np.all(xp2 == xp3))
-    assert(yp3 is None)
-
-    # Func basically same as using unique, but unique returns first occurance
-    xp_rev = xp[::-1]
-    _, idx = np.unique(xp_rev, return_index=True)
-    xp4 = xp_rev[idx]
-    yp4 = yp[::-1][idx]
-    assert(np.all(xp2 == xp4))
-    assert(np.all(yp2 == yp4))
 
 
 def test_area():
