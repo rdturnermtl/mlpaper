@@ -134,6 +134,8 @@ def test_nv_binary_clf_curve():
 
     y_bool = np.random.rand(N) <= 0.5
     y_pred = np.random.rand(N)
+    if np.random.rand() <= 0.5:  # make non-unique
+        y_pred = np.random.choice(y_pred, size=N, replace=True)
 
     sample_weight = None
     if np.random.rand() <= 0.2:
@@ -275,6 +277,8 @@ def test_binary_clf_curve():
 
     y_bool = np.random.rand(N) <= 0.5
     y_pred = np.random.rand(N)
+    if np.random.rand() <= 0.5:  # make non-unique
+        y_pred = np.random.choice(y_pred, size=N, replace=True)
 
     p = np.ones(N) / N
     sample_weight = None

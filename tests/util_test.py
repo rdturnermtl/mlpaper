@@ -182,6 +182,8 @@ def test_interp1d_prev():
 
 
 def test_area():
+    '''This tests consistentcy with interp1d. Other tests are found in
+    perf_curves_test.'''
     N_GRID = 1000
     kind_list = ['linear', 'previous']
     x_grid = np.linspace(0, 1, N_GRID)
@@ -195,10 +197,10 @@ def test_area():
     x[-1] = x_grid[-1]
     y = np.random.rand(N)
 
-    auc, = util.area(x[:, None], y[:, None], kind)
+    auc, = util.area(x[None, :], y[None, :], kind)
 
     y_grid = util.interp1d(x_grid, x, y, kind)
-    auc2, = util.area(x_grid[:, None], y_grid[:, None], kind)
+    auc2, = util.area(x_grid[None, :], y_grid[None, :], kind)
 
     # Make sure interp1d and area are consistent with each other
     assert(np.abs(auc - auc2) <= 10.0 / N_GRID)

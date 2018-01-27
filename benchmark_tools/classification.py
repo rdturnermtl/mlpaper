@@ -290,7 +290,7 @@ def check_curve(result, singleton=False, x_grid=None):
     -------
     curve : tuple of (ndarray, ndarray, str)
         Returns same object passed in after some input checks. Each of the
-        ndarrays have shape (n_thresholds, n_boot).
+        ndarrays have shape (n_boot, n_thresholds).
     '''
     curve, _ = result  # Skipping tholds (2nd arg) since not used here
     x_curve, y_curve, kind = curve
@@ -298,16 +298,16 @@ def check_curve(result, singleton=False, x_grid=None):
     # Check shape
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
-    assert((not singleton) or x_curve.shape[1] == 1)
-    assert(x_curve.shape[0] >= 2)  # Otherwise not curve
+    assert((not singleton) or x_curve.shape[0] == 1)
+    assert(x_curve.shape[1] >= 2)  # Otherwise not curve
 
     # Check values
     assert(np.all(np.isfinite(x_curve)))
     assert(np.all(y_curve < np.inf))  # PRG can be -inf, but all curves < inf
-    assert(np.all(np.diff(x_curve, axis=0) >= 0.0))  # also check is sorted
+    assert(np.all(np.diff(x_curve, axis=1) >= 0.0))  # also check is sorted
     if x_grid is not None:  # Make sure we won't need to extrapolate for grid
-        assert(np.all(x_curve[0, :] <= x_grid[0]))
-        assert(np.all(x_grid[-1] <= x_curve[-1, :]))
+        assert(np.all(x_curve[:, 0] <= x_grid[0]))
+        assert(np.all(x_grid[-1] <= x_curve[:, -1]))
     return curve
 
 
@@ -323,8 +323,8 @@ def boot_samples_to_CI(boot_samples, confidence):
     assert(boot_samples.ndim >= 1)
 
     q_levels = confidence_to_percentiles(confidence)
-    LB, UB = np.percentile(boot_samples, q_levels, axis=-1)
-    assert(LB.shape == boot_samples.shape[:-1])
+    LB, UB = np.percentile(boot_samples, q_levels, axis=0)
+    assert(LB.shape == boot_samples.shape[1:])
     assert(LB.shape == UB.shape)
     return LB, UB
 
@@ -355,13 +355,13 @@ def boot_samples_to_pval(boot_samples, ref):
 
 def interp1d_(x_grid, x_boot, y_boot, kind):
     # TODO just use np vectorize
-    n_boot = x_boot.shape[1]
+    n_boot = x_boot.shape[0]
 
-    y_grid_boot = np.zeros((x_grid.size, n_boot))
+    y_grid_boot = np.zeros((n_boot, x_grid.size))
     for nn in range(n_boot):
-        y_grid_boot[:, nn] = \
-            interp1d(x_grid, x_boot[:, nn], y_boot[:, nn], kind)
-    assert(y_grid_boot.shape == (x_grid.size, n_boot))
+        y_grid_boot[nn, :] = \
+            interp1d(x_grid, x_boot[nn, :], y_boot[nn, :], kind)
+    assert(y_grid_boot.shape == (n_boot, x_grid.size))
     return y_grid_boot
 
 
@@ -434,12 +434,12 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
     auc, = area(*curve)
     assert(auc.ndim == 0)
-    y_grid = np.squeeze(interp1d_(x_grid, *curve), axis=1)  # Use fixed grid
+    y_grid = np.squeeze(interp1d_(x_grid, *curve), axis=0)  # Use fixed grid
     assert(x_grid.shape == y_grid.shape)
 
     # Setup boot strap weights
     p_BS = np.ones(N) / N
-    weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot).T)
+    weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot))
 
     # Get boot strapped scores
     curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))

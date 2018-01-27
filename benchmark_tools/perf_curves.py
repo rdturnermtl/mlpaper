@@ -167,7 +167,7 @@ def roc_curve(y_true, y_score, sample_weight=None):
     tpr : ndarray, shape (n_boot, n_thresholds)
         The false positive rates. Each column is computed indepently by each
         column in `sample_weight`.
-    thresholds : ndarray, shape (n_boot, n_thresholds)
+    thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
@@ -208,7 +208,7 @@ def recall_precision_curve(y_true, y_score, sample_weight=None):
     precision : ndarray, shape (n_boot, n_thresholds)
         The precision. Each column is computed indepently by each column in
         `sample_weight`.
-    thresholds : ndarray, shape (n_boot, n_thresholds)
+    thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
@@ -242,7 +242,7 @@ def prg_curve(y_true, y_score, sample_weight=None):
     prec_gain : ndarray, shape (n_boot, n_thresholds)
         The precision gain. Each column is computed indepently by each column
         in `sample_weight`.
-    thresholds : ndarray, shape (n_boot, n_thresholds)
+    thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
