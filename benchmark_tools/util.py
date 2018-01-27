@@ -221,7 +221,7 @@ def eval_step_func(x_grid, xp, yp, ival=None,
     return y_grid
 
 
-def interp1d(x_grid, xp, yp, kind='linear'):
+def _interp1d(x_grid, xp, yp, kind='linear'):
     """Wrap `scipy.interpolate.interp1d` so it can handle ``'previous'`` like
     MATLAB's `interp1` function. ``'next'`` may be added here in the future.
 
@@ -268,6 +268,10 @@ def interp1d(x_grid, xp, yp, kind='linear'):
         f = si.interp1d(xp, yp, kind=kind, assume_sorted=True)
         y_grid = f(x_grid)
     return y_grid
+
+# Make a version of interp1d that supprts vectorized inputs:
+interp1d = np.vectorize(_interp1d, otypes=(float,), excluded=('kind', 3),
+                        signature='(n),(m),(m)->(n)')
 
 
 def area(x_curve, y_curve, kind):

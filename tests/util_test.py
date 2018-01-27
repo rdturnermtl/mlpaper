@@ -121,6 +121,46 @@ def test_eval_step_func():
     assert(np.allclose(y_grid, y_grid2))
 
 
+def interp1d_vec(x_grid, x_boot, y_boot, kind):
+    n_boot = x_boot.shape[0]
+
+    y_grid_boot = np.zeros((n_boot, x_grid.size))
+    for nn in range(n_boot):
+        y_grid_boot[nn, :] = \
+            util._interp1d(x_grid, x_boot[nn, :], y_boot[nn, :], kind)
+    assert(y_grid_boot.shape == (n_boot, x_grid.size))
+    return y_grid_boot
+
+
+def test_interp1d_vec():
+    kind_list = ['linear', 'previous']
+    kind = np.random.choice(kind_list)
+
+    N = np.random.randint(low=2, high=10)
+    n_boot = np.random.randint(low=0, high=10)
+    n_grid = np.random.randint(low=0, high=10)
+
+    xp = np.random.randn(n_boot, N)
+
+    if n_boot == 0:
+        LB, UB = 0.0, 1.0
+    else:
+        LB, UB = np.min(xp), np.max(xp)
+
+    for ii in range(n_boot):
+        xp[ii, :] = np.random.choice(xp[ii, :], size=N, replace=True)
+    xp.sort(axis=1)
+    xp[:, 0] = LB
+    xp[:, -1] = UB
+
+    yp = np.random.randn(n_boot, N)
+    x_grid = np.random.uniform(low=LB, high=UB, size=n_grid)
+
+    yy = interp1d_vec(x_grid, xp, yp, kind)
+    yy2 = util.interp1d(x_grid, xp, yp, kind)
+    assert(np.all(yy == yy2))
+
+
 def test_interp1d_linear():
     N = np.random.randint(low=2, high=10)
     N_test = np.random.randint(low=0, high=10)
@@ -140,9 +180,9 @@ def test_interp1d_linear():
 
     assert(not util.STRICT_SPACING)  # Check default false
     util.STRICT_SPACING = True
-    y_grid = util.interp1d(x_grid, xp, yp, kind='linear')
+    y_grid = util._interp1d(x_grid, xp, yp, kind='linear')
     util.STRICT_SPACING = False
-    y_grid2 = util.interp1d(x_grid, xp, yp, kind='linear')
+    y_grid2 = util._interp1d(x_grid, xp, yp, kind='linear')
     assert(np.allclose(y_grid, y_grid2))
 
     f = si.interp1d(xp, yp, kind='linear', assume_sorted=True)
@@ -173,8 +213,8 @@ def test_interp1d_prev():
     # Use max since can't extrapolate w/o ival
     x_grid = np.maximum(np.random.randn(N_test), xp[0])
 
-    y_grid = util.interp1d(x_grid, xp, yp, kind='previous')
-    y_grid2 = util.interp1d(x_grid, xp2, yp2, kind='previous')
+    y_grid = util._interp1d(x_grid, xp, yp, kind='previous')
+    y_grid2 = util._interp1d(x_grid, xp2, yp2, kind='previous')
     assert(np.all(y_grid == y_grid2))
 
     y_grid3 = util.eval_step_func(x_grid, xp, yp)
@@ -199,7 +239,7 @@ def test_area():
 
     auc, = util.area(x[None, :], y[None, :], kind)
 
-    y_grid = util.interp1d(x_grid, x, y, kind)
+    y_grid = util._interp1d(x_grid, x, y, kind)
     auc2, = util.area(x_grid[None, :], y_grid[None, :], kind)
 
     # Make sure interp1d and area are consistent with each other
@@ -215,6 +255,7 @@ if __name__ == '__main__':
         test_unique_take_last()
         test_cummax_strict()
         test_eval_step_func()
+        test_interp1d_vec()
         test_interp1d_linear()
         test_interp1d_prev()
         test_area()

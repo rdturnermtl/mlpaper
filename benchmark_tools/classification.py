@@ -353,18 +353,6 @@ def boot_samples_to_pval(boot_samples, ref):
     return pval
 
 
-def interp1d_(x_grid, x_boot, y_boot, kind):
-    # TODO just use np vectorize
-    n_boot = x_boot.shape[0]
-
-    y_grid_boot = np.zeros((n_boot, x_grid.size))
-    for nn in range(n_boot):
-        y_grid_boot[nn, :] = \
-            interp1d(x_grid, x_boot[nn, :], y_boot[nn, :], kind)
-    assert(y_grid_boot.shape == (n_boot, x_grid.size))
-    return y_grid_boot
-
-
 def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
                n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
     '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
@@ -434,7 +422,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
     auc, = area(*curve)
     assert(auc.ndim == 0)
-    y_grid = np.squeeze(interp1d_(x_grid, *curve), axis=0)  # Use fixed grid
+    y_grid = np.squeeze(interp1d(x_grid, *curve), axis=0)  # Use fixed grid
     assert(x_grid.shape == y_grid.shape)
 
     # Setup boot strap weights
@@ -445,7 +433,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))
     auc_boot = area(*curve_boot_)
     assert(auc_boot.shape == (n_boot,))
-    y_grid_boot = interp1d_(x_grid, *curve_boot_)
+    y_grid_boot = interp1d(x_grid, *curve_boot_)
 
     # Repeat area boot strap with reference predictor
     if np.ndim(ref) == 2:  # Note dim must be 0 or 2
