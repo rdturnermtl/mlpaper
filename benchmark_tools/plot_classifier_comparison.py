@@ -108,7 +108,7 @@ for ds_cnt, ds in enumerate(datasets):
                             non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True))
 
     # iterate over classifiers
-    for name, clf in classifiers.iteritems():
+    for name, clf in classifiers.items():
         if name == ref_method:
             continue
 
