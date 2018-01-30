@@ -165,7 +165,7 @@ def loss_table(pred_tbl, y, metrics_dict):
         # These get validated inside loss function
         mu = pred_tbl[(method, 'mu')].values
         std = pred_tbl[(method, 'std')].values
-        for metric, metric_f in metrics_dict.iteritems():
+        for metric, metric_f in metrics_dict.items():
             loss_tbl.loc[:, (metric, method)] = metric_f(y, mu, std)
     return loss_tbl
 
@@ -262,9 +262,9 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
     col_names = pd.MultiIndex.from_product([methods.keys(), ('mu', 'std')],
                                            names=[METHOD, MOMENT])
-    pred_tbl = pd.DataFrame(index=xrange(n_test), columns=col_names,
+    pred_tbl = pd.DataFrame(index=range(n_test), columns=col_names,
                             dtype=float)
-    for method_name, method_obj in methods.iteritems():
+    for method_name, method_obj in methods.items():
         if verbose:
             print('Running fit/predict for %s' % method_name)
         mu, std = train_predict(method_obj, X_train, y_train, X_test)

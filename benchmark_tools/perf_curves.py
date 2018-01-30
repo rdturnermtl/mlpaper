@@ -19,12 +19,12 @@ def _add_pseudo_points(fps, tps):
 
     Parameters
     ----------
-    fps : ndarray, shape (n_thresholds, n_boot)
+    fps : ndarray, shape (n_boot, n_thresholds)
         A count of false positives, at index i being the number of negative
         samples assigned a ``score >= thresholds[i]``. The total number of
         negative samples is equal to ``fps[-1]`` (thus true negatives are given
         by ``fps[-1] - fps``).
-    tps : ndarray, shape (n_thresholds, n_boot)
+    tps : ndarray, shape (n_boot, n_thresholds)
         An increasing count of true positives, at index i being the number
         of positive samples assigned a ``score >= thresholds[i]``. The total
         number of positive samples is equal to ``tps[-1]`` (thus false
@@ -32,21 +32,21 @@ def _add_pseudo_points(fps, tps):
 
     Returns
     -------
-    fps : ndarray, shape (n_thresholds, n_boot)
+    fps : ndarray, shape (n_boot, n_thresholds)
         If in corner case, `fps` after adding pseudo-points
-    tps : ndarray, shape (n_thresholds, n_boot)
+    tps : ndarray, shape (n_boot, n_thresholds)
         If in corner case, `fps` after adding pseudo-points
     """
     assert(fps.shape == tps.shape)
     assert(fps.size > 0)  # Otherwise -1 index doesn't work
 
-    fps_fix = (fps[-1, :] == 0)
-    tps_fix = (tps[-1, :] == 0)
+    fps_fix = (fps[:, -1] == 0)
+    tps_fix = (tps[:, -1] == 0)
 
     if np.any(fps_fix) or np.any(tps_fix):
         fps, tps = fps.astype(float), tps.astype(float)
-        fps[:, fps_fix] = EPSILON * tps[:, fps_fix]
-        tps[:, tps_fix] = EPSILON * fps[:, tps_fix]
+        fps[fps_fix, :] = EPSILON * tps[fps_fix, :]
+        tps[tps_fix, :] = EPSILON * fps[tps_fix, :]
     return fps, tps
 
 
@@ -66,22 +66,22 @@ def _binary_clf_curve(y_true, y_score, sample_weight=None):
         True targets of binary classification. Cannot be empty.
     y_score : ndarray, shape (n_samples,)
         Estimated probabilities or decision function. Must be finite.
-    sample_weight : None or ndarray of shape (n_samples, n_boot)
+    sample_weight : None or ndarray of shape (n_boot, n_samples)
         Sample weights. If `None`, all weights are one.
 
     Returns
     -------
-    fps : ndarray, shape (n_thresholds, n_boot)
+    fps : ndarray, shape (n_boot, n_thresholds)
         A count of false positives, at index i being the number of negative
         samples assigned a ``score >= thresholds[i]``. The total number of
         negative samples is equal to ``fps[-1]`` (thus true negatives are given
         by ``fps[-1] - fps``).
-    tps : ndarray, shape (n_thresholds, n_boot)
+    tps : ndarray, shape (n_boot, n_thresholds)
         An increasing count of true positives, at index i being the number
         of positive samples assigned a ``score >= thresholds[i]``. The total
         number of positive samples is equal to ``tps[-1]`` (thus false
         negatives are given by ``tps[-1] - tps``).
-    thresholds : ndarray, shape (n_thresholds, n_boot)
+    thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
     assert(y_true.ndim == 1 and y_true.dtype.kind == 'b')
@@ -102,35 +102,36 @@ def _binary_clf_curve(y_true, y_score, sample_weight=None):
         tps = np.cumsum(y_true)[threshold_idxs]
         fps = 1 + threshold_idxs - tps
         assert(fps[-1] == np.sum(~y_true) and tps[-1] == np.sum(y_true))
-        tps, fps = tps[:, None], fps[:, None]  # Make output 2D in either case
+        tps, fps = tps[None, :], fps[None, :]  # Make output 2D in either case
     else:
         assert(sample_weight.ndim == 2)
-        assert(sample_weight.shape[0] == y_true.shape[0])
-        assert(sample_weight.shape[1] >= 1)  # Might work at 0 anyway
+        assert(sample_weight.shape[1] == y_true.size)
+        assert(sample_weight.shape[0] >= 1)  # Might work at 0 anyway
         assert(np.all(np.isfinite(sample_weight)))
         # Negative weight makes no sense, 0 can violate assumps. of other funcs
         assert(np.all(sample_weight > 0))
 
-        weight = sample_weight[desc_score_indices, :]
-        tps = np.cumsum(y_true[:, None] * weight, axis=0)[threshold_idxs, :]
-        fps = np.cumsum(weight, axis=0)[threshold_idxs, :] - tps
-        assert(np.allclose(fps[-1, :], np.sum(weight[~y_true], axis=0)))
-        assert(np.allclose(tps[-1, :], np.sum(weight[y_true], axis=0)))
+        weight = sample_weight[:, desc_score_indices]
+        tps = np.cumsum(y_true[None, :] * weight, axis=1)[:, threshold_idxs]
+        fps = np.cumsum(weight, axis=1)[:, threshold_idxs] - tps
+        assert(np.allclose(fps[:, -1], np.sum(weight[:, ~y_true], axis=1)))
+        assert(np.allclose(tps[:, -1], np.sum(weight[:, y_true], axis=1)))
 
     # Now put in the (0, 0) coord (y_score >= np.inf)
-    zero_vec = np.zeros((1, fps.shape[1]), dtype=fps.dtype)
-    fps, tps = np.r_[zero_vec, fps], np.r_[zero_vec, tps]
+    zero_vec = np.zeros((fps.shape[0], 1), dtype=fps.dtype)
+    fps, tps = np.c_[zero_vec, fps], np.c_[zero_vec, tps]
     thresholds = np.r_[np.inf, y_score[threshold_idxs]]
+    assert(thresholds.ndim == 1 and thresholds.size >= 2)
 
     # Clean up corner case
     fps, tps = _add_pseudo_points(fps, tps)
-    assert(np.all(fps[-1, :] > 0) and np.all(tps[-1, :] > 0))
+    assert(np.all(fps[:, -1] > 0) and np.all(tps[:, -1] > 0))
     assert(fps.dtype == tps.dtype)
 
     # Remove any decreases due to numerics
-    fps = np.maximum.accumulate(fps, axis=0)
-    assert(np.all((np.diff(fps, axis=0) >= 0.0) &
-                  (np.diff(tps, axis=0) >= 0.0)))
+    fps = np.maximum.accumulate(fps, axis=1)
+    assert(np.all((np.diff(fps, axis=1) >= 0.0) &
+                  (np.diff(tps, axis=1) >= 0.0)))
 
     return fps, tps, thresholds
 
@@ -160,19 +161,19 @@ def roc_curve(y_true, y_score, sample_weight=None):
 
     Returns
     -------
-    fpr : ndarray, shape (n_thresholds, n_boot)
+    fpr : ndarray, shape (n_boot, n_thresholds)
         The false positive rates. Each column is computed indepently by each
         column in `sample_weight`.
-    tpr : ndarray, shape (n_thresholds, n_boot)
+    tpr : ndarray, shape (n_boot, n_thresholds)
         The false positive rates. Each column is computed indepently by each
         column in `sample_weight`.
-    thresholds : ndarray, shape (n_thresholds, n_boot)
+    thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
                                              sample_weight=sample_weight)
-    fpr = np.true_divide(fps, fps[-1:, :])
-    tpr = np.true_divide(tps, tps[-1:, :])
+    fpr = np.true_divide(fps, fps[:, -1:])
+    tpr = np.true_divide(tps, tps[:, -1:])
     return (fpr, tpr, LINEAR), thresholds
 
 
@@ -201,21 +202,21 @@ def recall_precision_curve(y_true, y_score, sample_weight=None):
 
     Returns
     -------
-    recall : ndarray, shape (n_thresholds, n_boot)
+    recall : ndarray, shape (n_boot, n_thresholds)
         The recall. Each column is computed indepently by each column in
         `sample_weight`.
-    precision : ndarray, shape (n_thresholds, n_boot)
+    precision : ndarray, shape (n_boot, n_thresholds)
         The precision. Each column is computed indepently by each column in
         `sample_weight`.
-    thresholds : ndarray, shape (n_thresholds, n_boot)
+    thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
                                              sample_weight=sample_weight)
-    recall = np.true_divide(tps, tps[-1:, :])
+    recall = np.true_divide(tps, tps[:, -1:])
     with np.errstate(divide='ignore', invalid='ignore'):
         precision = np.true_divide(tps, tps + fps)
-    precision[0, :] = precision[1, :]
+    precision[:, 0] = precision[:, 1]
     assert(np.all(0.0 <= precision) and np.all(precision <= 1.0))
     return (recall, precision, PREV), thresholds
 
@@ -235,18 +236,18 @@ def prg_curve(y_true, y_score, sample_weight=None):
 
     Returns
     -------
-    recall_gain : ndarray, shape (n_thresholds, n_boot)
+    recall_gain : ndarray, shape (n_boot, n_thresholds)
         The recall_gain. Each column is computed indepently by each column in
         `sample_weight`.
-    prec_gain : ndarray, shape (n_thresholds, n_boot)
+    prec_gain : ndarray, shape (n_boot, n_thresholds)
         The precision gain. Each column is computed indepently by each column
         in `sample_weight`.
-    thresholds : ndarray, shape (n_thresholds, n_boot)
+    thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
     fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
                                              sample_weight=sample_weight)
-    n_neg, n_pos = fps[-1:, :], tps[-1:, :]
+    n_neg, n_pos = fps[:, -1:], tps[:, -1:]
     fns = n_pos - tps
 
     den = n_neg * tps
@@ -254,11 +255,11 @@ def prg_curve(y_true, y_score, sample_weight=None):
         rec_gain = 1.0 - np.true_divide(n_pos * fns, den)
         prec_gain = 1.0 - np.true_divide(n_pos * fps, den)
     # interpolate backward just like in PR curve
-    prec_gain[0, :] = prec_gain[1, :]
+    prec_gain[:, 0] = prec_gain[:, 1]
 
     # Bring forward most recent negative point as point at 0
     with np.errstate(invalid='ignore'):
-        assert(not np.any(np.diff(rec_gain, axis=0) < 0.0))
+        assert(not np.any(np.diff(rec_gain, axis=1) < 0.0))
     rec_gain = np.maximum(0.0, rec_gain)
     assert(np.all(rec_gain <= 1.0))
     assert(np.all((rec_gain == 0.0) | (prec_gain <= 1.0)))

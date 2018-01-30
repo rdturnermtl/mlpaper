@@ -28,7 +28,10 @@ def remove_chars_py3(x_str, del_chars):
     x_str = x_str.translate(translator)
     return x_str
 
-# TODO figure out how to make some routine work in py2 and 3, move to util.
+# TODO figure out how to make some routine work in py2 and 3, move to util:
+# The py3 versions seems to work in Py2 after using
+# from builtins import str
+# if x_str is unicode => need to make sure we use unicode consistently
 remove_chars = remove_chars_py3 if version_info[0] >= 3 else remove_chars_py2
 
 # ============================================================================

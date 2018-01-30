@@ -270,36 +270,44 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
 # ============================================================================
 
 
-def check_curve(result, singleton=False):
-    '''Check result performance curve output matches expected format and
-    return the curve.
+def check_curve(result, singleton=False, x_grid=None):
+    '''Check performance curve output matches expected format and return the
+    curve after validation.
 
     Parameters
     ----------
-    curve : tuple of (2d ndarray, 2d ndarray, 2d ndarray)
-        Tuple containing (x points in step function, y points in step function,
-        threshold values).
+    curve : result of curve function, e.g., classification.roc_curve
+        Curves defined by a ROC or other curve estimation.
+    singleton : bool
+        If True, check that the 2d arrays have only a single columns, i.e.,
+        only a single curve.
+    x_grid : None or ndarray of shape (n_grid,)
+        If provided, check that all the curves are defined over a wider range
+        than the x_grid. So, when the functions are interpolated onto the range
+        of x_grid no extrapolation is needed.
 
     Returns
     -------
-    curve : tuple of (2d ndarray, 2d ndarray, 2d ndarray)
-        Returns same object passed in after some input checks.
+    curve : tuple of (ndarray, ndarray, str)
+        Returns same object passed in after some input checks. Each of the
+        ndarrays have shape (n_boot, n_thresholds).
     '''
-    # TODO update doc-string
-    curve, _ = result  # Skipping tholds since not used here
+    curve, _ = result  # Skipping tholds (2nd arg) since not used here
     x_curve, y_curve, kind = curve
 
     # Check shape
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
-    assert((not singleton) or x_curve.shape[1] == 1)
-    assert(x_curve.shape[0] >= 2)  # Otherwise not curve
+    assert((not singleton) or x_curve.shape[0] == 1)
+    assert(x_curve.shape[1] >= 2)  # Otherwise not curve
 
     # Check values
-    # TODO check all have same start and end
     assert(np.all(np.isfinite(x_curve)))
     assert(np.all(y_curve < np.inf))  # PRG can be -inf, but all curves < inf
-    assert(np.all(np.diff(x_curve, axis=0) >= 0.0))  # sorted
+    assert(np.all(np.diff(x_curve, axis=1) >= 0.0))  # also check is sorted
+    if x_grid is not None:  # Make sure we won't need to extrapolate for grid
+        assert(np.all(x_curve[:, 0] <= x_grid[0]))
+        assert(np.all(x_grid[-1] <= x_curve[:, -1]))
     return curve
 
 
@@ -315,8 +323,8 @@ def boot_samples_to_CI(boot_samples, confidence):
     assert(boot_samples.ndim >= 1)
 
     q_levels = confidence_to_percentiles(confidence)
-    LB, UB = np.percentile(boot_samples, q_levels, axis=-1)
-    assert(LB.shape == boot_samples.shape[:-1])
+    LB, UB = np.percentile(boot_samples, q_levels, axis=0)
+    assert(LB.shape == boot_samples.shape[1:])
     assert(LB.shape == UB.shape)
     return LB, UB
 
@@ -345,20 +353,7 @@ def boot_samples_to_pval(boot_samples, ref):
     return pval
 
 
-def interp1d_(x_grid, x_boot, y_boot, kind):
-    # TODO just use np vectorize
-    n_boot = x_boot.shape[1]
-
-    y_grid_boot = np.zeros((x_grid.size, n_boot))
-    for nn in xrange(n_boot):
-        y_grid_boot[:, nn] = \
-            interp1d(x_grid, x_boot[:, nn], y_boot[:, nn], kind)
-    assert(y_grid_boot.shape == (x_grid.size, n_boot))
-    return y_grid_boot
-
-
-def curve_boot(y, log_pred_prob, ref,
-               curve_f=pc.roc_curve, x_grid=None,
+def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
                n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
     '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
     For binary classification only.
@@ -372,16 +367,13 @@ def curve_boot(y, log_pred_prob, ref,
         distribution with *normalized* probabilities in log scale. However,
         many curves (e.g., ROC) are invariant to monotonic transformation and
         hence linear scale could also be used.
-    log_pred_prob_ref : None or ndarray of shape (n_samples, 2)
-        Array of shape ``(len(y), 2)``. Same as `log_pred_prob` except for the
-        reference (baseline) method if a paired statistical test is desired
-        on the area under the curve.
-    default_summary_ref : float
-        If `log_pred_prob_ref` is `None` then curve_boot tests the statistical
-        significance that the area under the curve differs from
-        `default_summary_ref` in a non-paired test. For ROC analysis,
-        `default_summary_ref` is typically 0.5. Either `log_pred_prob_ref`
-        or `default_summary_ref` must be provided.
+    ref : float or ndarray of shape (n_samples, 2)
+        If `ref` is an rray of shape ``(len(y), 2)``: Same as `log_pred_prob`
+        except for the reference (baseline) method if a paired statistical test
+        is desired on the area under the curve. If `ref` is a scalar float:
+        `curve_boot` tests the statistical significance that the area under the
+        curve differs from `ref` in a non-paired test. For ROC analysis, `ref`
+        is typically 0.5.
     curve_f : callable
         Function to compute the performance curve. Standard choices are:
         `perf_curves.roc_curve` or `perf_curves.recall_precision_curve`.
@@ -398,7 +390,7 @@ def curve_boot(y, log_pred_prob, ref,
 
     Returns
     -------
-    summary : tuple of floats
+    summary : tuple of floats, shape (3,)
         Tuple containing (mu, EB, pval), where mu is the best estimate on the
         summary statistic of the curve, EB is the error bar, and pval is the
         p-value from the two-sided boot strap significance test that its value
@@ -409,7 +401,6 @@ def curve_boot(y, log_pred_prob, ref,
         end of confidence envelope, and the upper end of the confidence
         envelope.
     '''
-    # TODO update doc string
     N, n_labels = shape_and_validate(y, log_pred_prob)
     assert(n_labels == 2)
     assert(np.ndim(ref) == 0 or ref.shape == log_pred_prob.shape)
@@ -419,34 +410,35 @@ def curve_boot(y, log_pred_prob, ref,
 
     # Setup constants
     epsilon = 1e-10  # Min bootstrap weight since 0 weight can cause problems
+    pos_label = 1  # Label=1 of [0,1] is considered a positive case
     x_grid = np.linspace(0.0, 1.0, DEFAULT_NGRID) if x_grid is None else x_grid
     assert(np.ndim(x_grid) == 1)
 
     # Put everything into a vector of right type for binary classification
     y = y.astype(bool)
-    log_pred_prob = log_pred_prob[:, 1]
+    log_pred_prob = log_pred_prob[:, pos_label]
 
-    # Get estimator on original data (before boot strap)
+    # Get estimator on original data. Could use _interp1d directly since only 1
+    # curve, but this is more consistent with bootstrap version below.
     curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
     auc, = area(*curve)
     assert(auc.ndim == 0)
-    # TODO make uneeded with singleton arg
-    y_grid = interp1d_(x_grid, *curve)[:, 0]  # Use fixed grid
+    y_grid, = interp1d(x_grid, *curve)
     assert(x_grid.shape == y_grid.shape)
 
     # Setup boot strap weights
     p_BS = np.ones(N) / N
-    weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot).T)
+    weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot))
 
     # Get boot strapped scores
     curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))
     auc_boot = area(*curve_boot_)
     assert(auc_boot.shape == (n_boot,))
-    y_grid_boot = interp1d_(x_grid, *curve_boot_)
+    y_grid_boot = interp1d(x_grid, *curve_boot_)
 
     # Repeat area boot strap with reference predictor
     if np.ndim(ref) == 2:  # Note dim must be 0 or 2
-        ref = area(*check_curve(curve_f(y, ref[:, 1], weight)))
+        ref = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
         assert(ref.shape == (n_boot,))
 
     # Pack up standard numeric summary triple
@@ -458,7 +450,7 @@ def curve_boot(y, log_pred_prob, ref,
     # Pack up data frame with graphical summaries (performance curves)
     y_LB, y_UB = boot_samples_to_CI(y_grid_boot, confidence)
     curve = pd.DataFrame(data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1),
-                         index=xrange(x_grid.size), columns=CURVE_STATS,
+                         index=range(x_grid.size), columns=CURVE_STATS,
                          dtype=float)
     return summary, curve
 
@@ -728,9 +720,9 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
             pred_log_prob = np.log(method_obj.predict_proba(X_test))
         return pred_log_prob
 
-    col_names = pd.MultiIndex.from_product([methods.keys(), xrange(n_labels)],
+    col_names = pd.MultiIndex.from_product([methods.keys(), range(n_labels)],
                                            names=[METHOD, LABEL])
-    log_pred_prob_table = pd.DataFrame(index=xrange(n_test), columns=col_names,
+    log_pred_prob_table = pd.DataFrame(index=range(n_test), columns=col_names,
                                        dtype=float)
     for method_name, method_obj in methods.items():
         if verbose:

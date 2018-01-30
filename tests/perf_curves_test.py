@@ -134,6 +134,8 @@ def test_nv_binary_clf_curve():
 
     y_bool = np.random.rand(N) <= 0.5
     y_pred = np.random.rand(N)
+    if np.random.rand() <= 0.5:  # make non-unique
+        y_pred = np.random.choice(y_pred, size=N, replace=True)
 
     sample_weight = None
     if np.random.rand() <= 0.2:
@@ -245,22 +247,22 @@ def test_nv_binary_clf_curve():
     assert(np.allclose(thresholds_prg[0], thresholds_pr[idx0]))
 
 
-def auc_trapz_test(x_curve, y_curve):
+def sub_test_auc_trapz(x_curve, y_curve):
     auc0 = util.area(x_curve, y_curve, 'linear')
-    for ii in range(x_curve.shape[1]):
-        auc1 = auc(x_curve[:, ii], y_curve[:, ii])
+    for ii in range(x_curve.shape[0]):
+        auc1 = auc(x_curve[ii, :], y_curve[ii, :])
         assert(np.allclose(auc0[ii], auc1))
 
-        y_ave = y_curve[1:, ii] + y_curve[:-1, ii]
-        auc2 = np.sum(0.5 * np.diff(x_curve[:, ii]) * y_ave)
+        y_ave = y_curve[ii, 1:] + y_curve[ii, :-1]
+        auc2 = np.sum(0.5 * np.diff(x_curve[ii, :]) * y_ave)
         assert(np.allclose(auc0[ii], auc2))
 
 
-def auc_left_test(x_curve, y_curve):
+def sub_test_auc_left(x_curve, y_curve):
     auc0 = util.area(x_curve, y_curve, 'previous')
-    for ii in range(x_curve.shape[1]):
-        delta = np.diff(x_curve[:, ii])
-        yv = y_curve[:-1, ii]
+    for ii in range(x_curve.shape[0]):
+        delta = np.diff(x_curve[ii, :])
+        yv = y_curve[ii, :-1]
 
         idx = delta > 0.0
         delta, yv = delta[idx], yv[idx]
@@ -275,15 +277,17 @@ def test_binary_clf_curve():
 
     y_bool = np.random.rand(N) <= 0.5
     y_pred = np.random.rand(N)
+    if np.random.rand() <= 0.5:  # make non-unique
+        y_pred = np.random.choice(y_pred, size=N, replace=True)
 
     p = np.ones(N) / N
     sample_weight = None
     if np.random.rand() <= 0.2:
-        sample_weight = np.abs(np.random.randn(N, n_boot))
+        sample_weight = np.abs(np.random.randn(n_boot, N))
     if np.random.rand() <= 0.2:
-        sample_weight = 1 + np.random.multinomial(N, p, size=n_boot).T
+        sample_weight = 1 + np.random.multinomial(N, p, size=n_boot)
     if np.random.rand() <= 0.2:
-        sample_weight = np.maximum(np.random.multinomial(N, p, size=n_boot).T,
+        sample_weight = np.maximum(np.random.multinomial(N, p, size=n_boot),
                                    1e-6)
 
     fps, tps, thresholds = pc._binary_clf_curve(y_bool, y_pred, sample_weight)
@@ -296,61 +300,68 @@ def test_binary_clf_curve():
     (rec_gain, prec_gain, kind), thresholds_prg = \
         pc.prg_curve(y_bool, y_pred, sample_weight)
     assert(kind == 'previous')
+    assert(thresholds_prg.shape == (rec_gain.shape[1],))
 
-    auc_trapz_test(fpr, tpr)
-    auc_left_test(rec, prec)
-    auc_left_test(rec_gain, prec_gain)
+    sub_test_auc_trapz(fpr, tpr)
+    sub_test_auc_left(rec, prec)
+    sub_test_auc_left(rec_gain, prec_gain)
 
     if sample_weight is None:
         fps2, tps2, thresholds2 = \
             _nv_binary_clf_curve(y_bool, y_pred, np.ones(N, dtype=int))
-        assert(np.all(fps2 == fps[:, 0]))
-        assert(np.all(tps2 == tps[:, 0]))
+        assert(np.all(fps2 == fps[0, :]))
+        assert(np.all(tps2 == tps[0, :]))
         assert(np.all(thresholds2 == thresholds))
 
         fps2, tps2, thresholds2 = _nv_binary_clf_curve(y_bool, y_pred)
-        assert(np.all(fps2 == fps[:, 0]))
-        assert(np.all(tps2 == tps[:, 0]))
+        assert(np.all(fps2 == fps[0, :]))
+        assert(np.all(tps2 == tps[0, :]))
         assert(np.all(thresholds2 == thresholds))
 
         fpr2, tpr2, thresholds_roc2 = _nv_roc_curve(y_bool, y_pred)
-        assert(np.allclose(fpr2, fpr[:, 0]))
-        assert(np.allclose(tpr2, tpr[:, 0]))
+        assert(np.allclose(fpr2, fpr[0, :]))
+        assert(np.allclose(tpr2, tpr[0, :]))
         assert(np.allclose(thresholds_roc2, thresholds))
 
         rec2, prec2, thresholds_pr2 = \
             _nv_recall_precision_curve(y_bool, y_pred)
-        assert(np.allclose(rec2, rec[:, 0]))
-        assert(np.allclose(prec2, prec[:, 0]))
+        assert(np.allclose(rec2, rec[0, :]))
+        assert(np.allclose(prec2, prec[0, :]))
         assert(np.allclose(thresholds_pr2, thresholds_pr))
 
         rec_gain2, prec_gain2, thresholds_prg2 = _nv_prg_curve(y_bool, y_pred)
-        assert(np.all(rec_gain[:-len(rec_gain2), 0] == 0.0))
-        assert(np.allclose(rec_gain2, rec_gain[-len(rec_gain2):, 0]))
-        assert(np.allclose(prec_gain2, prec_gain[-len(rec_gain2):, 0]))
+        assert(np.all(rec_gain[0, :-len(rec_gain2)] == 0.0))
+        assert(np.allclose(rec_gain2, rec_gain[0, -len(rec_gain2):]))
+        assert(np.allclose(prec_gain2, prec_gain[0, -len(rec_gain2):]))
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
         return
 
     for ii in range(n_boot):
-        weight_curr = sample_weight[:, ii]
+        weight_curr = sample_weight[ii, :]
+
+        fps2, tps2, thresholds2 = \
+            _nv_binary_clf_curve(y_bool, y_pred, weight_curr)
+        assert(np.allclose(fps2, fps[ii, :]))
+        assert(np.allclose(tps2, tps[ii, :]))
+        assert(np.allclose(thresholds2, thresholds))
 
         fpr2, tpr2, thresholds_roc2 = \
             _nv_roc_curve(y_bool, y_pred, weight_curr)
-        assert(np.allclose(fpr2, fpr[:, ii]))
-        assert(np.allclose(tpr2, tpr[:, ii]))
+        assert(np.allclose(fpr2, fpr[ii, :]))
+        assert(np.allclose(tpr2, tpr[ii, :]))
         assert(np.allclose(thresholds_roc2, thresholds))
 
         rec2, prec2, thresholds_pr2 = \
             _nv_recall_precision_curve(y_bool, y_pred, weight_curr)
-        assert(np.allclose(rec2, rec[:, ii]))
-        assert(np.allclose(prec2, prec[:, ii]))
+        assert(np.allclose(rec2, rec[ii, :]))
+        assert(np.allclose(prec2, prec[ii, :]))
         assert(np.allclose(thresholds_pr2, thresholds_pr))
 
         rec_gain2, prec_gain2, thresholds_prg2 = \
             _nv_prg_curve(y_bool, y_pred, weight_curr)
-        assert(np.all(rec_gain[:-len(rec_gain2), ii] == 0.0))
-        assert(np.allclose(rec_gain2, rec_gain[-len(rec_gain2):, ii]))
-        assert(np.allclose(prec_gain2, prec_gain[-len(rec_gain2):, ii]))
+        assert(np.all(rec_gain[ii, :-len(rec_gain2)] == 0.0))
+        assert(np.allclose(rec_gain2, rec_gain[ii, -len(rec_gain2):]))
+        assert(np.allclose(prec_gain2, prec_gain[ii, -len(rec_gain2):]))
         assert(np.allclose(thresholds_prg2, thresholds_prg[-len(rec_gain2):]))
 
 if __name__ == '__main__':
