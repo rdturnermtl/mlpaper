@@ -333,6 +333,7 @@ def boot_samples_to_EB(boot_samples, ref=0.0, confidence=0.95):
     assert(boot_samples.ndim == 1)
     assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
 
+    # TODO need to change this to be used estimate +/- EB not mean
     delta = boot_samples - ref
     mu_delta = np.mean(delta)
     LB, UB = boot_samples_to_CI(delta, confidence)
@@ -436,7 +437,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     assert(auc_boot.shape == (n_boot,))
     y_grid_boot = interp1d(x_grid, *curve_boot_)
 
-    # Repeat area boot strap with reference predictor
+    # Repeat area boot strap with reference predictor (if provided)
     if np.ndim(ref) == 2:  # Note dim must be 0 or 2
         ref = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
         assert(ref.shape == (n_boot,))
