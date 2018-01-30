@@ -56,7 +56,7 @@ def test_basic():
         fail[1] += fail_basic
         fail[2] += fail_EB
 
-        fail_perc, fail_basic, fail_EB = run_trial(x, np.median, mu)
+        fail_perc, fail_basic, fail_EB = run_trial(x, np.std, stdev)
         fail[3] += fail_perc
         fail[4] += fail_basic
         fail[5] += fail_EB
@@ -71,6 +71,7 @@ def test_paired():
     mu = np.random.randn(2)
     S = np.random.randn(2, 2)
     S = np.dot(S, S.T)
+    print(S)
 
     N = 201
     B = 1000
@@ -103,7 +104,8 @@ def test_paired():
         fail[1] += fail_basic
         fail[2] += fail_EB
 
-        fail_perc, fail_basic, fail_EB = run_trial(x, np.median, mu[1] - mu[0])
+        stdev_delta = np.sqrt(S[1, 1]) - np.sqrt(S[0, 0])
+        fail_perc, fail_basic, fail_EB = run_trial(x, np.std, stdev_delta)
         fail[3] += fail_perc
         fail[4] += fail_basic
         fail[5] += fail_EB
@@ -116,5 +118,8 @@ def test_paired():
 if __name__ == '__main__':
     np.random.seed(24233)
 
-    test_basic()
-    test_paired()
+    for rr in xrange(10):
+        print('---')
+        test_confidence_to_percentiles()
+        test_basic()
+        test_paired()
