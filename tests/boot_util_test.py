@@ -1,6 +1,10 @@
+# Ryan Turner (turnerry@iro.umontreal.ca)
+from __future__ import print_function, division
 import numpy as np
 import scipy.stats as ss
 import benchmark_tools.boot_util as bu
+
+FPR = 1e-3
 
 
 def get_boot_estimate(x, estimate_f):
@@ -22,13 +26,12 @@ def test_confidence_to_percentiles():
     assert(np.allclose(confidence * 100, UB - LB))
 
 
-def test_basic():
+def inner_test_boot(runs=100):
     mu = np.random.randn()
     stdev = np.abs(np.random.randn())
 
     N = 201
     B = 1000
-    runs = 100
     confidence = 0.95
 
     def run_trial(x, est_f, true_value):
@@ -47,7 +50,7 @@ def test_basic():
 
         return fail_perc, fail_basic, fail_EB
 
-    fail = [0] * 6
+    fail = [0] * 8
     for ii in range(runs):
         x = mu + stdev * np.random.randn(N)
 
@@ -60,22 +63,25 @@ def test_basic():
         fail[3] += fail_perc
         fail[4] += fail_basic
         fail[5] += fail_EB
-    print(fail)
-    pval = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
-    print(pval)
-    _, pval_agg = ss.combine_pvalues(pval)
-    print(pval_agg)
+
+        # Basic boot CI seems to suck and won't work with median
+        fail_perc, _, fail_EB = run_trial(x, np.median, mu)
+        fail[6] += fail_perc
+        fail[7] += fail_EB
+    pvals_2side = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
+    pvals_1side = \
+        [ss.binom_test(ff, runs, 1.0 - confidence, alternative='greater')
+         for ff in fail]
+    return pvals_2side, pvals_1side
 
 
-def test_paired():
+def inner_test_paired_boot(runs=100):
     mu = np.random.randn(2)
     S = np.random.randn(2, 2)
     S = np.dot(S, S.T)
-    print(S)
 
     N = 201
     B = 1000
-    runs = 100
     confidence = 0.95
 
     def run_trial(x, est_f, true_value):
@@ -95,7 +101,7 @@ def test_paired():
         fail_EB = np.abs(original_delta - true_value) > EB
         return fail_perc, fail_basic, fail_EB
 
-    fail = [0] * 6
+    fail = [0] * 8
     for ii in range(runs):
         x = np.random.multivariate_normal(mu, S, size=N)
 
@@ -109,17 +115,51 @@ def test_paired():
         fail[3] += fail_perc
         fail[4] += fail_basic
         fail[5] += fail_EB
-    print(fail)
-    pval = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
-    print(pval)
-    _, pval_agg = ss.combine_pvalues(pval)
-    print(pval_agg)
+
+        # Basic boot CI seems to suck and won't work with median
+        fail_perc, _, fail_EB = run_trial(x, np.median, mu[1] - mu[0])
+        fail[6] += fail_perc
+        fail[7] += fail_EB
+    pvals_2side = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
+    pvals_1side = \
+        [ss.binom_test(ff, runs, 1.0 - confidence, alternative='greater')
+         for ff in fail]
+    return pvals_2side, pvals_1side
+
+
+def loop_test(test_f):
+    runs = 100
+    M2 = []
+    M1 = []
+    for rr in xrange(10):
+        pvals_2side, pvals_1side = test_f(runs)
+        M2.append(pvals_2side)
+        M1.append(pvals_1side)
+    M2 = np.asarray(M2)
+    M1 = np.asarray(M1)
+
+    pvals_2side = [ss.combine_pvalues(M2[:, ii])[1] for ii in range(M2.shape[1])]
+    pvals_1side = [ss.combine_pvalues(M1[:, ii])[1] for ii in range(M1.shape[1])]
+
+    print(pvals_2side)
+    assert(np.min(pvals_2side) >= FPR / len(pvals_2side))
+    print(pvals_1side)
+    assert(np.min(pvals_1side) >= FPR / len(pvals_1side))
+
+
+def test_boot():
+    loop_test(inner_test_boot)
+
+
+def test_paired_boot():
+    loop_test(inner_test_paired_boot)
+
 
 if __name__ == '__main__':
     np.random.seed(24233)
 
     for rr in xrange(10):
-        print('---')
         test_confidence_to_percentiles()
-        test_basic()
-        test_paired()
+    test_boot()
+    test_paired_boot()
+    print('passed')
