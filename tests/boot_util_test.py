@@ -1,5 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, division
+from builtins import range
 import numpy as np
 import scipy.stats as ss
 import benchmark_tools.boot_util as bu
@@ -138,8 +139,10 @@ def loop_test(test_f):
     M2 = np.asarray(M2)
     M1 = np.asarray(M1)
 
-    pvals_2side = [ss.combine_pvalues(M2[:, ii])[1] for ii in range(M2.shape[1])]
-    pvals_1side = [ss.combine_pvalues(M1[:, ii])[1] for ii in range(M1.shape[1])]
+    pvals_2side = [ss.combine_pvalues(M2[:, ii])[1]
+                   for ii in range(M2.shape[1])]
+    pvals_1side = [ss.combine_pvalues(M1[:, ii])[1]
+                   for ii in range(M1.shape[1])]
 
     print(pvals_2side)
     assert(np.min(pvals_2side) >= FPR / len(pvals_2side))
