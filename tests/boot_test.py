@@ -2,93 +2,122 @@
 from __future__ import print_function, division
 from builtins import range
 import numpy as np
-from benchmark_tools.classification import curve_boot
-import benchmark_tools.constants as constants
-import benchmark_tools.benchmark_tools as bt
+import scipy.stats as ss
+from benchmark_tools.classification import curve_boot, DEFAULT_NGRID
+import benchmark_tools.constants as cc
 import benchmark_tools.perf_curves as pc
-
-def test_dummy():
-    assert True
+from benchmark_tools.util import area
 
 # @TODO(rdturnermtl): this needs to be made into proper tests.
 # np.random.seed(3563)
 
-# confidence = 0.95
-# N = 200
-# N_big = constants.MC_REPEATS_LARGE
-# p = 0.3
-# runs = constants.MC_REPEATS_1K
-# w = 0.1
+FPR = 1e-2
 
-# auc = np.zeros((runs, 3))
-# valid = np.zeros((runs, 3))
-# pval = np.zeros((runs, 3))
-# for rr in range(runs):
-#     y_score = np.random.rand(N_big, 2)
-#     y_true = np.random.rand(N_big) <= w * y_score[:, 0] + (1-w) * y_score[:, 1]
 
-#     x_curve, y_curve, _ = pc.roc_curve(y_true[N:], y_score[N:, 1])
-#     ref = pc.auc_trapz(x_curve, y_curve)
-#     summary, _ = curve_boot(y_true[:N], y_score[:N, :],
-#                             default_summary_ref=ref,
-#                             curve_f=pc.roc_curve, summary_f=pc.auc_trapz,
-#                             n_boot=1000, confidence=confidence)
-#     auc[rr, 0], EB, pval[rr, 0] = summary
-#     valid[rr, 0] = np.abs(ref - auc[rr, 0]) <= EB
+def fail_check_stat(fail, runs, expect_p_fail, fpr):
+    pvals_2side = [ss.binom_test(ff, runs, expect_p_fail) for ff in fail]
+    pvals_1side = \
+        [ss.binom_test(ff, runs, expect_p_fail, alternative='greater')
+         for ff in fail]
+    print(pvals_2side)
+    assert(np.min(pvals_2side) >= fpr / len(pvals_2side))
+    print(pvals_1side)
+    assert(np.min(pvals_1side) >= fpr / len(pvals_1side))
 
-#     x_curve, y_curve, _ = pc.recall_precision_curve(y_true[N:], y_score[N:, 1])
-#     ref = pc.auc_left(x_curve, y_curve)
-#     summary, _ = curve_boot(y_true[:N], y_score[:N, :],
-#                             default_summary_ref=ref,
-#                             curve_f=pc.recall_precision_curve,
-#                             summary_f=pc.auc_left,
-#                             n_boot=1000, confidence=confidence)
-#     auc[rr, 1], EB, pval[rr, 1] = summary
-#     valid[rr, 1] = np.abs(ref - auc[rr, 1]) <= EB
 
-#     x_curve, y_curve, _ = pc.prg_curve(y_true[N:], y_score[N:, 1])
-#     ref = pc.auc_left(x_curve, y_curve)
-#     summary, _ = curve_boot(y_true[:N], y_score[:N, :],
-#                             default_summary_ref=ref,
-#                             curve_f=pc.prg_curve, summary_f=pc.auc_left,
-#                             n_boot=1000, confidence=confidence)
-#     auc[rr, 2], EB, pval[rr, 2] = summary
-#     valid[rr, 2] = np.abs(ref - auc[rr, 2]) <= EB
+def test_boot(runs=100):
+    N = 201
+    confidence = 0.95
 
-# # TODO: This is not a test.
-# print('against N-big')
-# print('P EB valid', np.mean(valid, axis=0))
-# print('mean AUC', np.mean(auc, axis=0))
-# print('P p-val sig', np.mean(pval <= 0.05, axis=0))
+    # Doesn't furt to draw some extra seeds
+    # TODO accept as input
+    seeds = np.nditer(np.random.randint(low=0, high=int(1e6), size=runs * 5))
 
-# auc = np.zeros((runs, 3))
-# valid = np.zeros((runs, 3))
-# pval = np.zeros((runs, 3))
-# for rr in range(runs):
-#     y_true = np.random.rand(N) <= p
-#     y_score = np.random.randn(N, 2)
+    def run_trial(y_true, y_score, y_score_ref, true_value, curve_f, seed):
+        curve, _ = curve_f(y_true, y_score[:, 1])
+        auc_, = area(*curve)
+        curve, _ = curve_f(y_true, y_score_ref[:, 1])
+        auc_ref, = area(*curve)
 
-#     summary, _ = curve_boot(y_true, y_score, default_summary_ref=0.5,
-#                             curve_f=pc.roc_curve, summary_f=pc.auc_trapz,
-#                             n_boot=1000, confidence=confidence)
-#     auc[rr, 0], EB, pval[rr, 0] = summary
-#     valid[rr, 0] = np.abs(0.5 - auc[rr, 0]) <= EB
+        np.random.seed(seed)
+        (auc, EB, pval), curve = \
+            curve_boot(y_true, y_score, ref=true_value, curve_f=curve_f,
+                       confidence=confidence)
+        assert(auc_ == auc)
+        fail_EB = np.abs(auc - true_value) > EB
+        # Could also test distn with 1-sided KS test but this easier for now
+        fail_P = pval < 1.0 - confidence
+        fail_curve = ((curve[cc.YGRID].values < curve[cc.LB].values) |
+                      (curve[cc.UB].values < curve[cc.YGRID].values))
 
-#     summary, _ = curve_boot(y_true, y_score, default_summary_ref=p,
-#                             curve_f=pc.recall_precision_curve,
-#                             summary_f=pc.auc_left,
-#                             n_boot=1000, confidence=confidence)
-#     auc[rr, 1], EB, pval[rr, 1] = summary
-#     valid[rr, 1] = np.abs(p - auc[rr, 1]) <= EB
+        np.random.seed(seed)
+        (auc, EB_, pval), curve_ = \
+            curve_boot(y_true, y_score, ref=y_score_ref, curve_f=curve_f,
+                       confidence=confidence, pairwise_CI=False)
+        assert(auc_ == auc)
+        assert(EB_ == EB)
+        # Could also test distn with 1-sided KS test but this easier for now
+        fail_P2 = pval < 1.0 - confidence
+        assert(np.all(curve_.values == curve.values))
 
-#     summary, _ = curve_boot(y_true, y_score, default_summary_ref=0.0,
-#                             curve_f=pc.prg_curve, summary_f=pc.auc_left,
-#                             n_boot=1000, confidence=confidence)
-#     auc[rr, 2], EB, pval[rr, 2] = summary
-#     valid[rr, 2] = np.abs(auc[rr, 2]) <= EB
+        np.random.seed(seed)
+        (auc, EB, pval_), curve = \
+            curve_boot(y_true, y_score, ref=y_score_ref, curve_f=curve_f,
+                       confidence=confidence, pairwise_CI=True)
+        assert(auc_ == auc)
+        fail_EB2 = np.abs(auc - auc_ref) > EB
+        # Could also test distn with 1-sided KS test but this easier for now
+        assert(pval_ == pval)
+        assert(np.all(curve_.values == curve.values))
 
-# # TODO: this is not a test
-# print('just noise')
-# print('P EB valid', np.mean(valid, axis=0))
-# print('mean AUC', np.mean(auc, axis=0))
-# print('P p-val sig', np.mean(pval <= 0.05, axis=0))
+        return fail_EB, fail_P, fail_EB2, fail_P2, fail_curve
+
+    fail = [0] * 8
+    fail_curve_roc = np.zeros(DEFAULT_NGRID, dtype=int)
+    fail_curve_ap = np.zeros(DEFAULT_NGRID, dtype=int)
+    for ii in range(runs):
+        mu = np.random.randn(2)
+        S = np.random.randn(2, 2)
+        S = np.dot(S, S.T)
+        p = np.random.rand()
+
+        y_true = np.random.rand(N) <= p
+        # TODO also consider resample
+        y_score, y_score_ref = np.random.multivariate_normal(mu, S, size=N).T
+        y_score = np.stack((np.zeros_like(y_score), y_score), axis=1)
+        y_score_ref = np.stack((np.zeros_like(y_score_ref), y_score_ref), axis=1)
+        print(y_true.shape)
+        print(y_score.shape)
+        print(y_score_ref.shape)
+
+        fail_EB, fail_P, fail_EB2, fail_P2, fail_curve = \
+            run_trial(y_true, y_score, y_score_ref,
+                      0.5, pc.roc_curve, seeds.next())
+        fail[0] += fail_EB
+        fail[1] += fail_P
+        fail[2] += fail_EB2
+        fail[3] += fail_P2
+        fail_curve_roc += fail_curve
+
+        fail_EB, fail_P, fail_EB2, fail_P2, fail_curve = \
+            run_trial(y_true, y_score, y_score_ref,
+                      p, pc.recall_precision_curve, seeds.next())
+        fail[4] += fail_EB
+        fail[5] += fail_P
+        fail[6] += fail_EB2
+        fail[7] += fail_P2
+        fail_curve_ap += fail_curve
+
+    sub_FPR = FPR / 3.0
+    expect_p_fail = 1.0 - confidence
+    fail_check_stat(fail, runs, expect_p_fail, sub_FPR)
+    print('ROC')
+    fail_check_stat(fail_curve_roc, runs, expect_p_fail, sub_FPR)
+    print('AP')
+    fail_check_stat(fail_curve_ap, runs, expect_p_fail, sub_FPR)
+
+if __name__ == '__main__':
+    np.random.seed(56456)
+
+    test_boot()
+    print('passed')
