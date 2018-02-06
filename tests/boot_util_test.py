@@ -5,7 +5,7 @@ import numpy as np
 import scipy.stats as ss
 import benchmark_tools.boot_util as bu
 
-FPR = 1e-3
+FPR = 1e-3  # TODO move to constants file
 
 
 def get_boot_estimate(x, estimate_f):
@@ -14,7 +14,7 @@ def get_boot_estimate(x, estimate_f):
 
 
 def get_boot_estimate_vec(x, estimate_f):
-    idx = np.random.choice(range(x.shape[0]), size=x.shape[0], replace=True)
+    idx = np.random.choice(x.shape[0], size=x.shape[0], replace=True)
     x_bs = x[idx, :]
     est = estimate_f(x_bs, axis=0)
     return est
@@ -128,6 +128,52 @@ def inner_test_paired_boot(runs=100):
     return pvals_2side, pvals_1side
 
 
+def inner_test_significance(runs=100):
+    # Build symmetric but correlated distn to test pairwise sig tests
+    mu = np.zeros(2) + np.random.randn()
+    S = np.eye(2)
+    S[1, 0] = np.random.uniform(-1.0, 1.0)
+    S[0, 1] = S[1, 0]
+    S = np.abs(np.random.randn()) * S
+
+    N = 201
+    B = 1000
+    confidence = 0.95
+
+    def run_trial(x, est_f, true_value):
+        boot = [get_boot_estimate_vec(x, est_f) for _ in range(B)]
+        boot = np.asarray(boot)
+        assert(boot.shape == (B, 2))
+
+        pval = bu.significance(boot[:, 0], true_value)
+        fail_P = pval < 1.0 - confidence
+        pval = bu.significance(boot[:, 0], boot[:, 1])
+        fail_P2 = pval < 1.0 - confidence
+        return fail_P, fail_P2
+
+    fail = [0] * 6
+    for ii in range(runs):
+        x = np.random.multivariate_normal(mu, S, size=N)
+
+        fail_P, fail_P2 = run_trial(x, np.mean, mu[0])
+        fail[0] += fail_P
+        fail[1] += fail_P2
+
+        fail_P, fail_P2 = run_trial(x, np.std, np.sqrt(S[0, 0]))
+        fail[2] += fail_P
+        fail[3] += fail_P2
+
+        # Basic boot CI seems to suck and won't work with median
+        fail_P, fail_P2 = run_trial(x, np.median, mu[0])
+        fail[4] += fail_P
+        fail[5] += fail_P2
+    pvals_2side = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
+    pvals_1side = \
+        [ss.binom_test(ff, runs, 1.0 - confidence, alternative='greater')
+         for ff in fail]
+    return pvals_2side, pvals_1side
+
+
 def loop_test(test_f):
     runs = 100
     M2 = []
@@ -158,6 +204,9 @@ def test_paired_boot():
     loop_test(inner_test_paired_boot)
 
 
+def test_paired_significance():
+    loop_test(inner_test_significance)
+
 if __name__ == '__main__':
     np.random.seed(24233)
 
@@ -165,4 +214,5 @@ if __name__ == '__main__':
         test_confidence_to_percentiles()
     test_boot()
     test_paired_boot()
+    test_paired_significance()
     print('passed')

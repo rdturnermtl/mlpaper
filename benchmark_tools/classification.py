@@ -10,6 +10,9 @@ from benchmark_tools.constants import (
     METHOD, METRIC, PAIRWISE_DEFAULT)
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import one_hot, normalize, interp1d, area
+import benchmark_tools.boot_util as bu
+
+# TODO grep repated blanks
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -204,6 +207,14 @@ def spherical_loss(y, log_pred_prob, rescale=True):
         loss = (1.0 + loss) / c
     return loss
 
+# TODO add accuracy-at-k loss func. test against specification using large
+# cost matrix as hard loss function.
+
+# TODO consider ranking metric like NDCG, look at all ranking metrics under
+# sklearn
+
+# TODO have tests randomly cast in allowed types
+
 # ============================================================================
 # Loss summary: the main purpose of this file.
 # ============================================================================
@@ -298,6 +309,7 @@ def check_curve(result, singleton=False, x_grid=None):
     # Check shape
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
+    # TODO consider removing this
     assert((not singleton) or x_curve.shape[0] == 1)
     assert(x_curve.shape[1] >= 2)  # Otherwise not curve
 
@@ -311,49 +323,6 @@ def check_curve(result, singleton=False, x_grid=None):
     return curve
 
 
-def confidence_to_percentiles(confidence):
-    assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
-
-    alpha = 0.5 * (1.0 - confidence)
-    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
-    return q_levels
-
-
-def boot_samples_to_CI(boot_samples, confidence):
-    assert(boot_samples.ndim >= 1)
-
-    q_levels = confidence_to_percentiles(confidence)
-    LB, UB = np.percentile(boot_samples, q_levels, axis=0)
-    assert(LB.shape == boot_samples.shape[1:])
-    assert(LB.shape == UB.shape)
-    return LB, UB
-
-
-def boot_samples_to_EB(boot_samples, ref=0.0, confidence=0.95):
-    assert(boot_samples.ndim == 1)
-    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
-
-    # TODO need to change this to be used estimate +/- EB not mean
-    delta = boot_samples - ref
-    mu_delta = np.mean(delta)
-    LB, UB = boot_samples_to_CI(delta, confidence)
-    EB = np.fmax(UB - mu_delta, mu_delta - LB)
-    assert(EB >= 0.0 or np.isnan(EB))
-    # NaN EB only ever occurs when ref is infinite and so are some samples
-    assert(np.all(np.isfinite(ref)) <= ~np.isnan(EB))
-    return EB
-
-
-def boot_samples_to_pval(boot_samples, ref):
-    assert(boot_samples.ndim == 1)
-    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
-
-    pval = 2.0 * np.minimum(np.mean(boot_samples <= ref),
-                            np.mean(ref <= boot_samples))
-    pval = np.minimum(1.0, pval)  # Only needed when some auc == ref exactly
-    return pval
-
-
 def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
                n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
     '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
@@ -363,7 +332,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     ----------
     y : ndarray of type int or bool, shape (n_samples,)
         Array containing true labels, must be `bool` or {0,1}.
-    log_pred_prob :  ndarray, shape (n_samples, 2)
+    log_pred_prob : ndarray, shape (n_samples, 2)
         Array of shape ``(len(y), 2)``. Each row corresponds to a categorical
         distribution with *normalized* probabilities in log scale. However,
         many curves (e.g., ROC) are invariant to monotonic transformation and
@@ -425,31 +394,36 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     auc, = area(*curve)
     assert(auc.ndim == 0)
     y_grid, = interp1d(x_grid, *curve)
-    assert(x_grid.shape == y_grid.shape)
+    assert(y_grid.shape == x_grid.shape)
 
     # Setup boot strap weights
-    p_BS = np.ones(N) / N
-    weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot))
+    weight = bu.boot_weights(N, n_boot, epsilon=epsilon)
 
     # Get boot strapped scores
     curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))
     auc_boot = area(*curve_boot_)
     assert(auc_boot.shape == (n_boot,))
     y_grid_boot = interp1d(x_grid, *curve_boot_)
+    assert(y_grid_boot.shape == (n_boot, x_grid.size))
 
     # Repeat area boot strap with reference predictor (if provided)
+    ref_boot = ref
     if np.ndim(ref) == 2:  # Note dim must be 0 or 2
-        ref = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
-        assert(ref.shape == (n_boot,))
+        ref_boot = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
+        assert(ref_boot.shape == (n_boot,))
+        ref, = area(*check_curve(curve_f(y, ref[:, pos_label]),
+                                 singleton=True))
+    assert(np.ndim(ref) == 0)
 
     # Pack up standard numeric summary triple
-    EB = boot_samples_to_EB(auc_boot, ref, confidence) if pairwise_CI \
-        else boot_samples_to_EB(auc_boot, confidence=confidence)
-    pval = boot_samples_to_pval(auc_boot, ref)
+    EB = bu.error_bar(auc_boot - ref_boot, auc - ref, confidence=confidence) \
+        if pairwise_CI else bu.error_bar(auc_boot, auc, confidence=confidence)
+    pval = bu.significance(auc_boot, ref_boot)
     summary = (auc, EB, pval)
 
     # Pack up data frame with graphical summaries (performance curves)
-    y_LB, y_UB = boot_samples_to_CI(y_grid_boot, confidence)
+    # Could also try bu.basic and see which works better
+    y_LB, y_UB = bu.percentile(y_grid_boot, confidence)
     curve = pd.DataFrame(data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1),
                          index=range(x_grid.size), columns=CURVE_STATS,
                          dtype=float)
@@ -525,6 +499,7 @@ def curve_summary_table(log_pred_prob_table, y,
 
     col_names = pd.MultiIndex.from_product([curve_dict.keys(), STD_STATS],
                                            names=[METRIC, STAT])
+    # TODO grep all occurances of pd.DataFrame have dtype
     curve_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
     curve_tbl.index.name = METHOD
 

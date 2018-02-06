@@ -5,10 +5,18 @@ import pandas as pd
 import scipy.stats as ss
 from benchmark_tools.constants import (
     METHOD, METRIC, STAT, STD_STATS, PAIRWISE_DEFAULT)
+import benchmark_tools.boot_util as bu
 
 # ============================================================================
 # Statistical util functions
 # ============================================================================
+
+
+def clip_EB(mu, EB, lower=-np.inf, upper=np.inf):
+    # TODO test with nan/inf combos
+    EB_worst_case = np.maximum(upper - mu, mu - lower)
+    EB = np.minimum(EB, EB_worst_case)
+    return EB
 
 
 def ttest1(x, nan_on_zero=False):
@@ -91,15 +99,10 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
         return range_
 
     # From Thm 1 of Audibert et. al. (2009), must use MLE for std ==> ddof=0
+    # TODO test coverage, search for example to make this tight
     delta = 1.0 - confidence
     A = np.log(3.0 / delta)
     EB = np.std(x, ddof=0) * np.sqrt((2.0 * A) / N) + (3.0 * A * range_) / N
-
-    # Clip error bar with trivial worst-case based on [lower,upper] limits.
-    mu = np.mean(x)
-    EB_worst_case = np.maximum(upper - mu, mu - lower)
-    EB = np.minimum(EB, EB_worst_case)
-
     assert(np.ndim(EB) == 0 and not (EB < 0.0))
     return EB
 
@@ -111,19 +114,11 @@ def boot_EB(x, confidence=0.95, n_boot=1000):
     if N == 0:
         return np.inf
 
-    # Setup levels for percentile function
-    alpha = 0.5 * (1.0 - confidence)
-    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
-
-    p_BS = np.ones(N) / N
-    weight = np.random.multinomial(N, p_BS, size=n_boot).T
-
-    xw = np.mean(x[:, None] * weight, axis=0)
-    LB = np.percentile(xw, q_levels[0])
-    UB = np.percentile(xw, q_levels[1])
-
+    # TODO test equib output in boot_util)test
     mu = np.mean(x)
-    EB = np.maximum(UB - mu, mu - LB)
+    weight = bu.boot_weights(N, n_boot)
+    mu_boot = np.mean(x * weight, axis=1)
+    EB = bu.error_bar(mu_boot, mu, confidence=confidence)
     assert(np.ndim(EB) == 0 and not (EB < 0.0))
     return EB
 
@@ -178,6 +173,7 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     else:
         assert(False)
 
+
     EB = np.maximum(EB, min_EB)
     return mu, EB
 
@@ -223,6 +219,7 @@ def loss_summary_table(loss_table, ref_method,
         test on the hypothesis H0 that foo has the same mean loss as the
         reference method `ref_method`.
     '''
+    # TODO Allow this to accept CI method, take limits as dict
     assert(loss_table.columns.names == (METRIC, METHOD))
     metrics, methods = loss_table.columns.levels
     assert(ref_method in methods)  # ==> len(methods) >= 1

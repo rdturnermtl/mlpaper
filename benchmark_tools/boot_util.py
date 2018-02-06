@@ -1,4 +1,14 @@
+# Ryan Turner (turnerry@iro.umontreal.ca)
 import numpy as np
+
+
+def boot_weights(N, n_boot, epsilon=0):
+    # TODO grep for multinomial occurances that can be replaced with this
+
+    p_BS = np.ones(N) / N
+    weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot))
+    assert(weight.shape == (n_boot, N))
+    return weight
 
 
 def confidence_to_percentiles(confidence):
@@ -37,7 +47,7 @@ def error_bar(boot_estimates, original_estimate, confidence=0.95):
     LB, UB = percentile(boot_estimates, confidence)
     # This actually ends up the same whether we use basic or percentile
     EB = np.fmax(UB - original_estimate, original_estimate - LB)
-    assert(np.all((EB >= 0.0) | np.isnan(EB)))
+    assert(not np.any(EB < 0.0))  # Allows nans
     # NaN EB only ever occurs when ref is infinite and so are some samples
     assert(np.all(np.isfinite(original_estimate) <= ~np.isnan(EB)))
     return EB

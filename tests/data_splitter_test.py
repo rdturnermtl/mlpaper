@@ -8,6 +8,8 @@ import pandas as pd
 import benchmark_tools.constants as constants
 import benchmark_tools.data_splitter as ds
 
+# TODO make seperate test constants file
+
 
 def unif2():
     x = np.random.choice([0.0, np.random.rand(), 1.0], p=[0.05, 0.9, 0.05])
