@@ -526,7 +526,8 @@ def curve_summary_table(log_pred_prob_table, y,
 
 def summary_table(log_pred_prob_table, y,
                   loss_dict, curve_dict, ref_method, x_grid=None,
-                  n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
+                  n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95,
+                  method_EB='t', limits={}):
     '''Build table with mean and error bars of both loss and curve summaries
     from a table of probalistic predictions.
 
@@ -581,6 +582,7 @@ def summary_table(log_pred_prob_table, y,
         and the upper end of the confidence envelope. Only metrics from
         `curve_dict` and *not* from `loss_dict` are found here.
     '''
+    # TODO update doc string
     # Do the curve metrics
     curve_summary, dump_tbl = \
         curve_summary_table(log_pred_prob_table, y, curve_dict, ref_method,
@@ -592,7 +594,8 @@ def summary_table(log_pred_prob_table, y,
     loss_tbl = loss_table(log_pred_prob_table, y, loss_dict)
     loss_summary = loss_summary_table(loss_tbl, ref_method,
                                       pairwise_CI=pairwise_CI,
-                                      confidence=confidence)
+                                      confidence=confidence,
+                                      method_EB=method_EB, limits=limits)
 
     # Return the combo
     full_tbl = pd.concat((loss_summary, curve_summary), axis=1)
@@ -713,7 +716,8 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
 def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
                    methods, loss_dict, curve_dict, ref_method,
-                   min_pred_log_prob=-np.inf, pairwise_CI=PAIRWISE_DEFAULT):
+                   min_pred_log_prob=-np.inf, pairwise_CI=PAIRWISE_DEFAULT,
+                   method_EB='t', limits={}):
     '''Simplest one-call interface to this package. Just pass it data and
     method objects and a performance summary DataFrame is returned.
 
@@ -775,9 +779,11 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
         and the upper end of the confidence envelope. Only metrics from
         `curve_dict` and *not* from `loss_dict` are found here.
     '''
+    # TODO update doc string
     assert(y_train.dtype == y_test.dtype)  # Would be weird otherwise
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
                                  methods, min_log_prob=min_pred_log_prob)
     full_tbl, dump = summary_table(pred_tbl, y_test, loss_dict, curve_dict,
-                                   ref_method, pairwise_CI=pairwise_CI)
+                                   ref_method, pairwise_CI=pairwise_CI,
+                                   method_EB=method_EB, limits=limits)
     return full_tbl, dump

@@ -12,10 +12,17 @@ import benchmark_tools.boot_util as bu
 # ============================================================================
 
 
-def clip_EB(mu, EB, lower=-np.inf, upper=np.inf):
+def clip_EB(mu, EB, lower=-np.inf, upper=np.inf, min_EB=0.0):
     # TODO test with nan/inf combos
-    EB_worst_case = np.maximum(upper - mu, mu - lower)
-    EB = np.minimum(EB, EB_worst_case)
+    # Guarantee can always comply with min and max requirements
+    # TODO convert these to value errors
+    # Use not condition to still pass with nans
+    assert(not (lower > mu or mu > upper))
+    assert(not (2 * min_EB > upper - lower))
+
+    EB_trivial = np.fmax(upper - mu, mu - lower)
+    assert(not (min_EB > EB_trivial))
+    EB = np.clip(EB, min_EB, EB_trivial)
     return EB
 
 
@@ -88,6 +95,7 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     "Exploration-exploitation tradeoff using variance estimates in multi-armed
     bandits." Theoretical Computer Science 410.19 (2009): 1876-1902.
     '''
+    # TODO make note that clip is not done here
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.all(lower <= x) and np.all(x <= upper))
     assert(np.ndim(confidence) == 0)
@@ -114,7 +122,7 @@ def boot_EB(x, confidence=0.95, n_boot=1000):
     if N == 0:
         return np.inf
 
-    # TODO test equib output in boot_util)test
+    # TODO test equib output in boot_util_test
     mu = np.mean(x)
     weight = bu.boot_weights(N, n_boot)
     mu_boot = np.mean(x * weight, axis=1)
@@ -173,8 +181,7 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     else:
         assert(False)
 
-
-    EB = np.maximum(EB, min_EB)
+    EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
     return mu, EB
 
 # ============================================================================
@@ -182,8 +189,8 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
 # ============================================================================
 
 
-def loss_summary_table(loss_table, ref_method,
-                       pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
+def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
+                       confidence=0.95, method_EB='t', limits={}):
     '''Build table with mean and error bar summaries from a loss table that
     contains losses on a per data point basis.
 
@@ -219,7 +226,7 @@ def loss_summary_table(loss_table, ref_method,
         test on the hypothesis H0 that foo has the same mean loss as the
         reference method `ref_method`.
     '''
-    # TODO Allow this to accept CI method, take limits as dict
+    # TODO update doc string
     assert(loss_table.columns.names == (METRIC, METHOD))
     metrics, methods = loss_table.columns.levels
     assert(ref_method in methods)  # ==> len(methods) >= 1
@@ -233,18 +240,23 @@ def loss_summary_table(loss_table, ref_method,
     for metric in metrics:
         loss_ref = loss_table.loc[:, (metric, ref_method)]
         assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
+        lower, upper = limits.get(metric, -np.inf), limits.get(metric, np.inf)
+        assert(lower <= upper)
         for method in methods:
             loss = loss_table.loc[:, (metric, method)]
             assert(loss.ndim == 1)  # Weird stuff happens if names not unique
             assert(not np.any(np.isnan(loss)))  # Would let method cheat
+            assert(np.all(lower <= loss) and np.all(loss <= upper))
 
-            # get_mean_and_EB() supports other EB metrics already, they could
-            # be added here if needed.
             if pairwise_CI:
-                mu, EB = get_mean_and_EB(loss, loss_ref, confidence)
+                mu, EB = get_mean_and_EB(loss, loss_ref, confidence,
+                                         lower=lower, upper=upper,
+                                         method=method_EB)
                 EB = np.nan if method == ref_method else EB
             else:
-                mu, EB = get_mean_and_EB(loss, confidence)
+                mu, EB = get_mean_and_EB(loss, confidence=confidence,
+                                         lower=lower, upper=upper,
+                                         method=method_EB)
 
             # This is two-sided, could include one-sided option too.
             pval = ttest1(loss - loss_ref, nan_on_zero=(method == ref_method))

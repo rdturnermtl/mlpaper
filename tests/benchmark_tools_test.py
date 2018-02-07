@@ -231,11 +231,12 @@ def loss_summary_table_test():
                                equal_nan=True))
 
             if pairwise_CI:
-                mu, EB = bt.get_mean_and_EB(loss, loss_ref, confidence)
+                mu, EB = bt.get_mean_and_EB(loss=loss, loss_ref=loss_ref,
+                                            confidence=confidence)
                 if method == ref:
                     EB = np.nan
             else:
-                mu, EB = bt.get_mean_and_EB(loss, confidence)
+                mu, EB = bt.get_mean_and_EB(loss=loss, confidence=confidence)
 
             if method == ref:
                 pval = np.nan
