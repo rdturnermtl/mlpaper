@@ -11,6 +11,18 @@ def boot_weights(N, n_boot, epsilon=0):
     return weight
 
 
+def stratified_boot_weights(y, n_boot, epsilon=0):
+    # TODO assert weight has same type as what comes from boot weights
+    weight = np.full((n_boot, y.size), epsilon)  # preserve epsilon dtype
+
+    labels = np.unique(y)
+    for ll in labels:
+        idx = (y == ll)
+        N = np.sum(idx)
+        weight[:, idx] = boot_weights(N, n_boot, epsilon=epsilon)
+    return weight
+
+
 def confidence_to_percentiles(confidence):
     assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
     # TODO move to util

@@ -12,8 +12,6 @@ import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import one_hot, normalize, interp1d, area
 import benchmark_tools.boot_util as bu
 
-# TODO grep repated blanks
-
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
 
@@ -397,6 +395,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     assert(y_grid.shape == x_grid.shape)
 
     # Setup boot strap weights
+    # weight = bu.stratified_boot_weights(y, n_boot, epsilon=epsilon)
     weight = bu.boot_weights(N, n_boot, epsilon=epsilon)
 
     # Get boot strapped scores

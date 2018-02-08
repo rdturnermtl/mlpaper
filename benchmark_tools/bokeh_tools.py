@@ -76,7 +76,7 @@ def plot_perf_table(perf_tbl, run_name=DEFAULT_NAME, max_offset=0.0):
     methods = perf_tbl.index.values
     method_to_color = build_color_dict(methods, default_palette(len(methods)))
 
-    n_methods = np.maximum(1.0, len(methods) - 1.0)   # Now a float
+    n_methods = np.maximum(1.0, len(methods) - 1.0)  # Now a float
     for metric_name in perf_tbl.columns.levels[0]:
         fname = file_safe('%s_%s.html' % (run_name, metric_name))
         bp.output_file(fname)
