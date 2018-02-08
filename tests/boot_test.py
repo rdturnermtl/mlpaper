@@ -123,8 +123,7 @@ def test_boot(runs=100):
         fail[7] += fail_P2
         fail_curve_ap += fail_curve
 
-        # TODO switch to prg, and change true_curve
-        x_grid = np.linspace(0.05, 0.95, DEFAULT_NGRID)
+        x_grid = np.linspace(0.0, 0.99, DEFAULT_NGRID)
         true_curve = (np.array([[0.0, 1.0]]), np.array([[0.0, 0.0]]),
                       pc.PREV)
         fail_EB, fail_P, fail_EB2, fail_P2, fail_curve = \
