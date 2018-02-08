@@ -208,9 +208,6 @@ def spherical_loss(y, log_pred_prob, rescale=True):
 # TODO add accuracy-at-k loss func. test against specification using large
 # cost matrix as hard loss function.
 
-# TODO consider ranking metric like NDCG, look at all ranking metrics under
-# sklearn
-
 # TODO have tests randomly cast in allowed types
 
 # ============================================================================

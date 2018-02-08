@@ -1,10 +1,10 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 import numpy as np
 
+# TODO doc strings
+
 
 def boot_weights(N, n_boot, epsilon=0):
-    # TODO grep for multinomial occurances that can be replaced with this
-
     p_BS = np.ones(N) / N
     weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot))
     assert(weight.shape == (n_boot, N))
@@ -12,7 +12,6 @@ def boot_weights(N, n_boot, epsilon=0):
 
 
 def stratified_boot_weights(y, n_boot, epsilon=0):
-    # TODO assert weight has same type as what comes from boot weights
     weight = np.full((n_boot, y.size), epsilon)  # preserve epsilon dtype
 
     labels = np.unique(y)
