@@ -13,15 +13,44 @@ import benchmark_tools.boot_util as bu
 
 
 def clip_EB(mu, EB, lower=-np.inf, upper=np.inf, min_EB=0.0):
+    '''Clip error bars to both a minimum uncertainty level and a maximum level
+    determined by trivial error bars from the a prior known limits of the
+    unknown parameter `theta`.
+
+    Parameters
+    ----------
+    mu : float
+        Point estimate of unknown parameter `theta` around which error bars are
+        based.
+    EB : float
+        Size of error bar around `mu` (``EB > 0``). The confidence interval on
+        `theta` is ``[mu - EB, mu + EB]``.
+    lower : float
+        A priori known theoretical lower limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``lower=0``.
+    upper : float
+        A priori known theoretical upper limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``upper=1``.
+    min_EB : float
+        Minimum size beleivable size of error bar. Typically, leave
+        ``min_EB=0`` for simplicity.
+
+    Returns
+    -------
+    EB : float
+        Error bar after possible clipping.
+    '''
     # TODO test with nan/inf combos
-    # Guarantee can always comply with min and max requirements
-    # TODO convert these to value errors
-    # Use not condition to still pass with nans
-    assert(not (lower > mu or mu > upper))
-    assert(not (2 * min_EB > upper - lower))
+    # Note: These conditions are designed to pass when NaNs are supplied.
+    if lower > mu or mu > upper:
+        raise ValueError('mu %f outside of given limits (%f, %f)' %
+                         (mu, lower, upper))
+    if 2 * min_EB > upper - lower:
+        raise ValueError('min error bar %f too small for limits (%f, %f)' %
+                         (min_EB, lower, upper))
 
     EB_trivial = np.fmax(upper - mu, mu - lower)
-    assert(not (min_EB > EB_trivial))
+    assert(not (min_EB > EB_trivial))  # Let NaNs pass
     EB = np.clip(EB, min_EB, EB_trivial)
     return EB
 
@@ -46,6 +75,7 @@ def ttest1(x, nan_on_zero=False):
     assert(np.ndim(x) == 1 and len(x) > 0)
 
     if np.std(x) == 0.0:
+        # TODO should this be 0.0??
         pval = np.nan if nan_on_zero else 1.0
     else:
         _, pval = ss.ttest_1samp(x, 0.0)
@@ -67,7 +97,7 @@ def t_EB(x, confidence=0.95):
     -------
     EB : float
         Size of error bar on mean (>= 0). The confidence interval is
-        ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) = 1``.
+        ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) <= 1``.
     '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.ndim(confidence) == 0)
@@ -87,7 +117,35 @@ def t_EB(x, confidence=0.95):
 
 
 def bernstein_EB(x, lower, upper, confidence=0.95):
-    '''Bernstein version of `t_EB`, not yet used.
+    '''Get Bernstein bound based error bars on mean of `x`. This error bar
+    makes no distributional or central limit theorem assumption on `x`.
+
+    Parameters
+    ----------
+    x : array-like, shape (n_samples,)
+        Data points to estimate mean. Must not be empty or contain NaNs.
+    lower : float
+        A priori known theoretical lower limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``lower=0``.
+    upper : float
+        A priori known theoretical upper limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``upper=1``.
+    confidence : float
+        Confidence probability (in (0, 1)) to construct confidence interval
+        from t statistic.
+
+    Returns
+    -------
+    EB : float
+        Size of error bar on mean (>= 0). The confidence interval is
+        ``[mean(x) - EB, mean(x) + EB]``. ``EB = upper - lower`` is inf when
+        ``len(x) = 0``.
+
+    Notes
+    -----
+    This does not do clipping of to trivial error bars, i.e., `EB` could be
+    larger than ``upper - lower``. However, `clip_EB` can be called to enforce
+    trivial error bar limits.
 
     References
     ----------
@@ -95,7 +153,6 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     "Exploration-exploitation tradeoff using variance estimates in multi-armed
     bandits." Theoretical Computer Science 410.19 (2009): 1876-1902.
     '''
-    # TODO make note that clip is not done here
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.all(lower <= x) and np.all(x <= upper))
     assert(np.ndim(confidence) == 0)
@@ -107,7 +164,6 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
         return range_
 
     # From Thm 1 of Audibert et. al. (2009), must use MLE for std ==> ddof=0
-    # TODO test coverage, search for example to make this tight
     delta = 1.0 - confidence
     A = np.log(3.0 / delta)
     EB = np.std(x, ddof=0) * np.sqrt((2.0 * A) / N) + (3.0 * A * range_) / N
@@ -116,13 +172,29 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
 
 
 def boot_EB(x, confidence=0.95, n_boot=1000):
-    '''Bootstrap version of `t_EB`, not yet used.'''
+    '''Get bootstrap bound based error bars on mean of `x`.
+
+    Parameters
+    ----------
+    x : array-like, shape (n_samples,)
+        Data points to estimate mean. Must not be empty or contain NaNs.
+    confidence : float
+        Confidence probability (in (0, 1)) to construct confidence interval
+        from t statistic.
+    n_boot : int
+        Number of bootstrap iterations to perform.
+
+    Returns
+    -------
+    EB : float
+        Size of error bar on mean (>= 0). The confidence interval is
+        ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) <= 1``.
+    '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     N = x.size
-    if N == 0:
+    if N <= 1:
         return np.inf
 
-    # TODO test equib output in boot_util_test
     mu = np.mean(x)
     weight = bu.boot_weights(N, n_boot)
     mu_boot = np.mean(x * weight, axis=1)
@@ -149,11 +221,11 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     min_EB : float
         Minimum size of resulting error bar regardless of the data in `loss`.
     lower : float
-        Theoretically lowest possible value in `loss`. Used for construction of
-        Bernstein bounds.
+        A priori known theoretical lower limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``lower=0``.
     upper : float
-        Theoretically highest possible value in `loss`. Used for construction
-        of Bernstein bounds.
+        A priori known theoretical upper limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``upper=1``.
     method : {'t', 'bernstein', 'boot'}
         Method to use for building error bar.
 
@@ -163,7 +235,7 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
         Estimated mean loss.
     EB : float
         Size of error bar on mean loss (``EB > 0``). The confidence interval is
-        ``[mu - EB, mu + EB]``. `EB` is infinite when ``len(loss) = 1``.
+        ``[mu - EB, mu + EB]``.
     '''
     assert(loss.ndim == 1 and np.ndim(loss_ref) <= 1)
     assert(np.ndim(min_EB) == 0)
@@ -212,6 +284,12 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
         of just the mean of `loss`. This typically gives smaller error bars.
     confidence : float
         Confidence probability (in (0, 1)) to construct error bar.
+    method_EB : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, zero-one loss
+        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
 
     Returns
     -------
@@ -226,7 +304,6 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
         test on the hypothesis H0 that foo has the same mean loss as the
         reference method `ref_method`.
     '''
-    # TODO update doc string
     assert(loss_table.columns.names == (METRIC, METHOD))
     metrics, methods = loss_table.columns.levels
     assert(ref_method in methods)  # ==> len(methods) >= 1
@@ -240,7 +317,7 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
     for metric in metrics:
         loss_ref = loss_table.loc[:, (metric, ref_method)]
         assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
-        lower, upper = limits.get(metric, -np.inf), limits.get(metric, np.inf)
+        lower, upper = limits.get(metric, (-np.inf, np.inf))
         assert(lower <= upper)
         for method in methods:
             loss = loss_table.loc[:, (metric, method)]

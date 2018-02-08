@@ -931,8 +931,9 @@ def table_to_latex(perf_tbl_str, shifts, unit_dict, use_prefix=True):
     # Avoid doing inplace changes to perf_tbl_str, need index name to be none
     # anyways to avoid a bug in pandas (0.19.2) that puts the midrule in the
     # wrong place. Maybe in a future version of pandas this will not be needed.
+    # Use dtype of str since for good measure always state dtype with pandas.
     perf_tbl_str = pd.DataFrame(data=perf_tbl_str.values, columns=new_headers,
-                                index=perf_tbl_str.index.values)
+                                index=perf_tbl_str.index.values, dtype=str)
     latex_str = perf_tbl_str.to_latex(escape=False, column_format=align,
                                       index_names=False)
     return latex_str
@@ -974,7 +975,7 @@ def table_to_string(perf_tbl_str, shifts, unit_dict, use_prefix=True):
                                  use_prefix=use_prefix, use_tex=False)
     # Avoid doing inplace changes to perf_tbl_str
     perf_tbl_str = pd.DataFrame(data=perf_tbl_str.values, columns=new_headers,
-                                index=perf_tbl_str.index.values)
+                                index=perf_tbl_str.index.values, dtype=str)
     tbl_str = perf_tbl_str.to_string(index=True, index_names=False)
     return tbl_str
 

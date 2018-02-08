@@ -558,6 +558,12 @@ def summary_table(log_pred_prob_table, y,
         just the summary. This typically results in smaller error bars.
     confidence : float
         Confidence probability (in (0, 1)) to construct error bar.
+    method_EB : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, zero-one loss
+        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
 
     Returns
     -------
@@ -578,7 +584,6 @@ def summary_table(log_pred_prob_table, y,
         and the upper end of the confidence envelope. Only metrics from
         `curve_dict` and *not* from `loss_dict` are found here.
     '''
-    # TODO update doc string
     # Do the curve metrics
     curve_summary, dump_tbl = \
         curve_summary_table(log_pred_prob_table, y, curve_dict, ref_method,
@@ -755,6 +760,12 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     pairwise_CI : bool
         If True, compute error bars on the mean of ``loss - loss_ref`` instead
         of just the mean of `loss`. This typically gives smaller error bars.
+    method_EB : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, zero-one loss
+        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
 
     Returns
     -------
@@ -775,7 +786,6 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
         and the upper end of the confidence envelope. Only metrics from
         `curve_dict` and *not* from `loss_dict` are found here.
     '''
-    # TODO update doc string
     assert(y_train.dtype == y_test.dtype)  # Would be weird otherwise
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
                                  methods, min_log_prob=min_pred_log_prob)
