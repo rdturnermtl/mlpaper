@@ -40,7 +40,9 @@ def clip_EB(mu, EB, lower=-np.inf, upper=np.inf, min_EB=0.0):
     EB : float
         Error bar after possible clipping.
     '''
-    # TODO test with nan/inf combos
+    assert(0.0 <= min_EB and min_EB < np.inf)
+    assert(upper - lower >= 0.0)  # Also catch (inf, inf) or nans
+
     # Note: These conditions are designed to pass when NaNs are supplied.
     if lower > mu or mu > upper:
         raise ValueError('mu %f outside of given limits (%f, %f)' %
@@ -64,8 +66,8 @@ def ttest1(x, nan_on_zero=False):
     x : array-like, shape (n_samples,)
         array of data points to test.
     nan_on_zero : bool
-        If True, return a p-value of NaN for samples with zero variances,
-        otherwise return a p-value of 1.0.
+        If True, return a p-value of NaN for samples with identical values.
+        Otherwise, return p=1.0 when `x` is centered on zero, else p=0.0.
 
     Returns
     -------
@@ -73,12 +75,19 @@ def ttest1(x, nan_on_zero=False):
         p-value (in [0,1]) from t-test on `x`.
     '''
     assert(np.ndim(x) == 1 and len(x) > 0)
+    if nan_on_zero and np.all(x[0] == x):
+        return np.nan
+    if len(x) <= 1:
+        return 1.0  # Can't say anything about scale => p=1
 
-    if np.std(x) == 0.0:
-        # TODO should this be 0.0??
-        pval = np.nan if nan_on_zero else 1.0
-    else:
-        _, pval = ss.ttest_1samp(x, 0.0)
+    _, pval = ss.ttest_1samp(x, 0.0)
+    if np.isnan(pval):
+        # Should only be possible if scale underflowed to zero:
+        assert(np.var(x) <= 1e-100)
+        # It is debatable if the condition should be ``np.mean(x) == 0.0`` or
+        # ``np.all(x == 0.0)``
+        pval = np.float(np.mean(x) == 0.0)
+    assert(0.0 <= pval and pval <= 1.0)
     return pval
 
 
@@ -315,12 +324,12 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
     perf_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
     perf_tbl.index.name = METHOD
     for metric in metrics:
-        loss_ref = loss_table.loc[:, (metric, ref_method)]
+        loss_ref = loss_table.loc[:, (metric, ref_method)].values
         assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
         lower, upper = limits.get(metric, (-np.inf, np.inf))
         assert(lower <= upper)
         for method in methods:
-            loss = loss_table.loc[:, (metric, method)]
+            loss = loss_table.loc[:, (metric, method)].values
             assert(loss.ndim == 1)  # Weird stuff happens if names not unique
             assert(not np.any(np.isnan(loss)))  # Would let method cheat
             assert(np.all(lower <= loss) and np.all(loss <= upper))

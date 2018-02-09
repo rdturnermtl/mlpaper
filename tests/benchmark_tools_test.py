@@ -30,6 +30,51 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     return loss
 
 
+def fp_rnd():
+    x = np.random.randn()
+    if np.random.rand() <= 0.1:
+        x = np.inf
+    if np.random.rand() <= 0.1:
+        x = -np.inf
+    if np.random.rand() <= 0.1:
+        x = np.nan
+    return x
+
+
+def test_clip_EB(runs=100):
+    for _ in range(runs):
+        mu = fp_rnd()
+        EB0 = np.abs(fp_rnd())
+        lower = fp_rnd()
+        lower = lower if lower < np.inf else -np.inf
+        upper = np.fmax(lower, fp_rnd())
+        upper = upper if -np.inf < upper else np.inf
+        min_EB = np.abs(np.random.randn())
+
+        mu = np.clip(mu, lower, upper)
+        min_EB = np.fmin(min_EB, 0.5 * (upper - lower))
+
+        EB = bt.clip_EB(mu, EB0, lower=lower, upper=upper, min_EB=min_EB)
+
+        assert(np.isnan(EB0) == np.isnan(EB))
+        if np.isnan(EB0):
+            continue
+
+        if np.isnan(mu):
+            assert(np.fmax(EB0, min_EB) == EB)  # debabably EB should be nan
+            continue
+
+        assert(EB >= min_EB)
+        # Make sure get trivial
+        assert(lower - 1e-10 <= mu - EB or mu + EB <= upper + 1e-10)
+        # Make didn't remove too much
+        if EB < EB0:
+            assert(np.allclose(np.fmax(lower, mu - EB0),
+                               np.fmax(lower, mu - EB)))
+            assert(np.allclose(np.fmin(upper, mu + EB0),
+                               np.fmin(upper, mu + EB)))
+
+
 def test_t_EB(runs=10, trials=100):
     pval = []
     while len(pval) < runs:
@@ -238,19 +283,25 @@ def loss_summary_table_test():
             else:
                 mu, EB = bt.get_mean_and_EB(loss=loss, confidence=confidence)
 
+            delta = loss - loss_ref
             if method == ref:
                 pval = np.nan
-            elif np.std(loss - loss_ref) == 0.0:
+            elif len(delta) == 1:
                 pval = 1.0
+            elif np.std(delta) == 0.0:
+                pval = np.float(np.all(delta == 0.0))
             else:
-                _, pval = ss.ttest_1samp(loss - loss_ref, 0.0)
+                _, pval = ss.ttest_1samp(delta, 0.0)
             assert(np.allclose(perf_tbl.loc[method, metric].values,
                                [mu, EB, pval], equal_nan=True))
 
 if __name__ == '__main__':
     np.random.seed(53634)
 
+    test_t_EB(trials=constants.MC_REPEATS_1K)
+
     for _ in range(constants.MC_REPEATS_1K):
+        test_clip_EB()
         hard_loss_binary_test()
         hard_loss_decision_test()
         log_loss_test()
