@@ -83,7 +83,7 @@ def ttest1(x, nan_on_zero=False):
     _, pval = ss.ttest_1samp(x, 0.0)
     if np.isnan(pval):
         # Should only be possible if scale underflowed to zero:
-        assert(np.var(x) <= 1e-100)
+        assert(np.var(x, ddof=1) <= 1e-100)
         # It is debatable if the condition should be ``np.mean(x) == 0.0`` or
         # ``np.all(x == 0.0)``
         pval = np.float(np.mean(x) == 0.0)
