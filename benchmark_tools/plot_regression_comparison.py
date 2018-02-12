@@ -15,6 +15,7 @@ import benchmark_tools.sciprint as sp
 np.random.seed(1234)  # Set global random seed too to be safe.
 rng = np.random.RandomState(0)
 
+
 def simple_data():
     X = 15 * rng.rand(100, 1)
     y = np.sin(X).ravel()

@@ -5,8 +5,7 @@ import numpy as np
 import scipy.stats as ss
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import area
-
-FPR = 1e-3
+from constants import FPR
 
 
 def inner_test_curve(runs):
@@ -26,7 +25,7 @@ def inner_test_curve(runs):
 
         curve, _ = pc.roc_curve(y_true, y_score)
         auc[rr], = area(*curve)
-    
+
         curve, _ = pc.recall_precision_curve(y_true, y_score)
         ap[rr], = area(*curve)
     _, pvals_auc = ss.ttest_1samp(auc, 0.5)

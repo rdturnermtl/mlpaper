@@ -4,8 +4,7 @@ from builtins import range
 import numpy as np
 import scipy.stats as ss
 import benchmark_tools.boot_util as bu
-
-FPR = 1e-3  # TODO move to constants file
+from constants import FPR
 
 
 def get_boot_estimate(x, estimate_f):

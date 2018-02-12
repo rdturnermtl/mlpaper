@@ -7,8 +7,7 @@ from benchmark_tools.classification import curve_boot, DEFAULT_NGRID
 import benchmark_tools.constants as cc
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import area, interp1d
-
-FPR = 1e-2  # TODO move to constants file
+from constants import FPR
 
 
 def fail_check_stat(fail, runs, expect_p_fail, fpr):
@@ -86,8 +85,7 @@ def test_boot(runs=100):
         mu = np.random.randn(2)
         S = np.random.randn(2, 2)
         S = np.dot(S, S.T)
-        # Coverage, esp at edges, is worse for for imbalanced data.
-        # TODO file issue report and comment in number
+        # Coverage, esp at edges, is worse for imbalanced data. See issue #20.
         p = 0.5
 
         x_grid = np.linspace(0.0, 0.99, DEFAULT_NGRID)
@@ -102,7 +100,7 @@ def test_boot(runs=100):
         y_score = np.stack((np.zeros(N), y_score), axis=1)
         y_score_ref = np.stack((np.zeros(N), y_score_ref), axis=1)
 
-        # TODO file issue and comment in number that coverage bad at edges
+        # Coverage doesn't hold at edges, hence [0.05, 0.95]. See issue #20.
         x_grid = np.linspace(0.05, 0.95, DEFAULT_NGRID)
         fail_EB, fail_P, fail_EB2, fail_P2, fail_curve = \
             run_trial(y_true, y_score, y_score_ref,

@@ -2,7 +2,6 @@
 from __future__ import print_function, division
 from builtins import range
 from string import ascii_letters
-import benchmark_tools.constants as constants
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
@@ -10,6 +9,8 @@ from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 import benchmark_tools.benchmark_tools as bt
 import benchmark_tools.classification as btc
 from benchmark_tools import util
+from constants import MC_REPEATS_LARGE
+from constants import FPR
 
 
 def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
@@ -298,9 +299,7 @@ def loss_summary_table_test():
 if __name__ == '__main__':
     np.random.seed(53634)
 
-    test_t_EB(trials=constants.MC_REPEATS_1K)
-
-    for _ in range(constants.MC_REPEATS_1K):
+    for _ in range(MC_REPEATS_LARGE):
         test_clip_EB()
         hard_loss_binary_test()
         hard_loss_decision_test()
@@ -310,6 +309,10 @@ if __name__ == '__main__':
         loss_summary_table_test()
 
     print('Now running MC tests')
-    print(test_t_EB(trials=constants.MC_REPEATS_1K))
-    print(test_get_mean_and_EB(trials=constants.MC_REPEATS_1K))
+    pval = test_t_EB(trials=MC_REPEATS_LARGE)
+    print(pval)
+    assert(pval >= FPR / 2.0)
+    pval = test_get_mean_and_EB(trials=MC_REPEATS_LARGE)
+    print(pval)
+    assert(pval >= FPR / 2.0)
     print('passed')
