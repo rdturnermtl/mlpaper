@@ -2,9 +2,6 @@
 from __future__ import print_function, absolute_import
 import numpy as np
 
-# TODO grep all files with range import it
-# TODO consider loss curve
-
 EPSILON = 1e-10  # Size of pseudo-point to add to true/false positive count.
 
 # Interpolation kinds used here

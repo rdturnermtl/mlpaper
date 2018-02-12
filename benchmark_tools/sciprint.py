@@ -2,7 +2,6 @@
 from __future__ import print_function, absolute_import, division
 from builtins import range
 import decimal
-from sys import version_info
 import warnings
 import numpy as np
 import pandas as pd
@@ -11,28 +10,12 @@ from benchmark_tools.constants import (METHOD, METRIC, STAT,
 from benchmark_tools.constants import MEAN_COL, ERR_COL, PVAL_COL, EST_COL
 from benchmark_tools.constants import (GEN_FMT, ABOVE_FMT, BELOW_FMT,
                                        _PREFIX, _PREFIX_TEX)
+from benchmark_tools.util import remove_chars
 
 NAN_STR = str(np.nan)  # Our string rep of NaN
 # Constants of Decimal type
 D_INF = decimal.Decimal('Infinity')
 D_NINF = decimal.Decimal('-Infinity')
-
-
-def remove_chars_py2(x_str, del_chars):
-    x_str = x_str.translate(None, del_chars)
-    return x_str
-
-
-def remove_chars_py3(x_str, del_chars):
-    translator = str.maketrans('', '', del_chars)
-    x_str = x_str.translate(translator)
-    return x_str
-
-# TODO figure out how to make some routine work in py2 and 3, move to util:
-# The py3 versions seems to work in Py2 after using
-# from builtins import str
-# if x_str is unicode => need to make sure we use unicode consistently
-remove_chars = remove_chars_py3 if version_info[0] >= 3 else remove_chars_py2
 
 # ============================================================================
 # General utils

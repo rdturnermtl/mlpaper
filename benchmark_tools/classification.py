@@ -1,5 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
+from builtins import range
 from joblib import Memory
 import numpy as np
 import pandas as pd
@@ -205,11 +206,6 @@ def spherical_loss(y, log_pred_prob, rescale=True):
         loss = (1.0 + loss) / c
     return loss
 
-# TODO add accuracy-at-k loss func. test against specification using large
-# cost matrix as hard loss function.
-
-# TODO have tests randomly cast in allowed types
-
 # ============================================================================
 # Loss summary: the main purpose of this file.
 # ============================================================================
@@ -276,7 +272,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
 # ============================================================================
 
 
-def check_curve(result, singleton=False, x_grid=None):
+def check_curve(result, x_grid=None):
     '''Check performance curve output matches expected format and return the
     curve after validation.
 
@@ -284,9 +280,6 @@ def check_curve(result, singleton=False, x_grid=None):
     ----------
     curve : result of curve function, e.g., classification.roc_curve
         Curves defined by a ROC or other curve estimation.
-    singleton : bool
-        If True, check that the 2d arrays have only a single columns, i.e.,
-        only a single curve.
     x_grid : None or ndarray of shape (n_grid,)
         If provided, check that all the curves are defined over a wider range
         than the x_grid. So, when the functions are interpolated onto the range
@@ -304,8 +297,6 @@ def check_curve(result, singleton=False, x_grid=None):
     # Check shape
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
-    # TODO consider removing this
-    assert((not singleton) or x_curve.shape[0] == 1)
     assert(x_curve.shape[1] >= 2)  # Otherwise not curve
 
     # Check values
@@ -385,7 +376,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
 
     # Get estimator on original data. Could use _interp1d directly since only 1
     # curve, but this is more consistent with bootstrap version below.
-    curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
+    curve = check_curve(curve_f(y, log_pred_prob), x_grid)
     auc, = area(*curve)
     assert(auc.ndim == 0)
     y_grid, = interp1d(x_grid, *curve)
@@ -396,7 +387,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     weight = bu.boot_weights(N, n_boot, epsilon=epsilon)
 
     # Get boot strapped scores
-    curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))
+    curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight), x_grid)
     auc_boot = area(*curve_boot_)
     assert(auc_boot.shape == (n_boot,))
     y_grid_boot = interp1d(x_grid, *curve_boot_)
@@ -407,8 +398,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     if np.ndim(ref) == 2:  # Note dim must be 0 or 2
         ref_boot = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
         assert(ref_boot.shape == (n_boot,))
-        ref, = area(*check_curve(curve_f(y, ref[:, pos_label]),
-                                 singleton=True))
+        ref, = area(*check_curve(curve_f(y, ref[:, pos_label])))
     assert(np.ndim(ref) == 0)
 
     # Pack up standard numeric summary triple
@@ -495,7 +485,6 @@ def curve_summary_table(log_pred_prob_table, y,
 
     col_names = pd.MultiIndex.from_product([curve_dict.keys(), STD_STATS],
                                            names=[METRIC, STAT])
-    # TODO grep all occurances of pd.DataFrame have dtype
     curve_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
     curve_tbl.index.name = METHOD
 
