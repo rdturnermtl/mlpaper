@@ -43,6 +43,8 @@ def fp_rnd():
 
 
 def test_clip_EB(runs=100):
+    huge = 1e6
+
     for _ in range(runs):
         mu = fp_rnd()
         EB0 = np.abs(fp_rnd())
@@ -57,15 +59,19 @@ def test_clip_EB(runs=100):
 
         EB = bt.clip_EB(mu, EB0, lower=lower, upper=upper, min_EB=min_EB)
 
+        lower_finite = np.fmax(lower, -huge)
+        upper_finite = np.fmin(upper, huge)
+
         assert(np.isnan(EB0) == np.isnan(EB))
         if np.isnan(EB0):
             continue
 
-        if np.isnan(mu):
-            assert(np.fmax(EB0, min_EB) == EB)  # debabably EB should be nan
+        assert(EB >= min_EB)  # Sure EB is not NaN by here
+
+        if not np.isfinite(mu):
+            assert(np.fmax(EB0, min_EB) == EB)  # debatably EB should be nan
             continue
 
-        assert(EB >= min_EB)
         # Make sure get trivial
         assert(lower - 1e-10 <= mu - EB or mu + EB <= upper + 1e-10)
         # Make didn't remove too much
@@ -74,6 +80,15 @@ def test_clip_EB(runs=100):
                                np.fmax(lower, mu - EB)))
             assert(np.allclose(np.fmin(upper, mu + EB0),
                                np.fmin(upper, mu + EB)))
+
+        if EB0 == np.inf:
+            EB2 = bt.clip_EB(mu, 10 * (upper - lower),
+                             lower=lower, upper=upper, min_EB=min_EB)
+            assert(np.allclose(EB, EB2))
+            continue
+
+        # Should have excluded all these cases by here
+        assert(np.all(np.isfinite([mu, EB0, min_EB])))
 
 
 def test_t_EB(runs=10, trials=100):
