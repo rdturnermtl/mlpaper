@@ -7,7 +7,7 @@ from benchmark_tools.classification import curve_boot, DEFAULT_NGRID
 import benchmark_tools.constants as cc
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import area, interp1d
-from constants import FPR
+from benchmark_tools.test_constants import FPR
 
 
 def fail_check_stat(fail, runs, expect_p_fail, fpr):

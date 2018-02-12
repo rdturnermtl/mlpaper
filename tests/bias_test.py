@@ -5,7 +5,7 @@ import numpy as np
 import scipy.stats as ss
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import area
-from constants import FPR
+from benchmark_tools.test_constants import FPR
 
 
 def inner_test_curve(runs):
@@ -36,7 +36,7 @@ def inner_test_curve(runs):
 def loop_test(test_f):
     runs = 100
     M1 = []
-    for rr in xrange(10):
+    for rr in range(10):
         pvals = test_f(runs)
         M1.append(pvals)
     M1 = np.asarray(M1)

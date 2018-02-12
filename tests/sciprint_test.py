@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy.special import expit as logistic
 import benchmark_tools.sciprint as sp
-from constants import MC_REPEATS_LARGE
+from benchmark_tools.test_constants import MC_REPEATS_LARGE
 
 ONE = decimal.Decimal('1')
 

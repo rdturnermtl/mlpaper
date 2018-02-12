@@ -4,7 +4,7 @@ from builtins import range
 import numpy as np
 import scipy.stats as ss
 import benchmark_tools.boot_util as bu
-from constants import FPR
+from benchmark_tools.test_constants import FPR
 
 
 def get_boot_estimate(x, estimate_f):
@@ -177,7 +177,7 @@ def loop_test(test_f):
     runs = 100
     M2 = []
     M1 = []
-    for rr in xrange(10):
+    for rr in range(10):
         pvals_2side, pvals_1side = test_f(runs)
         M2.append(pvals_2side)
         M1.append(pvals_1side)
@@ -209,7 +209,7 @@ def test_paired_significance():
 if __name__ == '__main__':
     np.random.seed(24233)
 
-    for rr in xrange(10):
+    for rr in range(10):
         test_confidence_to_percentiles()
     test_boot()
     test_paired_boot()

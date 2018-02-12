@@ -9,8 +9,7 @@ from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 import benchmark_tools.benchmark_tools as bt
 import benchmark_tools.classification as btc
 from benchmark_tools import util
-from constants import MC_REPEATS_LARGE
-from constants import FPR
+from benchmark_tools.test_constants import MC_REPEATS_LARGE, FPR
 
 
 def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):

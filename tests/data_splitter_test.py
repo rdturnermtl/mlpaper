@@ -6,7 +6,7 @@ from string import ascii_letters
 import numpy as np
 import pandas as pd
 import benchmark_tools.data_splitter as ds
-from constants import MC_REPEATS_LARGE
+from benchmark_tools.test_constants import MC_REPEATS_LARGE
 
 
 def unif2():
