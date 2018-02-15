@@ -1,6 +1,7 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, division
 from builtins import range
+import warnings
 from string import ascii_letters
 import numpy as np
 import pandas as pd
@@ -124,15 +125,17 @@ def test_get_mean_and_EB(runs=10, trials=100):
             x = 2.0 + np.random.randn(N)
             x_ref = 1.5 + np.random.randn(N)
 
-            mu, EB = bt.get_mean_and_EB(x, x_ref, confidence=confidence)
-            assert(np.allclose(mu, np.nanmean(mu), equal_nan=True))
-            assert(EB == np.inf)
+            with warnings.catch_warnings():  # expect warning for N=0
+                warnings.simplefilter('ignore', RuntimeWarning)
+                mu, EB = bt.get_mean_and_EB(x, x_ref, confidence=confidence)
+                assert(np.allclose(mu, np.nanmean(mu), equal_nan=True))
+                assert(EB == np.inf)
 
-            mu, EB = bt.get_mean_and_EB(x, confidence=confidence)
-            mu2, EB2 = bt.get_mean_and_EB(x, np.zeros_like(x),
+                mu, EB = bt.get_mean_and_EB(x, confidence=confidence)
+                mu2, EB2 = bt.get_mean_and_EB(x, np.zeros_like(x),
                                           confidence=confidence)
-            assert(np.allclose(mu, np.nanmean(mu2), equal_nan=True))
-            assert(np.allclose(EB, np.nanmean(EB2), equal_nan=True))
+                assert(np.allclose(mu, np.nanmean(mu2), equal_nan=True))
+                assert(np.allclose(EB, np.nanmean(EB2), equal_nan=True))
         else:
             fail = 0
             for tt in range(trials):

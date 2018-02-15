@@ -51,7 +51,8 @@ def clip_EB(mu, EB, lower=-np.inf, upper=np.inf, min_EB=0.0):
         raise ValueError('min error bar %f too small for limits (%f, %f)' %
                          (min_EB, lower, upper))
 
-    EB_trivial = np.fmax(upper - mu, mu - lower)
+    with np.errstate(invalid='ignore'):  # expect non-finite here
+        EB_trivial = np.fmax(upper - mu, mu - lower)
     assert(not (min_EB > EB_trivial))  # Let NaNs pass
     EB = np.clip(EB, min_EB, EB_trivial)
     return EB
