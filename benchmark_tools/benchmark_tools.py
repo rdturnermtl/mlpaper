@@ -78,6 +78,9 @@ def ttest1(x, nan_on_zero=False):
     assert(np.ndim(x) == 1 and len(x) > 0)
     if nan_on_zero and np.all(x[0] == x):
         return np.nan
+    if not np.all(np.isfinite(x)):
+        # It is debatable if this is right action for a single inf.
+        return np.nan
     if len(x) <= 1:
         return 1.0  # Can't say anything about scale => p=1
 

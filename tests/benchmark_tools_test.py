@@ -89,6 +89,11 @@ def test_clip_EB(runs=100):
             assert(np.allclose(np.fmin(upper, mu + EB0),
                                np.fmin(upper, mu + EB)))
 
+# TODO include test of ttest1
+#     make sure always nan for non-finite
+#     test both nan on zero and not
+#     test scales that produce underflow
+
 
 def test_t_EB(runs=10, trials=100):
     pval = []
@@ -114,8 +119,16 @@ def test_t_EB(runs=10, trials=100):
     _, pval_agg = ss.combine_pvalues(pval)
     return pval_agg
 
+# TODO test other forms of EB
+# will need to use one sided test for bernstein
+# maybe put in slow_tests
+
+
+
 
 def test_get_mean_and_EB(runs=10, trials=100):
+    # TODO test bernstein and boot as well, will need one sided
+
     pval = []
     while len(pval) < runs:
         N = np.random.randint(low=0, high=10)
@@ -142,6 +155,9 @@ def test_get_mean_and_EB(runs=10, trials=100):
                 x = 2.0 + np.random.randn(N)
                 x_ref = 1.5 + np.random.randn(N)
 
+                # TODO test again that min_EB increases it to min_EB
+                # also try throwing in lower and upper near where EB is
+
                 mu, EB = bt.get_mean_and_EB(x, x_ref, confidence=confidence)
                 assert(np.isfinite(mu) and np.isfinite(EB))
                 assert(np.allclose(mu, np.nanmean(mu), equal_nan=True))
@@ -156,6 +172,8 @@ def test_get_mean_and_EB(runs=10, trials=100):
             pval.append(ss.binom_test(fail, trials, 1.0 - confidence))
     _, pval_agg = ss.combine_pvalues(pval)
     return pval_agg
+
+# TODO pull these guys out into test classification
 
 
 def hard_loss_binary_test():
