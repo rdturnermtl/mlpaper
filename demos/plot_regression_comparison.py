@@ -4,6 +4,8 @@
 # License: BSD 3 clause
 from __future__ import print_function, absolute_import, division
 import numpy as np
+from matplotlib import use
+use('pdf')
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared
