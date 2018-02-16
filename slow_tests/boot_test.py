@@ -3,6 +3,7 @@ from __future__ import print_function, division
 from builtins import range
 import numpy as np
 import scipy.stats as ss
+import benchmark_tools.benchmark_tools as bt
 from benchmark_tools.classification import curve_boot, DEFAULT_NGRID
 import benchmark_tools.constants as cc
 import benchmark_tools.perf_curves as pc
@@ -142,8 +143,29 @@ def test_boot(runs=100):
     print('PRG curve')
     fail_check_stat(fail_curve_prg, runs, expect_p_fail, sub_FPR)
 
+
+def test_boot_mean(runs=100):
+    N = 201
+    confidence = 0.95
+
+    fail = 0
+    for ii in range(runs):
+        mu = np.random.randn()
+        S = np.abs(np.random.randn())
+        x = mu + S * np.random.randn(N)
+
+        mu_est = np.mean(x)
+        EB = bt.boot_EB(x, confidence=0.95)
+
+        fail += np.abs(mu - mu_est) > EB
+    # TODO change FPR
+    expect_p_fail = 1.0 - confidence
+    print('boot mean')
+    fail_check_stat([fail], runs, expect_p_fail, FPR)
+
 if __name__ == '__main__':
-    np.random.seed(56456)
+    np.random.seed(56456 + 11)
 
     test_boot()
+    test_boot_mean()
     print('passed')

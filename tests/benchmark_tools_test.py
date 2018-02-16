@@ -273,7 +273,7 @@ def loss_summary_table_test():
                                [mu, EB, pval], equal_nan=True))
 
 if __name__ == '__main__':
-    np.random.seed(53634)
+    np.random.seed(53634 + 199)
 
     for _ in range(MC_REPEATS_LARGE):
         test_clip_EB()
