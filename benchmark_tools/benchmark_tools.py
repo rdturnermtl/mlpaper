@@ -76,12 +76,11 @@ def ttest1(x, nan_on_zero=False):
         p-value (in [0,1]) from t-test on `x`.
     '''
     assert(np.ndim(x) == 1 and len(x) > 0)
+    assert(not np.any(np.isnan(x)))
+
     if nan_on_zero and np.all(x[0] == x):
         return np.nan
-    if not np.all(np.isfinite(x)):
-        # It is debatable if this is right action for a single inf.
-        return np.nan
-    if len(x) <= 1:
+    if (len(x) <= 1) or (not np.all(np.isfinite(x))):
         return 1.0  # Can't say anything about scale => p=1
 
     _, pval = ss.ttest_1samp(x, 0.0)
@@ -117,7 +116,7 @@ def t_EB(x, confidence=0.95):
     assert(0.0 < confidence and confidence < 1.0)
 
     N = len(x)
-    if N <= 1:
+    if (N <= 1) or (not np.all(np.isfinite(x))):
         return np.inf
 
     # loc cancels out when we just want EB anyway
@@ -125,7 +124,7 @@ def t_EB(x, confidence=0.95):
     assert(not (LB > UB))
     # Just multiplying scale=ss.sem(x) is better for when scale=0
     EB = 0.5 * ss.sem(x) * (UB - LB)
-    assert(np.ndim(EB) == 0 and not (EB < 0.0))
+    assert(np.ndim(EB) == 0 and EB >= 0.0)
     return EB
 
 
@@ -171,16 +170,18 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     assert(np.ndim(confidence) == 0)
     assert(0.0 < confidence and confidence < 1.0)
 
-    N = x.size
     range_ = upper - lower
-    if N == 0:
+    assert(range_ >= 0.0)  # Also catch (inf, inf) or nans
+
+    N = x.size
+    if (N <= 1) or (not np.all(np.isfinite(x))):
         return range_
 
     # From Thm 1 of Audibert et. al. (2009), must use MLE for std ==> ddof=0
     delta = 1.0 - confidence
     A = np.log(3.0 / delta)
     EB = np.std(x, ddof=0) * np.sqrt((2.0 * A) / N) + (3.0 * A * range_) / N
-    assert(np.ndim(EB) == 0 and not (EB < 0.0))
+    assert(np.ndim(EB) == 0 and EB >= 0.0)
     return EB
 
 
@@ -205,14 +206,14 @@ def boot_EB(x, confidence=0.95, n_boot=1000):
     '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     N = x.size
-    if N <= 1:
+    if (N <= 1) or (not np.all(np.isfinite(x))):
         return np.inf
 
     mu = np.mean(x)
     weight = bu.boot_weights(N, n_boot)
     mu_boot = np.mean(x * weight, axis=1)
     EB = bu.error_bar(mu_boot, mu, confidence=confidence)
-    assert(np.ndim(EB) == 0 and not (EB < 0.0))
+    assert(np.ndim(EB) == 0 and EB >= 0.0)
     return EB
 
 
