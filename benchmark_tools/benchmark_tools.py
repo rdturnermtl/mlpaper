@@ -93,6 +93,8 @@ def ttest1(x, nan_on_zero=False):
     assert(0.0 <= pval and pval <= 1.0)
     return pval
 
+# TODO write stat tests for other EB methods
+
 
 def t_EB(x, confidence=0.95):
     '''Get t statistic based error bars on mean of `x`.
@@ -185,6 +187,30 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     return EB
 
 
+def bernstein_test(x, lower, upper):
+    range_ = upper - lower
+    assert(range_ >= 0.0)  # Also catch (inf, inf) or nans
+    if (len(x) <= 1) or (not np.all(np.isfinite(x))) or (range_ == np.inf):
+        return 1.0  # Can't say anything about scale => p=1
+
+    # Get the moments
+    N = len(x)
+    mu = np.mean(x)
+    std = np.std(x, ddof=0)
+
+    coef = [(3.0 * range_) / N, std * np.sqrt(2.0 / N), -np.abs(mu)]
+    assert(np.all(np.isfinite(coef)))  # Should have caught all these cases
+    coef_roots = np.roots(coef)
+    assert(coef_roots.dtype.kind == 'f')  # Appears roots are always real
+    B = np.min(coef_roots ** 2)  # Bernstein test statistic
+    # Sampling CDF bounded by exponential for any true distn.
+    delta = 3.0 * np.exp(-B)
+
+    pval = np.minimum(1.0, delta)  # Can cap at 1 to make p-value
+    assert(0.0 <= pval and pval <= 1.0)
+    return pval
+
+
 def boot_EB(x, confidence=0.95, n_boot=1000):
     '''Get bootstrap bound based error bars on mean of `x`.
 
@@ -251,6 +277,7 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
         Size of error bar on mean loss (``EB > 0``). The confidence interval is
         ``[mu - EB, mu + EB]``.
     '''
+    # TODO update doc on lower and upper, must be limits on delta
     assert(loss.ndim == 1 and np.ndim(loss_ref) <= 1)
     assert(np.ndim(min_EB) == 0)
     # EB subroutines all check for presence of nans
@@ -267,8 +294,12 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     else:
         assert(False)
 
-    EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
+    # TODO might not make sense for pairwise CI
+    EB = clip_EB(np.mean(delta), EB, lower, upper, min_EB=min_EB)
     return mu, EB
+
+# just call mean to get CI in main
+# TODO EB should only work on deltas
 
 # ============================================================================
 # Loss summary: the main purpose of this file.
@@ -329,20 +360,32 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
     perf_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
     perf_tbl.index.name = METHOD
     for metric in metrics:
-        loss_ref = loss_table.loc[:, (metric, ref_method)].values
-        assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
         lower, upper = limits.get(metric, (-np.inf, np.inf))
         assert(lower <= upper)
+        loss_ref = loss_table.loc[:, (metric, ref_method)].values
+        assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
+        assert(not np.any(np.isnan(loss_ref)))  # Would let method cheat
+        assert(np.all(lower <= loss_ref) and np.all(loss_ref <= upper))
         for method in methods:
             loss = loss_table.loc[:, (metric, method)].values
             assert(loss.ndim == 1)  # Weird stuff happens if names not unique
             assert(not np.any(np.isnan(loss)))  # Would let method cheat
             assert(np.all(lower <= loss) and np.all(loss <= upper))
 
+            # TODO new order:
+            # just compute mean
+
+            # Do sig test always pairwise with deltas
+            # compute new bounds, and rand sample seed for boot
+
             if pairwise_CI:
+                # TODO use deltas from before if pairwise, pass in seed for
+                # boot. add condition for just nan when method == ref_method.
+                range_ = upper - lower
                 mu, EB = get_mean_and_EB(loss, loss_ref, confidence,
-                                         lower=lower, upper=upper,
+                                         lower=-range_, upper=range_,
                                          method=method_EB)
+                # TODO add comment on why here
                 EB = np.nan if method == ref_method else EB
             else:
                 mu, EB = get_mean_and_EB(loss, confidence=confidence,

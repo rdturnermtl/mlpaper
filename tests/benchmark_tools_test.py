@@ -223,6 +223,7 @@ def test_get_mean_and_EB(runs=10, trials=100):
 
 
 def loss_summary_table_test():
+    # TODO test other EB methods here
     n_labels = np.random.randint(low=1, high=10)
     N = np.random.randint(low=1, high=10)
     n_methods = np.random.randint(low=1, high=5)
