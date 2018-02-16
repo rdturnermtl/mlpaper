@@ -5,10 +5,57 @@ import pandas as pd
 import scipy.stats as ss
 from benchmark_tools.constants import (
     METHOD, METRIC, STAT, STD_STATS, PAIRWISE_DEFAULT)
+import benchmark_tools.boot_util as bu
 
 # ============================================================================
 # Statistical util functions
 # ============================================================================
+
+
+def clip_EB(mu, EB, lower=-np.inf, upper=np.inf, min_EB=0.0):
+    '''Clip error bars to both a minimum uncertainty level and a maximum level
+    determined by trivial error bars from the a prior known limits of the
+    unknown parameter `theta`.
+
+    Parameters
+    ----------
+    mu : float
+        Point estimate of unknown parameter `theta` around which error bars are
+        based.
+    EB : float
+        Size of error bar around `mu` (``EB > 0``). The confidence interval on
+        `theta` is ``[mu - EB, mu + EB]``.
+    lower : float
+        A priori known theoretical lower limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``lower=0``.
+    upper : float
+        A priori known theoretical upper limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``upper=1``.
+    min_EB : float
+        Minimum size beleivable size of error bar. Typically, leave
+        ``min_EB=0`` for simplicity.
+
+    Returns
+    -------
+    EB : float
+        Error bar after possible clipping.
+    '''
+    assert(0.0 <= min_EB and min_EB < np.inf)
+    assert(upper - lower >= 0.0)  # Also catch (inf, inf) or nans
+
+    # Note: These conditions are designed to pass when NaNs are supplied.
+    if lower > mu or mu > upper:
+        raise ValueError('mu %f outside of given limits (%f, %f)' %
+                         (mu, lower, upper))
+    if 2 * min_EB > upper - lower:
+        raise ValueError('min error bar %f too small for limits (%f, %f)' %
+                         (min_EB, lower, upper))
+
+    with np.errstate(invalid='ignore'):  # expect non-finite here
+        EB_trivial = np.fmax(upper - mu, mu - lower)
+    assert(not (min_EB > EB_trivial))  # Let NaNs pass
+    EB = np.clip(EB, min_EB, EB_trivial)
+    return EB
 
 
 def ttest1(x, nan_on_zero=False):
@@ -20,8 +67,8 @@ def ttest1(x, nan_on_zero=False):
     x : array-like, shape (n_samples,)
         array of data points to test.
     nan_on_zero : bool
-        If True, return a p-value of NaN for samples with zero variances,
-        otherwise return a p-value of 1.0.
+        If True, return a p-value of NaN for samples with identical values.
+        Otherwise, return p=1.0 when `x` is centered on zero, else p=0.0.
 
     Returns
     -------
@@ -29,11 +76,19 @@ def ttest1(x, nan_on_zero=False):
         p-value (in [0,1]) from t-test on `x`.
     '''
     assert(np.ndim(x) == 1 and len(x) > 0)
+    if nan_on_zero and np.all(x[0] == x):
+        return np.nan
+    if len(x) <= 1:
+        return 1.0  # Can't say anything about scale => p=1
 
-    if np.std(x) == 0.0:
-        pval = np.nan if nan_on_zero else 1.0
-    else:
-        _, pval = ss.ttest_1samp(x, 0.0)
+    _, pval = ss.ttest_1samp(x, 0.0)
+    if np.isnan(pval):
+        # Should only be possible if scale underflowed to zero:
+        assert(np.var(x, ddof=1) <= 1e-100)
+        # It is debatable if the condition should be ``np.mean(x) == 0.0`` or
+        # ``np.all(x == 0.0)``
+        pval = np.float(np.mean(x) == 0.0)
+    assert(0.0 <= pval and pval <= 1.0)
     return pval
 
 
@@ -52,7 +107,7 @@ def t_EB(x, confidence=0.95):
     -------
     EB : float
         Size of error bar on mean (>= 0). The confidence interval is
-        ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) = 1``.
+        ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) <= 1``.
     '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     assert(np.ndim(confidence) == 0)
@@ -72,7 +127,35 @@ def t_EB(x, confidence=0.95):
 
 
 def bernstein_EB(x, lower, upper, confidence=0.95):
-    '''Bernstein version of `t_EB`, not yet used.
+    '''Get Bernstein bound based error bars on mean of `x`. This error bar
+    makes no distributional or central limit theorem assumption on `x`.
+
+    Parameters
+    ----------
+    x : array-like, shape (n_samples,)
+        Data points to estimate mean. Must not be empty or contain NaNs.
+    lower : float
+        A priori known theoretical lower limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``lower=0``.
+    upper : float
+        A priori known theoretical upper limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``upper=1``.
+    confidence : float
+        Confidence probability (in (0, 1)) to construct confidence interval
+        from t statistic.
+
+    Returns
+    -------
+    EB : float
+        Size of error bar on mean (>= 0). The confidence interval is
+        ``[mean(x) - EB, mean(x) + EB]``. ``EB = upper - lower`` is inf when
+        ``len(x) = 0``.
+
+    Notes
+    -----
+    This does not do clipping of to trivial error bars, i.e., `EB` could be
+    larger than ``upper - lower``. However, `clip_EB` can be called to enforce
+    trivial error bar limits.
 
     References
     ----------
@@ -94,36 +177,38 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     delta = 1.0 - confidence
     A = np.log(3.0 / delta)
     EB = np.std(x, ddof=0) * np.sqrt((2.0 * A) / N) + (3.0 * A * range_) / N
-
-    # Clip error bar with trivial worst-case based on [lower,upper] limits.
-    mu = np.mean(x)
-    EB_worst_case = np.maximum(upper - mu, mu - lower)
-    EB = np.minimum(EB, EB_worst_case)
-
     assert(np.ndim(EB) == 0 and not (EB < 0.0))
     return EB
 
 
 def boot_EB(x, confidence=0.95, n_boot=1000):
-    '''Bootstrap version of `t_EB`, not yet used.'''
+    '''Get bootstrap bound based error bars on mean of `x`.
+
+    Parameters
+    ----------
+    x : array-like, shape (n_samples,)
+        Data points to estimate mean. Must not be empty or contain NaNs.
+    confidence : float
+        Confidence probability (in (0, 1)) to construct confidence interval
+        from t statistic.
+    n_boot : int
+        Number of bootstrap iterations to perform.
+
+    Returns
+    -------
+    EB : float
+        Size of error bar on mean (>= 0). The confidence interval is
+        ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) <= 1``.
+    '''
     assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
     N = x.size
-    if N == 0:
+    if N <= 1:
         return np.inf
 
-    # Setup levels for percentile function
-    alpha = 0.5 * (1.0 - confidence)
-    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
-
-    p_BS = np.ones(N) / N
-    weight = np.random.multinomial(N, p_BS, size=n_boot).T
-
-    xw = np.mean(x[:, None] * weight, axis=0)
-    LB = np.percentile(xw, q_levels[0])
-    UB = np.percentile(xw, q_levels[1])
-
     mu = np.mean(x)
-    EB = np.maximum(UB - mu, mu - LB)
+    weight = bu.boot_weights(N, n_boot)
+    mu_boot = np.mean(x * weight, axis=1)
+    EB = bu.error_bar(mu_boot, mu, confidence=confidence)
     assert(np.ndim(EB) == 0 and not (EB < 0.0))
     return EB
 
@@ -146,11 +231,11 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     min_EB : float
         Minimum size of resulting error bar regardless of the data in `loss`.
     lower : float
-        Theoretically lowest possible value in `loss`. Used for construction of
-        Bernstein bounds.
+        A priori known theoretical lower limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``lower=0``.
     upper : float
-        Theoretically highest possible value in `loss`. Used for construction
-        of Bernstein bounds.
+        A priori known theoretical upper limit on unknown parameter `theta`.
+        For instance, for mean zero-one loss, ``upper=1``.
     method : {'t', 'bernstein', 'boot'}
         Method to use for building error bar.
 
@@ -160,7 +245,7 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
         Estimated mean loss.
     EB : float
         Size of error bar on mean loss (``EB > 0``). The confidence interval is
-        ``[mu - EB, mu + EB]``. `EB` is infinite when ``len(loss) = 1``.
+        ``[mu - EB, mu + EB]``.
     '''
     assert(loss.ndim == 1 and np.ndim(loss_ref) <= 1)
     assert(np.ndim(min_EB) == 0)
@@ -178,7 +263,7 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
     else:
         assert(False)
 
-    EB = np.maximum(EB, min_EB)
+    EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
     return mu, EB
 
 # ============================================================================
@@ -186,8 +271,8 @@ def get_mean_and_EB(loss, loss_ref=0.0, confidence=0.95, min_EB=0.0,
 # ============================================================================
 
 
-def loss_summary_table(loss_table, ref_method,
-                       pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
+def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
+                       confidence=0.95, method_EB='t', limits={}):
     '''Build table with mean and error bar summaries from a loss table that
     contains losses on a per data point basis.
 
@@ -209,6 +294,12 @@ def loss_summary_table(loss_table, ref_method,
         of just the mean of `loss`. This typically gives smaller error bars.
     confidence : float
         Confidence probability (in (0, 1)) to construct error bar.
+    method_EB : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, zero-one loss
+        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
 
     Returns
     -------
@@ -234,20 +325,25 @@ def loss_summary_table(loss_table, ref_method,
     perf_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
     perf_tbl.index.name = METHOD
     for metric in metrics:
-        loss_ref = loss_table.loc[:, (metric, ref_method)]
+        loss_ref = loss_table.loc[:, (metric, ref_method)].values
         assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
+        lower, upper = limits.get(metric, (-np.inf, np.inf))
+        assert(lower <= upper)
         for method in methods:
-            loss = loss_table.loc[:, (metric, method)]
+            loss = loss_table.loc[:, (metric, method)].values
             assert(loss.ndim == 1)  # Weird stuff happens if names not unique
             assert(not np.any(np.isnan(loss)))  # Would let method cheat
+            assert(np.all(lower <= loss) and np.all(loss <= upper))
 
-            # get_mean_and_EB() supports other EB metrics already, they could
-            # be added here if needed.
             if pairwise_CI:
-                mu, EB = get_mean_and_EB(loss, loss_ref, confidence)
+                mu, EB = get_mean_and_EB(loss, loss_ref, confidence,
+                                         lower=lower, upper=upper,
+                                         method=method_EB)
                 EB = np.nan if method == ref_method else EB
             else:
-                mu, EB = get_mean_and_EB(loss, confidence)
+                mu, EB = get_mean_and_EB(loss, confidence=confidence,
+                                         lower=lower, upper=upper,
+                                         method=method_EB)
 
             # This is two-sided, could include one-sided option too.
             pval = ttest1(loss - loss_ref, nan_on_zero=(method == ref_method))

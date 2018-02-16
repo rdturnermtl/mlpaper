@@ -1,6 +1,7 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
 from builtins import range
+from sys import version_info
 import numpy as np
 import scipy.interpolate as si
 from scipy.misc import logsumexp
@@ -90,6 +91,42 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
 
     x = x + delta * (np.random.rand(len(x)) - 0.5)
     return x
+
+# ============================================================================
+# Area for annoying routines where we need use version_info and write
+# different versions for Py 2 and Py3.
+# ============================================================================
+
+
+def _remove_chars_py2(x_str, del_chars):
+    '''See `_remove_chars_py3`.'''
+    x_str = x_str.translate(None, del_chars)
+    return x_str
+
+
+def _remove_chars_py3(x_str, del_chars):
+    '''Utility to remove specified characters from string.
+
+    Parameters
+    ----------
+    x_str : str
+        Generic input string.
+    del_chars : str
+        String containing characters we would like to remove.
+
+    Returns
+    -------
+    x_str : str
+        Generic input string after removing characters in `del_chars`.
+    '''
+    translator = str.maketrans('', '', del_chars)
+    x_str = x_str.translate(translator)
+    return x_str
+
+# The py3 versions seems to work in Py2 after using:
+# from builtins import str
+# *if* x_str is unicode => need to make sure we use unicode consistently
+remove_chars = _remove_chars_py3 if version_info[0] >= 3 else _remove_chars_py2
 
 # ============================================================================
 # Interpolation utils

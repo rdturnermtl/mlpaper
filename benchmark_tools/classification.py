@@ -1,5 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
+from builtins import range
 from joblib import Memory
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ from benchmark_tools.constants import (
     METHOD, METRIC, PAIRWISE_DEFAULT)
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import one_hot, normalize, interp1d, area
+import benchmark_tools.boot_util as bu
 
 DEFAULT_NGRID = 100
 LABEL = 'label'  # Don't put in constants since only needed for classification
@@ -270,7 +272,7 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
 # ============================================================================
 
 
-def check_curve(result, singleton=False, x_grid=None):
+def check_curve(result, x_grid=None):
     '''Check performance curve output matches expected format and return the
     curve after validation.
 
@@ -278,9 +280,6 @@ def check_curve(result, singleton=False, x_grid=None):
     ----------
     curve : result of curve function, e.g., classification.roc_curve
         Curves defined by a ROC or other curve estimation.
-    singleton : bool
-        If True, check that the 2d arrays have only a single columns, i.e.,
-        only a single curve.
     x_grid : None or ndarray of shape (n_grid,)
         If provided, check that all the curves are defined over a wider range
         than the x_grid. So, when the functions are interpolated onto the range
@@ -298,7 +297,6 @@ def check_curve(result, singleton=False, x_grid=None):
     # Check shape
     assert(x_curve.ndim == 2 and y_curve.ndim == 2)
     assert(x_curve.shape == y_curve.shape)
-    assert((not singleton) or x_curve.shape[0] == 1)
     assert(x_curve.shape[1] >= 2)  # Otherwise not curve
 
     # Check values
@@ -311,48 +309,6 @@ def check_curve(result, singleton=False, x_grid=None):
     return curve
 
 
-def confidence_to_percentiles(confidence):
-    assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
-
-    alpha = 0.5 * (1.0 - confidence)
-    q_levels = (100.0 * alpha, 100.0 * (1.0 - alpha))
-    return q_levels
-
-
-def boot_samples_to_CI(boot_samples, confidence):
-    assert(boot_samples.ndim >= 1)
-
-    q_levels = confidence_to_percentiles(confidence)
-    LB, UB = np.percentile(boot_samples, q_levels, axis=0)
-    assert(LB.shape == boot_samples.shape[1:])
-    assert(LB.shape == UB.shape)
-    return LB, UB
-
-
-def boot_samples_to_EB(boot_samples, ref=0.0, confidence=0.95):
-    assert(boot_samples.ndim == 1)
-    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
-
-    delta = boot_samples - ref
-    mu_delta = np.mean(delta)
-    LB, UB = boot_samples_to_CI(delta, confidence)
-    EB = np.fmax(UB - mu_delta, mu_delta - LB)
-    assert(EB >= 0.0 or np.isnan(EB))
-    # NaN EB only ever occurs when ref is infinite and so are some samples
-    assert(np.all(np.isfinite(ref)) <= ~np.isnan(EB))
-    return EB
-
-
-def boot_samples_to_pval(boot_samples, ref):
-    assert(boot_samples.ndim == 1)
-    assert(np.ndim(ref) == 0 or ref.shape == boot_samples.shape)
-
-    pval = 2.0 * np.minimum(np.mean(boot_samples <= ref),
-                            np.mean(ref <= boot_samples))
-    pval = np.minimum(1.0, pval)  # Only needed when some auc == ref exactly
-    return pval
-
-
 def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
                n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
     '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
@@ -362,7 +318,7 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     ----------
     y : ndarray of type int or bool, shape (n_samples,)
         Array containing true labels, must be `bool` or {0,1}.
-    log_pred_prob :  ndarray, shape (n_samples, 2)
+    log_pred_prob : ndarray, shape (n_samples, 2)
         Array of shape ``(len(y), 2)``. Each row corresponds to a categorical
         distribution with *normalized* probabilities in log scale. However,
         many curves (e.g., ROC) are invariant to monotonic transformation and
@@ -420,35 +376,40 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
 
     # Get estimator on original data. Could use _interp1d directly since only 1
     # curve, but this is more consistent with bootstrap version below.
-    curve = check_curve(curve_f(y, log_pred_prob), singleton=True)
+    curve = check_curve(curve_f(y, log_pred_prob), x_grid)
     auc, = area(*curve)
     assert(auc.ndim == 0)
     y_grid, = interp1d(x_grid, *curve)
-    assert(x_grid.shape == y_grid.shape)
+    assert(y_grid.shape == x_grid.shape)
 
     # Setup boot strap weights
-    p_BS = np.ones(N) / N
-    weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot))
+    # weight = bu.stratified_boot_weights(y, n_boot, epsilon=epsilon)
+    weight = bu.boot_weights(N, n_boot, epsilon=epsilon)
 
     # Get boot strapped scores
-    curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight))
+    curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight), x_grid)
     auc_boot = area(*curve_boot_)
     assert(auc_boot.shape == (n_boot,))
     y_grid_boot = interp1d(x_grid, *curve_boot_)
+    assert(y_grid_boot.shape == (n_boot, x_grid.size))
 
-    # Repeat area boot strap with reference predictor
+    # Repeat area boot strap with reference predictor (if provided)
+    ref_boot = ref
     if np.ndim(ref) == 2:  # Note dim must be 0 or 2
-        ref = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
-        assert(ref.shape == (n_boot,))
+        ref_boot = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
+        assert(ref_boot.shape == (n_boot,))
+        ref, = area(*check_curve(curve_f(y, ref[:, pos_label])))
+    assert(np.ndim(ref) == 0)
 
     # Pack up standard numeric summary triple
-    EB = boot_samples_to_EB(auc_boot, ref, confidence) if pairwise_CI \
-        else boot_samples_to_EB(auc_boot, confidence=confidence)
-    pval = boot_samples_to_pval(auc_boot, ref)
+    EB = bu.error_bar(auc_boot - ref_boot, auc - ref, confidence=confidence) \
+        if pairwise_CI else bu.error_bar(auc_boot, auc, confidence=confidence)
+    pval = bu.significance(auc_boot, ref_boot)
     summary = (auc, EB, pval)
 
     # Pack up data frame with graphical summaries (performance curves)
-    y_LB, y_UB = boot_samples_to_CI(y_grid_boot, confidence)
+    # Could also try bu.basic and see which works better
+    y_LB, y_UB = bu.percentile(y_grid_boot, confidence)
     curve = pd.DataFrame(data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1),
                          index=range(x_grid.size), columns=CURVE_STATS,
                          dtype=float)
@@ -550,7 +511,8 @@ def curve_summary_table(log_pred_prob_table, y,
 
 def summary_table(log_pred_prob_table, y,
                   loss_dict, curve_dict, ref_method, x_grid=None,
-                  n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
+                  n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95,
+                  method_EB='t', limits={}):
     '''Build table with mean and error bars of both loss and curve summaries
     from a table of probalistic predictions.
 
@@ -585,6 +547,12 @@ def summary_table(log_pred_prob_table, y,
         just the summary. This typically results in smaller error bars.
     confidence : float
         Confidence probability (in (0, 1)) to construct error bar.
+    method_EB : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, zero-one loss
+        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
 
     Returns
     -------
@@ -616,7 +584,8 @@ def summary_table(log_pred_prob_table, y,
     loss_tbl = loss_table(log_pred_prob_table, y, loss_dict)
     loss_summary = loss_summary_table(loss_tbl, ref_method,
                                       pairwise_CI=pairwise_CI,
-                                      confidence=confidence)
+                                      confidence=confidence,
+                                      method_EB=method_EB, limits=limits)
 
     # Return the combo
     full_tbl = pd.concat((loss_summary, curve_summary), axis=1)
@@ -737,7 +706,8 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
 
 def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
                    methods, loss_dict, curve_dict, ref_method,
-                   min_pred_log_prob=-np.inf, pairwise_CI=PAIRWISE_DEFAULT):
+                   min_pred_log_prob=-np.inf, pairwise_CI=PAIRWISE_DEFAULT,
+                   method_EB='t', limits={}):
     '''Simplest one-call interface to this package. Just pass it data and
     method objects and a performance summary DataFrame is returned.
 
@@ -779,6 +749,12 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     pairwise_CI : bool
         If True, compute error bars on the mean of ``loss - loss_ref`` instead
         of just the mean of `loss`. This typically gives smaller error bars.
+    method_EB : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, zero-one loss
+        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
 
     Returns
     -------
@@ -803,5 +779,6 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
                                  methods, min_log_prob=min_pred_log_prob)
     full_tbl, dump = summary_table(pred_tbl, y_test, loss_dict, curve_dict,
-                                   ref_method, pairwise_CI=pairwise_CI)
+                                   ref_method, pairwise_CI=pairwise_CI,
+                                   method_EB=method_EB, limits=limits)
     return full_tbl, dump

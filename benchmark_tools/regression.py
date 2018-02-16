@@ -1,5 +1,6 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, absolute_import, division
+from builtins import range
 from joblib import Memory
 import numpy as np
 import pandas as pd
@@ -278,7 +279,7 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
 
 def just_benchmark(X_train, y_train, X_test, y_test,
                    methods, loss_dict, ref_method, min_std=0.0,
-                   pairwise_CI=PAIRWISE_DEFAULT):
+                   pairwise_CI=PAIRWISE_DEFAULT, method_EB='t', limits={}):
     '''Simplest one-call interface to this package. Just pass it data and
     method objects and a performance summary DataFrame is returned.
 
@@ -314,6 +315,13 @@ def just_benchmark(X_train, y_train, X_test, y_test,
     pairwise_CI : bool
         If True, compute error bars on the mean of ``loss - loss_ref`` instead
         of just the mean of `loss`. This typically gives smaller error bars.
+    method_EB : {'t', 'bernstein', 'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, square loss on a
+        bounded y domain of ``(-1.0,1.0)`` would give limits of ``(0.0, 4.0)``.
+        If entry missing, (-inf, inf) is used.
 
     Returns
     -------
@@ -333,5 +341,6 @@ def just_benchmark(X_train, y_train, X_test, y_test,
                               min_std=min_std)
     loss_tbl = loss_table(pred_tbl, y_test, loss_dict)
     loss_summary = loss_summary_table(loss_tbl, ref_method,
-                                      pairwise_CI=pairwise_CI)
+                                      pairwise_CI=pairwise_CI,
+                                      method_EB=method_EB, limits=limits)
     return loss_summary

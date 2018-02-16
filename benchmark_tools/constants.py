@@ -53,7 +53,3 @@ _PREFIX = {-24: 'y',
 
 _PREFIX_TEX = dict(_PREFIX)  # Make a copy
 _PREFIX_TEX[-6] = r'$\mu$'
-
-# test MC repeats
-MC_REPEATS_1K = 1000
-MC_REPEATS_LARGE = 1000

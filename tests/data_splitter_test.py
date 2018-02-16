@@ -5,8 +5,8 @@ from collections import OrderedDict
 from string import ascii_letters
 import numpy as np
 import pandas as pd
-import benchmark_tools.constants as constants
 import benchmark_tools.data_splitter as ds
+from benchmark_tools.test_constants import MC_REPEATS_LARGE
 
 
 def unif2():
@@ -107,7 +107,7 @@ def test_splitter(seed0=10, seed1=100):
 if __name__ == '__main__':
     np.random.seed(635463)
 
-    runs = constants.MC_REPEATS_1K
+    runs = MC_REPEATS_LARGE
     seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
     for rr in range(runs):
         test_splitter(seeds[rr, 0], seeds[rr, 1])

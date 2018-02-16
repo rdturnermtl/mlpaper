@@ -5,11 +5,9 @@ import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve
 from sklearn.metrics.ranking import roc_curve, precision_recall_curve
-import benchmark_tools.constants as constants
 import benchmark_tools.perf_curves as pc
 import benchmark_tools.util as util
-
-# @TODO(rdturnermtl): move MC tests into the respective test functions
+from benchmark_tools.test_constants import MC_REPEATS_LARGE
 
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.
@@ -367,7 +365,7 @@ def test_binary_clf_curve():
 if __name__ == '__main__':
     np.random.seed(89254)
 
-    for rr in range(constants.MC_REPEATS_LARGE):
+    for rr in range(MC_REPEATS_LARGE):
         test_nv_binary_clf_curve()
         test_binary_clf_curve()
     print('passed')

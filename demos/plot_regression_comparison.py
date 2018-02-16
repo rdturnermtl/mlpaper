@@ -4,6 +4,8 @@
 # License: BSD 3 clause
 from __future__ import print_function, absolute_import, division
 import numpy as np
+from matplotlib import use
+use('pdf')
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared
@@ -12,9 +14,8 @@ import benchmark_tools.regression as btr
 from benchmark_tools.regression import STD_REGR_LOSS
 import benchmark_tools.sciprint as sp
 
+np.random.seed(1234)  # Set global random seed too to be safe.
 rng = np.random.RandomState(0)
-
-# TODO set general random seed too
 
 
 def simple_data():
@@ -78,7 +79,7 @@ plt.xlabel('data')
 plt.ylabel('target')
 plt.xlim(0, 20)
 plt.ylim(-4, 4)
-plt.legend(loc='best',  scatterpoints=1, prop={'size': 8})
+plt.legend(loc='best', scatterpoints=1, prop={'size': 8})
 plt.grid()
 plt.tight_layout(pad=0.0)
 plt.show()

@@ -6,8 +6,8 @@ from string import ascii_letters
 import numpy as np
 import pandas as pd
 from scipy.special import expit as logistic
-import benchmark_tools.constants as constants
 import benchmark_tools.sciprint as sp
+from benchmark_tools.test_constants import MC_REPEATS_LARGE
 
 ONE = decimal.Decimal('1')
 
@@ -489,15 +489,15 @@ def dec_rnd_list(N, to_dot=False, all_pos=False, all_finite=False):
 if __name__ == '__main__':
     np.random.seed(8235)
 
-    for rr in range(constants.MC_REPEATS_1K):
+    for rr in range(MC_REPEATS_LARGE):
         test_decimalize()
     print('test_decimalize done')
 
-    for rr in range(constants.MC_REPEATS_1K):
+    for rr in range(MC_REPEATS_LARGE):
         test_format_table()
     print('test_format_table done')
 
-    for rr in range(constants.MC_REPEATS_1K):
+    for rr in range(MC_REPEATS_LARGE):
         for f in DEC_TESTS:
             f()
     print('passed')
