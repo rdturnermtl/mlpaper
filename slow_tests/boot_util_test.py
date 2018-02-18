@@ -4,7 +4,7 @@ from builtins import range
 import numpy as np
 import scipy.stats as ss
 import benchmark_tools.boot_util as bu
-from benchmark_tools.test_constants import FPR
+from benchmark_tools.test_constants import MC_REPEATS_LARGE, FPR
 
 
 def get_boot_estimate(x, estimate_f):
@@ -24,6 +24,60 @@ def test_confidence_to_percentiles():
 
     LB, UB = bu.confidence_to_percentiles(confidence)
     assert(np.allclose(confidence * 100, UB - LB))
+
+
+def test_percentile_significance():
+    N = np.random.randint(1, 20)
+    x = np.random.randn(N)
+    x[0] = 0
+    x = np.random.choice(x, size=N, replace=True)
+    x[0] = 0  # At least one, maybe more zeros
+
+    # Test when reference is included
+    pval = bu.significance(x, ref=0)
+    assert(pval > 0.0)  # Not possible with 0 included
+    if pval == 1.0:
+        pval = np.nextafter(1.0, 0.0)
+    LB, UB = bu.percentile(x, confidence=1.0 - pval)
+    # Make sure this expands p-value out to where needed to hit reference
+    assert(LB == 0 or UB == 0)
+
+    # Test when reference is not included, still rounds up
+    x[x == 0] = np.random.randn()
+    pval = bu.significance(x, ref=0)
+    if pval == 0.0:
+        confidence = np.nextafter(1.0, 0.0)  # => coverage near 1
+        LB, UB = bu.percentile(x, confidence=confidence)
+        # Arguably, -inf and inf are the correct answers here
+        assert(LB == np.min(x) and UB == np.max(x))
+    elif pval == 1.0:
+        # => coverage near 1, but EB still rounds up
+        pval = np.nextafter(1.0, 0.0)
+        LB, UB = bu.percentile(x, confidence=1.0 - pval)
+        assert(LB <= 0 and 0 <= UB)
+    else:
+        LB, UB = bu.percentile(x, confidence=1.0 - pval)
+        assert(LB <= 0 and 0 <= UB)
+
+
+def test_percentile_ref():
+    N = np.random.randint(1, 20)
+    x = np.random.randn(N)
+    x[0] = 0  # Zero possible
+    x = np.random.choice(x, size=N, replace=True)
+
+    # Test using ref same as subtract
+    y = np.random.randn(N)
+    y = np.random.choice(np.concatenate((x, y)), size=N, replace=True)
+    pval1 = bu.significance(x, ref=y)
+    pval2 = bu.significance(x - y, ref=0)
+    assert(pval1 == pval2)
+
+    # And test with scalar ref
+    y = np.random.choice(y)
+    pval1 = bu.significance(x, ref=y)
+    pval2 = bu.significance(x - y, ref=0)
+    assert(pval1 == pval2)
 
 
 def inner_test_boot(runs=100):
@@ -209,8 +263,10 @@ def test_paired_significance():
 if __name__ == '__main__':
     np.random.seed(24233)
 
-    for rr in range(10):
+    for rr in range(MC_REPEATS_LARGE):
         test_confidence_to_percentiles()
+        test_percentile_significance()
+        test_percentile_ref()
     test_boot()
     test_paired_boot()
     test_paired_significance()

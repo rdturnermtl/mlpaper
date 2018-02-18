@@ -78,8 +78,11 @@ def percentile(boot_estimates, confidence=0.95):
     assert(boot_estimates.ndim >= 1)
     assert(not np.any(np.isnan(boot_estimates)))  # NaN ordering is arbitrary
 
-    q_levels = confidence_to_percentiles(confidence)
-    LB, UB = np.percentile(boot_estimates, q_levels, axis=0)
+    LB_perc, UB_perc = confidence_to_percentiles(confidence)
+    # Expand upward to bigger interval for round off. Also, important for
+    # keeping CI coherent with signficance test function.
+    LB = np.percentile(boot_estimates, LB_perc, axis=0, interpolation='lower')
+    UB = np.percentile(boot_estimates, UB_perc, axis=0, interpolation='higher')
     assert(LB.shape == boot_estimates.shape[1:])
     assert(LB.shape == UB.shape)
     return LB, UB
@@ -141,6 +144,11 @@ def error_bar(boot_estimates, original_estimate, confidence=0.95):
     assert(np.all(np.isfinite(original_estimate) <= ~np.isnan(EB)))
     return EB
 
+# TODO test these for consistency against CI
+   # include dupe points, make sure exact when ref in sample
+   # and EB rounds up when not in sample
+# TODO make version that is consistence against basic boot CI
+
 
 def significance(boot_estimates, ref):
     '''Perform a two-sided bootstrap based hypothesis test on whether the
@@ -150,7 +158,7 @@ def significance(boot_estimates, ref):
     ----------
     boot_estimates : ndarray, shape (n_boot,)
         Estimated quantity across different bootstrap replications.
-    ref : float of ndarray of shape (n_boot,)
+    ref : float or ndarray of shape (n_boot,)
         Reference value is in hypothesis test. Use a scalar value for a known
         reference value or a array of n_boot bootstraped value to perform a
         paired test against another unknown quantity.
