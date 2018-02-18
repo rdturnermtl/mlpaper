@@ -6,6 +6,7 @@ import scipy.stats as ss
 from benchmark_tools.constants import (
     METHOD, METRIC, STAT, STD_STATS, PAIRWISE_DEFAULT)
 import benchmark_tools.boot_util as bu
+from benchmark_tools.util import clip_chk
 
 N_BOOT = 1000  # Default number of bootstrap replications
 
@@ -363,7 +364,7 @@ def get_mean_and_EB(x, confidence=0.95, min_EB=0.0,
         assert(False)
 
     # EB subroutines already validated x for shape and nans
-    mu = np.clip(np.mean(x), lower, upper)  # TODO make clip_chk
+    mu = clip_chk(np.mean(x), lower, upper)
     EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
     return mu, EB
 
@@ -448,7 +449,7 @@ def get_mean_EB_test(x, confidence=0.95, min_EB=0.0,
         assert(False)
 
     # EB subroutines already validated x for shape and nans
-    mu = np.clip(np.mean(x), lower, upper)  # TODO make clip_chk
+    mu = clip_chk(np.mean(x), lower, upper)
     EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
     return mu, EB, pval
 

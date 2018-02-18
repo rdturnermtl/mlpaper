@@ -442,9 +442,8 @@ if __name__ == '__main__':
     np.random.seed(85634)
 
     # Already have for-loop built in
-    # TODO bring back
-    #test_boot_EB_and_test()
-    #test_get_mean_EB_test()
+    test_boot_EB_and_test()
+    test_get_mean_EB_test()
 
     for rr in range(MC_REPEATS_LARGE):
         test_clip_EB()
