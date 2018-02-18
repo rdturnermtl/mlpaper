@@ -232,14 +232,17 @@ def test_bernstein_test_to_EB():
     x = np.random.uniform(lower, upper, size=N)
     if N >= 1:
         x[0] = np.clip(0, lower, upper)
-    x = np.random.choice(x, size=N, replace=True)
+        x = np.random.choice(x, size=N, replace=True)
 
     pval = bt.bernstein_test(x, lower, upper)
-    EB = bt.bernstein_EB(x, lower, upper, confidence=1.0 - pval)
-    if pval == 1.0:
-        assert(EB == upper - lower)
-    else:
-        assert(np.allallclose(np.abs(np.mean(x)), EB))
+    epsilon = np.spacing(1.0)
+    pval_adj = np.clip(pval, epsilon, 1.0 - epsilon)
+    EB = bt.bernstein_EB(x, lower, upper, confidence=1.0 - pval_adj)
+    # p-value very small, might not expect this to pass due to numerics, if
+    # p-value = 1 then it was clipped and can't invert since we don't have
+    # original.
+    if 1e-6 <= pval and pval < 1.0:
+        assert(np.allclose(np.abs(np.mean(x)), EB))
 
 
 def test_boot_EB_and_test():
@@ -428,8 +431,8 @@ if __name__ == '__main__':
     np.random.seed(85634)
 
     # Already have for-loop built in
-    test_boot_EB_and_test()
-    test_get_mean_EB_test()
+    #test_boot_EB_and_test()
+    #test_get_mean_EB_test()
 
     for rr in range(MC_REPEATS_LARGE):
         test_clip_EB()
@@ -442,7 +445,7 @@ if __name__ == '__main__':
         test_t_test_to_EB()
         test_bernstein_test_inf()
         test_bernstein_EB_inf()
-        # test_bernstein_test_to_EB()  # TODO enable
+        test_bernstein_test_to_EB()
         # This is a big one, we could put in loop with less iters:
         test_loss_summary_table()
         print(rr)
