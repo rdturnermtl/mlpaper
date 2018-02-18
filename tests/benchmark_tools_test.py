@@ -10,6 +10,11 @@ import benchmark_tools.constants as cc
 from benchmark_tools.test_constants import MC_REPEATS_LARGE, FPR
 
 
+def close_lte(x, y):
+    R = (x <= y) or np.allclose(x, y)
+    return R
+
+
 def fp_rnd(allow_nan=False):
     x = np.random.randn()
     if np.random.rand() <= 0.1:
@@ -248,29 +253,35 @@ def test_boot_EB_and_test():
         mu = np.mean(x)
         confidence = np.random.rand()
 
+        n_boot = 10
+
         np.random.seed(seed)
         EB, pval, CI = bt._boot_EB_and_test(x, confidence=confidence,
-                                            return_CI=True)
-        #assert(mu - EB <= CI[0])
-        #assert(CI[1] <= mu + EB)  # TODO enable
+                                            return_CI=True, n_boot=n_boot)
+        assert(close_lte(mu - EB, CI[0]))
+        assert(close_lte(CI[1], mu + EB))
         assert(np.allclose(mu - EB, CI[0]) or np.allclose(mu + EB, CI[1]))
 
         np.random.seed(seed)
-        pval_ = bt.boot_test(x)
+        pval_ = bt.boot_test(x, n_boot=n_boot)
         assert(pval == pval_)
 
         np.random.seed(seed)
-        EB_ = bt.boot_EB(x, confidence=confidence)
+        EB_ = bt.boot_EB(x, confidence=confidence, n_boot=n_boot)
         assert(EB == EB_)
 
-        #np.random.seed(seed)
-        #pval_adj = np.nextafter(1.0, 0.0) if pval == 1.0 else pval
-        #EB, pval_, CI = bt._boot_EB_and_test(x, confidence=1.0 - pval_adj,
-        #                                     return_CI=True)
-        #assert(pval == pval_)
-        #assert(mu - EB <= CI[0])
-        #assert(CI[1] <= mu + EB)
-        # assert(CI[0] == 0.0 or CI[1] == 0.0)  # TODO enable
+        if pval == 0.0:
+            continue
+        pval_adj = np.nextafter(1.0, 0.0) if pval == 1.0 else pval
+        np.random.seed(seed)
+        EB, pval_, CI = bt._boot_EB_and_test(x, confidence=1.0 - pval_adj,
+                                             return_CI=True, n_boot=n_boot)
+        assert(pval == pval_)
+        assert(close_lte(mu - EB, CI[0]))
+        assert(close_lte(CI[1], mu + EB))
+        # Can only guarantee one side will be zero if 0 is in BS replicates of
+        # estimator.
+        assert(CI[0] <= 0.0 and 0.0 <= CI[1])
 
 
 def test_get_mean_EB_test():
@@ -350,7 +361,6 @@ def test_loss_summary_table():
               for mm in metrics}
     del limits[metrics[0]]  # Also test missing
 
-    print(tbl)
     perf_tbl = bt.loss_summary_table(tbl, ref_method, pairwise_CI=False,
                                      confidence=confidence,
                                      method_EB=method_EB, limits=limits)
@@ -419,6 +429,10 @@ def test_loss_summary_table():
 if __name__ == '__main__':
     np.random.seed(85634)
 
+    # Already have for loop built in
+    test_boot_EB_and_test()
+    test_get_mean_EB_test()
+
     for rr in range(MC_REPEATS_LARGE):
         test_clip_EB()
         test_t_test_to_scipy()
@@ -434,10 +448,6 @@ if __name__ == '__main__':
         # This is a big one, we could put in loop with less iters:
         test_loss_summary_table()
         print(rr)
-
-    # Already have for loop built in
-    test_boot_EB_and_test()
-    test_get_mean_EB_test()
 
     print('Now running MC tests')
     test_list = [test_t_EB_coverage, test_bernstein_EB_coverage]
