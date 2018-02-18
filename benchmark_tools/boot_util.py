@@ -81,6 +81,9 @@ def percentile(boot_estimates, confidence=0.95):
     LB_perc, UB_perc = confidence_to_percentiles(confidence)
     # Expand upward to bigger interval for round off. Also, important for
     # keeping CI coherent with signficance test function.
+    # TODO np.percentile does not exactly correspond to mathematical definition
+    # of the quantile function wrt jump locations. And hence may not exactly be
+    # inverse of the ECDF used in significance(). File bug report with numpy.
     LB = np.percentile(boot_estimates, LB_perc, axis=0, interpolation='lower')
     UB = np.percentile(boot_estimates, UB_perc, axis=0, interpolation='higher')
     assert(LB.shape == boot_estimates.shape[1:])
@@ -143,11 +146,6 @@ def error_bar(boot_estimates, original_estimate, confidence=0.95):
     # NaN EB only ever occurs when ref is infinite and so are some samples
     assert(np.all(np.isfinite(original_estimate) <= ~np.isnan(EB)))
     return EB
-
-# TODO test these for consistency against CI
-   # include dupe points, make sure exact when ref in sample
-   # and EB rounds up when not in sample
-# TODO make version that is consistence against basic boot CI
 
 
 def significance(boot_estimates, ref):
