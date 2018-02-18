@@ -3,6 +3,7 @@ from __future__ import print_function, division
 from builtins import range
 import numpy as np
 import scipy.stats as ss
+import benchmark_tools.benchmark_tools as bt
 import benchmark_tools.boot_util as bu
 from benchmark_tools.test_constants import MC_REPEATS_LARGE, FPR
 
@@ -227,6 +228,43 @@ def inner_test_significance(runs=100):
     return pvals_2side, pvals_1side
 
 
+def inner_test_boot_EB_and_test(runs=100):
+    '''Arguably this should do out to its own file since it tests bt core.'''
+    mu = np.random.randn()
+    stdev = np.abs(np.random.randn())
+
+    N = 201
+    confidence = 0.95
+
+    def run_trial(x, true_value):
+        _, _, CI = bt._boot_EB_and_test(x, confidence=confidence,
+                                        return_CI=True)
+        LB, UB = CI
+        fail_CI = (true_value < LB) or (UB < true_value)
+
+        _, pval, CI = bt._boot_EB_and_test(x - true_value,
+                                           confidence=confidence,
+                                           return_CI=True)
+        LB, UB = CI
+        fail_CI2 = (0 < LB) or (UB < 0)
+        fail_P = pval < 1.0 - confidence
+        return fail_CI, fail_CI2, fail_P
+
+    fail = [0] * 3
+    for ii in range(runs):
+        x = mu + stdev * np.random.randn(N)
+
+        fail_CI, fail_CI2, fail_P = run_trial(x, mu)
+        fail[0] += fail_CI
+        fail[1] += fail_CI2
+        fail[2] += fail_P
+    pvals_2side = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
+    pvals_1side = \
+        [ss.binom_test(ff, runs, 1.0 - confidence, alternative='greater')
+         for ff in fail]
+    return pvals_2side, pvals_1side
+
+
 def loop_test(test_f):
     runs = 100
     M2 = []
@@ -260,8 +298,14 @@ def test_paired_boot():
 def test_paired_significance():
     loop_test(inner_test_significance)
 
+
+def test_boot_EB_and_test():
+    loop_test(inner_test_boot_EB_and_test)
+
 if __name__ == '__main__':
     np.random.seed(24233)
+
+    test_boot_EB_and_test()
 
     for rr in range(MC_REPEATS_LARGE):
         test_confidence_to_percentiles()

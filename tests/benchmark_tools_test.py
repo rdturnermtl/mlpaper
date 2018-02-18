@@ -336,8 +336,6 @@ def test_get_mean_EB_test():
             pval_ = bt.boot_test(x)
         assert(pval_ == pval)
 
-# TODO MC test coverage of boot but point into slows test
-
 
 def test_loss_summary_table():
     N = np.random.randint(low=1, high=10)
@@ -429,7 +427,7 @@ def test_loss_summary_table():
 if __name__ == '__main__':
     np.random.seed(85634)
 
-    # Already have for loop built in
+    # Already have for-loop built in
     test_boot_EB_and_test()
     test_get_mean_EB_test()
 
