@@ -234,7 +234,18 @@ def test_bernstein_test_to_EB():
         x[0] = np.clip(0, lower, upper)
         x = np.random.choice(x, size=N, replace=True)
 
+    EB = bt.bernstein_EB(x, lower, upper, confidence=0.95)
     pval = bt.bernstein_test(x, lower, upper)
+    if N >= 1:
+        mu = np.mean(x)
+        LB, UB = mu - EB, mu + EB
+        # Sanity check pval even if really small and not well numerically
+        # invertible.
+        if pval <= 0.05:
+            assert(close_lte(0, LB) or close_lte(UB, 0))
+        else:
+            assert(close_lte(LB, 0) or close_lte(0, UB))
+
     epsilon = np.spacing(1.0)
     pval_adj = np.clip(pval, epsilon, 1.0 - epsilon)
     EB = bt.bernstein_EB(x, lower, upper, confidence=1.0 - pval_adj)
@@ -431,6 +442,7 @@ if __name__ == '__main__':
     np.random.seed(85634)
 
     # Already have for-loop built in
+    # TODO bring back
     #test_boot_EB_and_test()
     #test_get_mean_EB_test()
 
