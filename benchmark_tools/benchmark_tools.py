@@ -172,15 +172,17 @@ def bernstein_test(x, lower, upper):
     coef = [(3.0 * range_) / N, std * np.sqrt(2.0 / N), -np.abs(mu)]
     assert(np.all(np.isfinite(coef)))  # Should have caught non-finite cases
     coef_roots = np.roots(coef)
+    assert(len(coef_roots) <= 2)  # This should never happen for quadratic
     assert(coef_roots.dtype.kind == 'f')  # Appears roots are always real
+    print(coef_roots)
+    if len(coef_roots) == 0:
+        print(N, mu, std)
+        print(range_)
+        return 1.0  # TODO figure out this case
     # Appears to always be one neg and one pos root, but we looking for square
     # root so the positive one is the correct one.
-    # TODO make assert
-    if not (len(coef_roots) == 2 and coef_roots[0] <= 0.0 and 0.0 <= coef_roots[1]):
-        print('coeff issue')
-        print(coef_roots)
-    if len(coef_roots) == 0:
-        return 1.0  # TODO figure out this case
+    assert(np.sum(coef_roots <= 0.0) >= 1)
+    assert(np.sum(coef_roots >= 0.0) >= 1)
     B = np.max(coef_roots) ** 2  # Bernstein test statistic
     # Sampling CDF is bounded by exponential for any true distn on x.
     delta = 3.0 * np.exp(-B)
