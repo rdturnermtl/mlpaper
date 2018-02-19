@@ -3,11 +3,14 @@ from __future__ import print_function, division
 from builtins import range
 import numpy as np
 import scipy.stats as ss
+import benchmark_tools.benchmark_tools as bt
 from benchmark_tools.classification import curve_boot, DEFAULT_NGRID
 import benchmark_tools.constants as cc
 import benchmark_tools.perf_curves as pc
 from benchmark_tools.util import area, interp1d
 from benchmark_tools.test_constants import FPR
+
+_FPR = FPR / 3.0  # Divide by number of test funcs
 
 
 def fail_check_stat(fail, runs, expect_p_fail, fpr):
@@ -132,7 +135,7 @@ def test_boot(runs=100):
         fail[10] += fail_EB2
         fail[11] += fail_P2
         fail_curve_prg += fail_curve
-    sub_FPR = FPR / 4.0
+    sub_FPR = _FPR / 4.0
     expect_p_fail = 1.0 - confidence
     fail_check_stat(fail, runs, expect_p_fail, sub_FPR)
     print('ROC curve')
@@ -142,8 +145,65 @@ def test_boot(runs=100):
     print('PRG curve')
     fail_check_stat(fail_curve_prg, runs, expect_p_fail, sub_FPR)
 
+
+def test_boot_mean(runs=100):
+    N = 201
+    confidence = 0.95
+
+    fail = 0
+    for ii in range(runs):
+        mu = np.random.randn()
+        S = np.abs(np.random.randn())
+        x = mu + S * np.random.randn(N)
+
+        mu_est = np.mean(x)
+        EB = bt.boot_EB(x, confidence=0.95)
+
+        fail += np.abs(mu - mu_est) > EB
+    expect_p_fail = 1.0 - confidence
+    print('boot mean')
+    fail_check_stat([fail], runs, expect_p_fail, _FPR)
+
+
+def test_boot_EB_and_test(runs=100):
+    '''Arguably this should do out to its own file since it tests bt core.'''
+    mu = np.random.randn()
+    stdev = np.abs(np.random.randn())
+
+    N = 201
+    confidence = 0.95
+
+    def run_trial(x, true_value):
+        _, _, CI = bt._boot_EB_and_test(x, confidence=confidence,
+                                        return_CI=True)
+        LB, UB = CI
+        fail_CI = (true_value < LB) or (UB < true_value)
+
+        _, pval, CI = bt._boot_EB_and_test(x - true_value,
+                                           confidence=confidence,
+                                           return_CI=True)
+        LB, UB = CI
+        fail_CI2 = (0 < LB) or (UB < 0)
+        fail_P = pval < 1.0 - confidence
+        return fail_CI, fail_CI2, fail_P
+
+    fail = [0] * 3
+    for ii in range(runs):
+        x = mu + stdev * np.random.randn(N)
+
+        fail_CI, fail_CI2, fail_P = run_trial(x, mu)
+        fail[0] += fail_CI
+        fail[1] += fail_CI2
+        fail[2] += fail_P
+    expect_p_fail = 1.0 - confidence
+    print('boot mean and test')
+    fail_check_stat(fail, runs, expect_p_fail, _FPR)
+
+
 if __name__ == '__main__':
-    np.random.seed(56456)
+    np.random.seed(56467)
 
     test_boot()
+    test_boot_mean()
+    test_boot_EB_and_test()
     print('passed')

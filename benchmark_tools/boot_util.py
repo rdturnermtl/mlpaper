@@ -78,8 +78,14 @@ def percentile(boot_estimates, confidence=0.95):
     assert(boot_estimates.ndim >= 1)
     assert(not np.any(np.isnan(boot_estimates)))  # NaN ordering is arbitrary
 
-    q_levels = confidence_to_percentiles(confidence)
-    LB, UB = np.percentile(boot_estimates, q_levels, axis=0)
+    LB_perc, UB_perc = confidence_to_percentiles(confidence)
+    # Expand upward to bigger interval for round off. Also, important for
+    # keeping CI coherent with signficance test function.
+    # TODO np.percentile does not exactly correspond to mathematical definition
+    # of the quantile function wrt jump locations. And hence may not exactly be
+    # inverse of the ECDF used in significance(). File bug report with numpy.
+    LB = np.percentile(boot_estimates, LB_perc, axis=0, interpolation='lower')
+    UB = np.percentile(boot_estimates, UB_perc, axis=0, interpolation='higher')
     assert(LB.shape == boot_estimates.shape[1:])
     assert(LB.shape == UB.shape)
     return LB, UB
@@ -150,7 +156,7 @@ def significance(boot_estimates, ref):
     ----------
     boot_estimates : ndarray, shape (n_boot,)
         Estimated quantity across different bootstrap replications.
-    ref : float of ndarray of shape (n_boot,)
+    ref : float or ndarray of shape (n_boot,)
         Reference value is in hypothesis test. Use a scalar value for a known
         reference value or a array of n_boot bootstraped value to perform a
         paired test against another unknown quantity.

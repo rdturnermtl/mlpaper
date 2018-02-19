@@ -200,9 +200,10 @@ def spherical_loss(y, log_pred_prob, rescale=True):
     # Need to do negative of spherical score to make a loss function
     loss = -np.exp(log_pred_prob[np.arange(N), y.astype(int)] - log_normalizer)
 
-    if rescale and n_labels > 1:
-        # Linearly rescale so perfect is 0.0 and uniform gives 1.0
-        c = 1.0 - 1.0 / np.sqrt(n_labels)
+    if rescale:
+        # Linearly rescale so perfect is 0.0 and uniform gives 1.0, when
+        # n_labels = 1 everything is perfect so loss = 0.
+        c = 1.0 - 1.0 / np.sqrt(n_labels) if n_labels > 1 else 1.0
         loss = (1.0 + loss) / c
     return loss
 

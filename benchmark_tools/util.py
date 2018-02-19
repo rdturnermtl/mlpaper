@@ -9,6 +9,13 @@ from scipy.misc import logsumexp
 STRICT_SPACING = False
 
 
+def clip_chk(a, a_min, a_max):
+    a_clip = np.clip(a, a_min, a_max)
+    # Check that clipping was small effect
+    assert(np.all((a == a_clip) | np.isclose(a, a_min) | np.isclose(a, a_max)))
+    return a_clip
+
+
 def one_hot(y, n_labels):
     '''Same functionality `sklearn.preprocessing.OneHotEncoder` but avoids
     extra dependency.

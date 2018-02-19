@@ -1,51 +1,35 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import print_function, division
 from builtins import range
-import warnings
 from string import ascii_letters
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 import benchmark_tools.benchmark_tools as bt
-import benchmark_tools.classification as btc
-from benchmark_tools import util
+import benchmark_tools.constants as cc
 from benchmark_tools.test_constants import MC_REPEATS_LARGE, FPR
 
 
-def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
-    '''Special case of hard_loss.'''
-    N, n_labels = btc.shape_and_validate(y_bool, log_pred_prob)
-    assert(n_labels == 2)
-    assert(FP_cost > 0.0)
-
-    FN_cost = 1.0
-    thold = np.log(FP_cost / (FP_cost + FN_cost))
-
-    y_bool = y_bool.astype(bool)  # So we can use ~
-    yhat = log_pred_prob[:, 1] >= thold
-    assert(y_bool.dtype.kind == 'b' and yhat.dtype.kind == 'b')
-
-    loss = (~y_bool * yhat) * FP_cost + (y_bool * ~yhat) * FN_cost
-    assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
-    return loss
+def close_lte(x, y):
+    R = (x <= y) or np.allclose(x, y)
+    return R
 
 
-def fp_rnd():
+def fp_rnd(allow_nan=False):
     x = np.random.randn()
     if np.random.rand() <= 0.1:
         x = np.inf
     if np.random.rand() <= 0.1:
         x = -np.inf
-    if np.random.rand() <= 0.1:
+    if allow_nan and np.random.rand() <= 0.1:
         x = np.nan
     return x
 
 
 def test_clip_EB(runs=100):
     for _ in range(runs):
-        mu = fp_rnd()
-        EB0 = np.abs(fp_rnd())
+        mu = fp_rnd(allow_nan=True)
+        EB0 = np.abs(fp_rnd(allow_nan=True))
         lower = fp_rnd()
         lower = lower if lower < np.inf else -np.inf
         upper = np.fmax(lower, fp_rnd())
@@ -90,245 +74,397 @@ def test_clip_EB(runs=100):
                                np.fmin(upper, mu + EB)))
 
 
-def test_t_EB(runs=10, trials=100):
-    pval = []
-    while len(pval) < runs:
-        N = np.random.randint(low=0, high=10)
-        confidence = np.random.rand()
+def test_t_test_to_scipy():
+    N = np.random.randint(low=2, high=10)
+    x = np.random.randn(N)
 
-        if N <= 1:
-            x = np.random.randn(N)
-            EB = bt.t_EB(x, confidence=confidence)
-            assert(EB == np.inf)
-        else:
-            fail = 0
-            for tt in range(trials):
-                x = np.random.randn(N)
-
-                EB = bt.t_EB(x, confidence=confidence)
-                mu = np.nanmean(x)
-                LB, UB = mu - EB, mu + EB
-                assert(np.isfinite(LB) and np.isfinite(UB))
-                fail += (0.0 < LB) or (UB < 0.0)
-            pval.append(ss.binom_test(fail, trials, 1.0 - confidence))
-    _, pval_agg = ss.combine_pvalues(pval)
-    return pval_agg
+    _, pval_ss = ss.ttest_1samp(x, 0.0)
+    pval = bt.t_test(x)
+    assert(pval == pval_ss)
 
 
-def test_get_mean_and_EB(runs=10, trials=100):
-    pval = []
-    while len(pval) < runs:
-        N = np.random.randint(low=0, high=10)
-        confidence = np.random.rand()
-
-        if N <= 1:
-            x = 2.0 + np.random.randn(N)
-            x_ref = 1.5 + np.random.randn(N)
-
-            with warnings.catch_warnings():  # expect warning for N=0
-                warnings.simplefilter('ignore', RuntimeWarning)
-                mu, EB = bt.get_mean_and_EB(x, x_ref, confidence=confidence)
-                assert(np.allclose(mu, np.nanmean(mu), equal_nan=True))
-                assert(EB == np.inf)
-
-                mu, EB = bt.get_mean_and_EB(x, confidence=confidence)
-                mu2, EB2 = bt.get_mean_and_EB(x, np.zeros_like(x),
-                                          confidence=confidence)
-                assert(np.allclose(mu, np.nanmean(mu2), equal_nan=True))
-                assert(np.allclose(EB, np.nanmean(EB2), equal_nan=True))
-        else:
-            fail = 0
-            for tt in range(trials):
-                x = 2.0 + np.random.randn(N)
-                x_ref = 1.5 + np.random.randn(N)
-
-                mu, EB = bt.get_mean_and_EB(x, x_ref, confidence=confidence)
-                assert(np.isfinite(mu) and np.isfinite(EB))
-                assert(np.allclose(mu, np.nanmean(mu), equal_nan=True))
-                err = np.nanmean(x - x_ref) - 0.5
-                fail += np.abs(err) > EB
-
-                mu, EB = bt.get_mean_and_EB(x, confidence=confidence)
-                mu2, EB2 = bt.get_mean_and_EB(x, np.zeros_like(x),
-                                              confidence=confidence)
-                assert(np.allclose(mu, np.nanmean(mu2), equal_nan=True))
-                assert(np.allclose(EB, np.nanmean(EB2), equal_nan=True))
-            pval.append(ss.binom_test(fail, trials, 1.0 - confidence))
-    _, pval_agg = ss.combine_pvalues(pval)
-    return pval_agg
-
-
-def hard_loss_binary_test():
-    '''Also tests hard loss.'''
-    n_labels = 2
-    N = np.random.randint(low=1, high=10)
-
-    y_bool = np.random.rand(N) <= 0.5
-    y_pred = util.normalize(np.random.randn(N, n_labels))
-    loss = hard_loss_binary(y_bool, y_pred)
-
-    act = btc.hard_loss_decision(y_pred, 1.0 - np.eye(n_labels))
-    loss2 = zero_one_loss(y_bool.astype(int), act)
-    assert(np.allclose(np.mean(loss), loss2))
-
-    loss2 = btc.hard_loss(y_bool, y_pred)
-    assert(np.allclose(loss, loss2))
-
-
-def hard_loss_decision_test():
-    n_labels = np.random.randint(low=1, high=10)
-    n_act = np.random.randint(low=1, high=10)
+def test_t_test_on_zero():
+    # Also tests for small N
     N = np.random.randint(low=0, high=10)
+    x = np.zeros(N)
 
-    y_pred = util.normalize(np.random.randn(N, n_labels))
-
-    act = btc.hard_loss_decision(y_pred, 1.0 - np.eye(n_labels))
-    assert(np.all(np.argmax(y_pred, axis=1) == act))
-
-    loss_mat = np.random.rand(n_labels, n_act)
-    act = btc.hard_loss_decision(y_pred, loss_mat)
-
-    loss_mat = np.concatenate((loss_mat, np.ones((n_labels, 1))), axis=1)
-    act2 = btc.hard_loss_decision(y_pred, loss_mat)
-    assert(np.all(act == act2))
-
-    loss_mat = np.concatenate((loss_mat, np.zeros((n_labels, 1))), axis=1)
-    act2 = btc.hard_loss_decision(y_pred, loss_mat)
-    assert(np.all(act2 == loss_mat.shape[1] - 1))
+    pval = bt.t_test(x)
+    assert(pval == 1.0)
 
 
-def log_loss_test():
-    n_labels = np.random.randint(low=1, high=10)
+def test_t_test_zero_var():
+    N = np.random.randint(low=2, high=10)
+    x = np.random.rand() + np.zeros(N)
+    scale = np.exp(np.random.randn()) * np.spacing(x[0])
+    x = scale * np.random.randn(N) + x
+
+    _, pval_ss = ss.ttest_1samp(x, 0.0)
+    pval = bt.t_test(x)
+    if np.isnan(pval_ss):
+        assert(pval == 0.0)  # Not on zero w.p. 1
+    else:
+        assert(pval == pval_ss)
+
+
+def test_t_test_inf():
     N = np.random.randint(low=1, high=10)
-
-    y = np.random.randint(low=0, high=n_labels, size=N)
-    y_pred = util.normalize(np.random.randn(N, n_labels))
-
-    if n_labels >= 2:
-        loss = btc.log_loss(y, y_pred)
-
-        loss2 = log_loss(y, np.exp(y_pred), labels=range(n_labels))
-        assert(np.allclose(np.mean(loss), loss2))
-
-    with np.errstate(invalid='ignore', divide='ignore'):
-        pred = np.log(util.one_hot(y, n_labels))
-    loss2 = btc.log_loss(y, pred)
-    assert(np.max(np.abs(loss2)) <= 1e-8)
+    x = np.zeros(N)
+    x[0] = np.inf
+    if np.random.rand() <= 0.5:
+        x[0] = -1 * x[0]
+    pval = bt.t_test(x)
+    assert(pval == 1.0)
 
 
-def brier_loss_test():
-    n_labels = np.random.randint(low=1, high=4)
+def test_t_EB_zero_var():
+    # Also tests small N
+    N = np.random.randint(low=0, high=10)
+    x = np.random.rand() + np.zeros(N)
+    confidence = np.random.rand()
+    EB = bt.t_EB(x, confidence=confidence)
+    if N <= 1:
+        assert(EB == np.inf)
+    else:
+        assert(np.allclose(EB, 0.0))
+
+
+def test_t_EB_inf():
     N = np.random.randint(low=1, high=10)
-
-    y = np.random.randint(low=0, high=n_labels, size=N)
-    y_pred = util.normalize(np.random.randn(N, n_labels))
-
-    loss = btc.brier_loss(y, y_pred, rescale=False)
-    # sklearn learn is dumb and gets confused when only one class passed in
-    if n_labels == 2 and np.std(y) >= 1e-8:
-        loss2 = brier_score_loss(y == 1, np.exp(y_pred[:, 1]), pos_label=True)
-        assert(np.allclose(np.mean(loss), 2.0 * loss2))
-
-    with np.errstate(invalid='ignore', divide='ignore'):
-        pred = np.log(util.one_hot(y, n_labels))
-    loss2 = btc.brier_loss(y, pred, rescale=False)
-    assert(np.max(np.abs(loss2)) <= 1e-8)
-
-
-def spherical_loss_test():
-    n_labels = np.random.randint(low=1, high=10)
-    N = np.random.randint(low=1, high=10)
-
-    y = np.random.randint(low=0, high=n_labels, size=N)
-    y_pred = util.normalize(np.random.randn(N, n_labels))
-
-    loss = btc.spherical_loss(y, y_pred, rescale=False)
-
-    # Check against the linear implementation
-    pred_prob = np.exp(y_pred)
-    normalizer = np.sqrt(np.sum(pred_prob ** 2, axis=1))
-    loss_0 = -pred_prob[np.arange(N), y.astype(int)] / normalizer
-    assert(np.allclose(loss, loss_0, equal_nan=True))
-
-    with np.errstate(invalid='ignore', divide='ignore'):
-        pred = np.log(util.one_hot(y, n_labels))
-    loss2 = btc.spherical_loss(y, pred, rescale=False)
-    assert(np.max(np.abs(loss2 + 1.0)) <= 1e-8)
-
-    if n_labels >= 2:
-        with np.errstate(invalid='ignore', divide='ignore'):
-            pred_prob = util.normalize(np.log(1.0 - util.one_hot(y, n_labels)))
-        loss2 = btc.spherical_loss(y, pred_prob, rescale=False)
-        assert(np.max(np.abs(loss2)) <= 1e-8)
-
-
-def loss_summary_table_test():
-    n_labels = np.random.randint(low=1, high=10)
-    N = np.random.randint(low=1, high=10)
-    n_methods = np.random.randint(low=1, high=5)
+    x = np.zeros(N)
+    x[0] = np.inf
+    if np.random.rand() <= 0.5:
+        x[0] = -1 * x[0]
 
     confidence = np.random.rand()
-    pairwise_CI = np.random.rand() <= 0.5
+    EB = bt.t_EB(x, confidence=confidence)
+    assert(EB == np.inf)
+
+
+def test_t_EB_coverage(runs=10, trials=100):
+    pval = []
+    while len(pval) < runs:
+        N = np.random.randint(low=2, high=10)
+        confidence = np.random.rand()
+
+        fail = 0
+        for tt in range(trials):
+            x = np.random.randn(N)
+
+            EB = bt.t_EB(x, confidence=confidence)
+            mu = np.nanmean(x)
+            LB, UB = mu - EB, mu + EB
+            assert(np.isfinite(LB) and np.isfinite(UB))
+            fail += (0.0 < LB) or (UB < 0.0)
+        pval.append(ss.binom_test(fail, trials, 1.0 - confidence))
+    _, pval_agg = ss.combine_pvalues(pval)
+    return pval_agg
+
+
+def test_t_test_to_EB():
+    N = np.random.randint(low=2, high=10)
+    x = np.random.randn(N)
+
+    pval = bt.t_test(x)
+    EB = bt.t_EB(x, confidence=1.0 - pval)
+    assert(np.allclose(np.abs(np.mean(x)), EB))
+
+
+def test_bernstein_test_inf():
+    N = np.random.randint(low=1, high=10)
+    x = np.zeros(N)
+    x[0] = np.inf
+    if np.random.rand() <= 0.5:
+        x[0] = -1 * x[0]
+
+    lower = np.minimum(np.min(x), np.random.randn())
+    upper = np.maximum(np.max(x), np.random.randn())
+
+    pval = bt.bernstein_test(x, lower, upper)
+    assert(pval == 1.0)
+
+
+def test_bernstein_EB_inf():
+    N = np.random.randint(low=1, high=10)
+    x = np.zeros(N)
+    x[0] = np.inf
+    if np.random.rand() <= 0.5:
+        x[0] = -1 * x[0]
+
+    lower = np.minimum(np.min(x), np.random.randn())
+    upper = np.maximum(np.max(x), np.random.randn())
+
+    confidence = np.random.rand()
+    EB = bt.bernstein_EB(x, lower, upper, confidence=confidence)
+    assert(EB == np.inf)
+
+
+def test_bernstein_EB_coverage(runs=10, trials=100):
+    pval = []
+    while len(pval) < runs:
+        # Crank up N to test this bound
+        N = np.random.randint(low=200, high=1000)
+        confidence = np.random.rand()
+
+        lower = np.random.randn()
+        upper = lower + np.abs(np.random.randn())
+
+        fail = 0
+        for tt in range(trials):
+            x = np.random.uniform(lower, upper, size=N)
+            true_mu = (lower + upper) / 2
+
+            EB = bt.bernstein_EB(x, lower, upper, confidence=confidence)
+            mu = np.mean(x)
+            LB, UB = mu - EB, mu + EB
+            assert(np.isfinite(LB) and np.isfinite(UB))
+            fail += (true_mu < LB) or (UB < true_mu)
+        # Must use one-sided test since the bernstein bound can be loose.
+        pval.append(ss.binom_test(fail, trials, 1.0 - confidence,
+                                  alternative='greater'))
+    _, pval_agg = ss.combine_pvalues(pval)
+    return pval_agg
+
+
+def test_bernstein_test_to_EB():
+    N = np.random.randint(low=0, high=25)
+    lower = np.random.randn()
+    upper = lower + np.abs(np.random.randn())
+    x = np.random.uniform(lower, upper, size=N)
+    if N >= 1:
+        x[0] = np.clip(0, lower, upper)
+        x = np.random.choice(x, size=N, replace=True)
+
+    EB = bt.bernstein_EB(x, lower, upper, confidence=0.95)
+    pval = bt.bernstein_test(x, lower, upper)
+    if N >= 1:
+        mu = np.mean(x)
+        LB, UB = mu - EB, mu + EB
+        # Sanity check pval even if really small and not well numerically
+        # invertible.
+        if pval <= 0.05:
+            assert(close_lte(0, LB) or close_lte(UB, 0))
+        else:
+            assert(close_lte(LB, 0) or close_lte(0, UB))
+
+    epsilon = np.spacing(1.0)
+    pval_adj = np.clip(pval, epsilon, 1.0 - epsilon)
+    EB = bt.bernstein_EB(x, lower, upper, confidence=1.0 - pval_adj)
+    # p-value very small, might not expect this to pass due to numerics, if
+    # p-value = 1 then it was clipped and can't invert since we don't have
+    # original.
+    if 1e-6 <= pval and pval < 1.0:
+        assert(np.allclose(np.abs(np.mean(x)), EB))
+
+
+def test_boot_EB_and_test():
+    seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
+    for seed in seed_iter:
+        N = np.random.randint(1, 20)
+        x = np.random.randn(N)
+        x[0] = 0
+        x = np.random.choice(x, size=N, replace=True)
+        x[0] = 0  # At least one, maybe more zeros
+        mu = np.mean(x)
+        confidence = np.random.rand()
+
+        n_boot = 10
+
+        np.random.seed(seed)
+        EB, pval, CI = bt._boot_EB_and_test(x, confidence=confidence,
+                                            return_CI=True, n_boot=n_boot)
+        assert(close_lte(mu - EB, CI[0]))
+        assert(close_lte(CI[1], mu + EB))
+        assert(np.allclose(mu - EB, CI[0]) or np.allclose(mu + EB, CI[1]))
+
+        np.random.seed(seed)
+        pval_ = bt.boot_test(x, n_boot=n_boot)
+        assert(pval == pval_)
+
+        np.random.seed(seed)
+        EB_ = bt.boot_EB(x, confidence=confidence, n_boot=n_boot)
+        assert(EB == EB_)
+
+        if pval == 0.0:
+            continue
+        pval_adj = np.nextafter(1.0, 0.0) if pval == 1.0 else pval
+        np.random.seed(seed)
+        EB, pval_, CI = bt._boot_EB_and_test(x, confidence=1.0 - pval_adj,
+                                             return_CI=True, n_boot=n_boot)
+        assert(pval == pval_)
+        assert(close_lte(mu - EB, CI[0]))
+        assert(close_lte(CI[1], mu + EB))
+        # Can only guarantee one side will be zero if 0 is in BS replicates of
+        # estimator.
+        assert(CI[0] <= 0.0 and 0.0 <= CI[1])
+
+
+def test_get_mean_EB_test():
+    seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
+    for seed in seed_iter:
+        N = np.random.randint(1, 20)
+        x = np.random.randn(N)
+        x[0] = 0
+        x = np.random.choice(x, size=N, replace=True)
+        mu = np.mean(x)
+        confidence = np.random.rand()
+
+        lower = np.min(x) - np.maximum(0.0, fp_rnd())
+        upper = np.max(x) + np.maximum(0.0, fp_rnd())
+        min_EB = np.clip(np.random.randn(), 0.0, 0.5 * (upper - lower))
+        method = np.random.choice(['t', 'bernstein', 'boot'])
+
+        np.random.seed(seed)
+        mu_, EB, pval = \
+            bt.get_mean_EB_test(x, confidence=confidence, min_EB=min_EB,
+                                lower=lower, upper=upper, method=method)
+        assert(np.allclose(mu, mu_))
+
+        np.random.seed(seed)
+        mu_, EB_ = bt.get_mean_and_EB(x, confidence=confidence, min_EB=min_EB,
+                                      lower=lower, upper=upper, method=method)
+        assert(np.allclose(mu, mu_))
+        assert(EB_ == EB)
+
+        np.random.seed(seed)
+        pval_ = bt.get_test(x, lower=lower, upper=upper, method=method)
+        assert(pval_ == pval)
+
+        np.random.seed(seed)
+        if method == 't':
+            EB_ = bt.t_EB(x, confidence=confidence)
+        elif method == 'bernstein':
+            EB_ = bt.bernstein_EB(x, lower=lower, upper=upper,
+                                  confidence=confidence)
+        else:
+            EB_ = bt.boot_EB(x, confidence=confidence)
+        assert(EB_ >= EB or EB == min_EB)  # EB_ is pre-clip
+        assert(EB == EB_ or EB == min_EB or
+               np.allclose(mu - EB, lower) or np.allclose(mu + EB, upper))
+
+        np.random.seed(seed)
+        if method == 't':
+            pval_ = bt.t_test(x)
+        elif method == 'bernstein':
+            pval_ = bt.bernstein_test(x, lower=lower, upper=upper)
+        else:
+            pval_ = bt.boot_test(x)
+        assert(pval_ == pval)
+
+
+def test_loss_summary_table():
+    N = np.random.randint(low=1, high=10)
+    n_methods = np.random.randint(low=1, high=5)
+    n_metrics = np.random.randint(low=1, high=5)
+    confidence = np.random.rand()
+    # Would be good to test 'boot' too, but too much hassle with random seeds
+    method_EB = np.random.choice(['t', 'bernstein'])
 
     methods = np.random.choice(list(ascii_letters), n_methods, replace=False)
-    ref = np.random.choice(methods)
-    metrics = btc.STD_CLASS_LOSS
-    labels = range(n_labels)
+    ref_method = np.random.choice(methods)
+    metrics = np.random.choice(list(ascii_letters), n_metrics, replace=False)
 
-    col_names = pd.MultiIndex.from_product([methods, labels],
-                                           names=[bt.METHOD, btc.LABEL])
-    dat = np.random.randn(N, n_labels * len(methods))
-    tbl = pd.DataFrame(data=dat, index=range(N), columns=col_names,
-                       dtype=float)
+    cols = pd.MultiIndex.from_product([metrics, methods],
+                                      names=[cc.METRIC, cc.METHOD])
+    dat = np.random.randn(N, n_metrics * n_methods)
+    tbl = pd.DataFrame(data=dat, index=range(N), columns=cols, dtype=float)
 
-    y = np.random.randint(low=0, high=n_labels, size=N)
-    loss_tbl = btc.loss_table(tbl, y, metrics_dict=metrics)
-    perf_tbl = bt.loss_summary_table(loss_tbl, ref, pairwise_CI=pairwise_CI,
-                                     confidence=confidence)
-    for metric, metric_f in metrics.items():
-        loss_ref = metric_f(y, util.normalize(tbl[ref].values))
+    limits = {mm: (np.min(tbl[mm].values) - np.maximum(0.0, fp_rnd()),
+                   np.max(tbl[mm].values) + np.maximum(0.0, fp_rnd()))
+              for mm in metrics}
+    del limits[metrics[0]]  # Also test missing
+
+    perf_tbl = bt.loss_summary_table(tbl, ref_method, pairwise_CI=False,
+                                     confidence=confidence,
+                                     method_EB=method_EB, limits=limits)
+    perf_tbl_p = bt.loss_summary_table(tbl, ref_method, pairwise_CI=True,
+                                       confidence=confidence,
+                                       method_EB=method_EB, limits=limits)
+
+    # Test pairwise vs non-pairwise off EB
+    mean_df = perf_tbl.xs(cc.MEAN_COL, axis=1, level=1)
+    assert(mean_df.equals(perf_tbl_p.xs(cc.MEAN_COL, axis=1, level=1)))
+    pval_df = perf_tbl.xs(cc.PVAL_COL, axis=1, level=1)
+    assert(pval_df.equals(perf_tbl_p.xs(cc.PVAL_COL, axis=1, level=1)))
+
+    # Test nan pattern
+    assert(not np.any(np.isnan(mean_df.values)))
+    assert(np.all(np.isnan(pval_df.loc[ref_method, :].values)))
+    other_pvals = pval_df.loc[pval_df.index != ref_method, :].values
+    assert(np.all(0.0 <= other_pvals) and np.all(other_pvals <= 1.0))
+    EB_df = perf_tbl.xs(cc.ERR_COL, axis=1, level=1)
+    assert(np.all(EB_df >= 0.0))
+    EB_df = perf_tbl_p.xs(cc.ERR_COL, axis=1, level=1)
+    assert(np.all(np.isnan(EB_df.loc[ref_method, :].values)))
+    other_EB = EB_df.loc[pval_df.index != ref_method, :].values
+    assert(np.all(0.0 <= other_EB))
+
+    # Now non-vectorized test
+    for metric in metrics:
+        lower, upper = limits.get(metric, (-np.inf, np.inf))
+        range_ = upper - lower
+        loss_sub = tbl[metric]
+        ref_x = loss_sub[ref_method].values
         for method in methods:
-            loss = metric_f(y, util.normalize(tbl[method].values))
-            assert(np.allclose(loss_tbl[(metric, method)].values, loss,
-                               equal_nan=True))
+            x = loss_sub[method].values
 
-            if pairwise_CI:
-                mu, EB = bt.get_mean_and_EB(loss=loss, loss_ref=loss_ref,
-                                            confidence=confidence)
-                if method == ref:
-                    EB = np.nan
-            else:
-                mu, EB = bt.get_mean_and_EB(loss=loss, confidence=confidence)
+            mu, EB, pval = perf_tbl.loc[method, metric].values
+            mu_p, EB_p, pval_p = perf_tbl_p.loc[method, metric].values
+            assert(mu == np.mean(x))
+            assert(mu == mu_p)
 
-            delta = loss - loss_ref
-            if method == ref:
-                pval = np.nan
-            elif len(delta) == 1:
-                pval = 1.0
-            elif np.std(delta) == 0.0:
-                pval = np.float(np.all(delta == 0.0))
+            # Non-pairwise EB
+            _, EB_ = bt.get_mean_and_EB(x, confidence=confidence,
+                                        lower=lower, upper=upper,
+                                        method=method_EB)
+            assert(EB == EB_)
+
+            # Pairwise EB
+            if method == ref_method:
+                assert(np.isnan(EB_p))
             else:
-                _, pval = ss.ttest_1samp(delta, 0.0)
-            assert(np.allclose(perf_tbl.loc[method, metric].values,
-                               [mu, EB, pval], equal_nan=True))
+                _, EB_ = bt.get_mean_and_EB(x - ref_x, confidence=confidence,
+                                            lower=-range_, upper=range_,
+                                            method=method_EB)
+                assert(EB_p == EB_)
+
+            # P-vals
+            if method == ref_method:
+                assert(np.isnan(pval))
+                assert(np.isnan(pval_p))
+            else:
+                pval_ = bt.get_test(x - ref_x, lower=-range_, upper=range_,
+                                    method=method_EB)
+                assert(pval == pval_p)
+                assert(pval == pval_)
+
 
 if __name__ == '__main__':
-    np.random.seed(53634)
+    np.random.seed(85634)
 
-    for _ in range(MC_REPEATS_LARGE):
+    # Already have for-loop built in
+    test_boot_EB_and_test()
+    test_get_mean_EB_test()
+
+    for rr in range(MC_REPEATS_LARGE):
         test_clip_EB()
-        hard_loss_binary_test()
-        hard_loss_decision_test()
-        log_loss_test()
-        brier_loss_test()
-        spherical_loss_test()
-        loss_summary_table_test()
+        test_t_test_to_scipy()
+        test_t_test_on_zero()
+        test_t_test_zero_var()
+        test_t_test_inf()
+        test_t_EB_zero_var()
+        test_t_EB_inf()
+        test_t_test_to_EB()
+        test_bernstein_test_inf()
+        test_bernstein_EB_inf()
+        test_bernstein_test_to_EB()
+        # This is a big one, we could put in loop with less iters:
+        test_loss_summary_table()
+        print(rr)
 
     print('Now running MC tests')
-    pval = test_t_EB(trials=MC_REPEATS_LARGE)
-    print(pval)
-    assert(pval >= FPR / 2.0)
-    pval = test_get_mean_and_EB(trials=MC_REPEATS_LARGE)
-    print(pval)
-    assert(pval >= FPR / 2.0)
+    test_list = [test_t_EB_coverage, test_bernstein_EB_coverage]
+    for test_f in test_list:
+        pval = test_f(trials=MC_REPEATS_LARGE)
+        print(pval)
+        assert(pval >= FPR / len(test_list))
     print('passed')
