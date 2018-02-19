@@ -24,10 +24,8 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
     assert(np.all((loss == 0) | (loss == FN_cost) | (loss == FP_cost)))
     return loss
 
-# TODO change _test order in func name
 
-
-def hard_loss_decision_test():
+def test_hard_loss_decision():
     n_labels = np.random.randint(low=1, high=10)
     n_act = np.random.randint(low=1, high=10)
     N = np.random.randint(low=0, high=10)
@@ -49,7 +47,7 @@ def hard_loss_decision_test():
     assert(np.all(act2 == loss_mat.shape[1] - 1))
 
 
-def hard_loss_binary_test():
+def test_hard_loss_binary():
     '''Also tests hard loss.'''
     n_labels = 2
     N = np.random.randint(low=1, high=10)
@@ -66,7 +64,7 @@ def hard_loss_binary_test():
     assert(np.allclose(loss, loss2))
 
 
-def log_loss_test():
+def test_log_loss():
     n_labels = np.random.randint(low=1, high=10)
     N = np.random.randint(low=1, high=10)
 
@@ -87,7 +85,7 @@ def log_loss_test():
 # TODO test with rescale=True
 
 
-def brier_loss_test():
+def test_brier_loss():
     n_labels = np.random.randint(low=1, high=4)
     N = np.random.randint(low=1, high=10)
 
@@ -106,7 +104,7 @@ def brier_loss_test():
     assert(np.max(np.abs(loss2)) <= 1e-8)
 
 
-def spherical_loss_test():
+def test_spherical_loss():
     n_labels = np.random.randint(low=1, high=10)
     N = np.random.randint(low=1, high=10)
 
@@ -132,20 +130,15 @@ def spherical_loss_test():
         loss2 = btc.spherical_loss(y, pred_prob, rescale=False)
         assert(np.max(np.abs(loss2)) <= 1e-8)
 
-# TODO test loss table
-
-# TODO note that curves done in boot
-
-# TODO test rest of classification
-
+# Note: btc.curve_boot is tested in slow_tests/boot_test.py
 
 if __name__ == '__main__':
     np.random.seed(845412)
 
     for _ in range(MC_REPEATS_LARGE):
-        hard_loss_binary_test()
-        hard_loss_decision_test()
-        log_loss_test()
-        brier_loss_test()
-        spherical_loss_test()
+        test_hard_loss_binary()
+        test_hard_loss_decision()
+        test_log_loss()
+        test_brier_loss()
+        test_spherical_loss()
     print('passed')
