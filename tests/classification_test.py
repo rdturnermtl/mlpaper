@@ -82,8 +82,6 @@ def test_log_loss():
     loss2 = btc.log_loss(y, pred)
     assert(np.max(np.abs(loss2)) <= 1e-8)
 
-# TODO test with rescale=True
-
 
 def test_brier_loss():
     n_labels = np.random.randint(low=1, high=4)
@@ -102,6 +100,15 @@ def test_brier_loss():
         pred = np.log(util.one_hot(y, n_labels))
     loss2 = btc.brier_loss(y, pred, rescale=False)
     assert(np.max(np.abs(loss2)) <= 1e-8)
+    loss2 = btc.brier_loss(y, pred, rescale=True)
+    assert(np.max(np.abs(loss2)) <= 1e-8)
+
+    pred = util.normalize(np.zeros((N, n_labels)))
+    loss2 = btc.brier_loss(y, pred, rescale=True)
+    if n_labels >= 2:
+        assert(np.max(np.abs(loss2 - 1.0)) <= 1e-8)
+    else:
+        assert(np.max(np.abs(loss2)) <= 1e-8)
 
 
 def test_spherical_loss():
@@ -123,12 +130,18 @@ def test_spherical_loss():
         pred = np.log(util.one_hot(y, n_labels))
     loss2 = btc.spherical_loss(y, pred, rescale=False)
     assert(np.max(np.abs(loss2 + 1.0)) <= 1e-8)
+    loss2 = btc.spherical_loss(y, pred, rescale=True)
+    assert(np.max(np.abs(loss2)) <= 1e-8)
 
     if n_labels >= 2:
         with np.errstate(invalid='ignore', divide='ignore'):
             pred_prob = util.normalize(np.log(1.0 - util.one_hot(y, n_labels)))
         loss2 = btc.spherical_loss(y, pred_prob, rescale=False)
         assert(np.max(np.abs(loss2)) <= 1e-8)
+
+        loss2 = btc.spherical_loss(y, util.normalize(np.zeros((N, n_labels))),
+                                   rescale=True)
+        assert(np.max(np.abs(loss2 - 1.0)) <= 1e-8)
 
 # Note: btc.curve_boot is tested in slow_tests/boot_test.py
 
