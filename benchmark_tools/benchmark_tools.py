@@ -159,10 +159,14 @@ def bernstein_test(x, lower, upper):
     assert(range_ >= 0.0)  # Also catch (inf, inf) or nans
     assert(np.all(lower <= x) and np.all(x <= upper))
 
-    if (len(x) <= 1) or (range_ == np.inf) or (not np.all(np.isfinite(x))):
-        # Arguably, we could return p=0, if 0 is outside of [lower, upper], but
-        # it is unclear if there is any advantage to that extra complication.
+    if (len(x) <= 1) or (not np.all(np.isfinite(x))):
         return 1.0  # Can't say anything about scale => p=1
+    if (range_ == 0.0) or (range_ == np.inf):
+        # If range_ = inf, we could use p=0, if 0 is outside of [lower, upper],
+        # but it is unclear if there is any advantage to the extra hassle.
+        # If range_ = 0, then roots not invertible and distn on data x is a
+        # point mass => everything has p=1.
+        return 1.0
 
     # Get the moments
     N = len(x)
@@ -172,15 +176,10 @@ def bernstein_test(x, lower, upper):
     coef = [(3.0 * range_) / N, std * np.sqrt(2.0 / N), -np.abs(mu)]
     assert(np.all(np.isfinite(coef)))  # Should have caught non-finite cases
     coef_roots = np.roots(coef)
-    assert(len(coef_roots) <= 2)  # This should never happen for quadratic
+    assert(len(coef_roots) == 2)
     assert(coef_roots.dtype.kind == 'f')  # Appears roots are always real
-    print(coef_roots)
-    if len(coef_roots) == 0:
-        print(N, mu, std)
-        print(range_)
-        return 1.0  # TODO figure out this case
     # Appears to always be one neg and one pos root, but we looking for square
-    # root so the positive one is the correct one.
+    # root so the positive one is the correct one. The roots can be zero.
     assert(np.sum(coef_roots <= 0.0) >= 1)
     assert(np.sum(coef_roots >= 0.0) >= 1)
     B = np.max(coef_roots) ** 2  # Bernstein test statistic
