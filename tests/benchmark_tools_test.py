@@ -334,7 +334,7 @@ def test_get_mean_EB_test():
             EB_ = bt.t_EB(x, confidence=confidence)
         elif method == 'bernstein':
             EB_ = bt.bernstein_EB(x, lower=lower, upper=upper,
-                              confidence=confidence)
+                                  confidence=confidence)
         else:
             EB_ = bt.boot_EB(x, confidence=confidence)
         assert(EB_ >= EB or EB == min_EB)  # EB_ is pre-clip

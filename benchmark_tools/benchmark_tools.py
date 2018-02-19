@@ -268,7 +268,7 @@ def _boot_EB_and_test(x, confidence=0.95, n_boot=N_BOOT,
     EB = np.inf
     if return_EB:
         mu = np.mean(x)
-        EB = bu.error_bar(mu_boot, mu, confidence=confidence)    
+        EB = bu.error_bar(mu_boot, mu, confidence=confidence)
 
     # Useful in test:
     CI = -np.inf, np.inf

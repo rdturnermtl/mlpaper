@@ -26,6 +26,7 @@ def hard_loss_binary(y_bool, log_pred_prob, FP_cost=1.0):
 
 # TODO change _test order in func name
 
+
 def hard_loss_decision_test():
     n_labels = np.random.randint(low=1, high=10)
     n_act = np.random.randint(low=1, high=10)
@@ -84,6 +85,7 @@ def log_loss_test():
     assert(np.max(np.abs(loss2)) <= 1e-8)
 
 # TODO test with rescale=True
+
 
 def brier_loss_test():
     n_labels = np.random.randint(low=1, high=4)
