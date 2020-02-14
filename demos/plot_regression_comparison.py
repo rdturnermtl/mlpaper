@@ -5,7 +5,7 @@
 from __future__ import print_function, absolute_import, division
 import numpy as np
 from matplotlib import use
-use('pdf')
+use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared
@@ -82,5 +82,4 @@ plt.ylim(-4, 4)
 plt.legend(loc='best', scatterpoints=1, prop={'size': 8})
 plt.grid()
 plt.tight_layout(pad=0.0)
-plt.show()
 plt.savefig('regress.png', format='png', dpi=300, pad=0)

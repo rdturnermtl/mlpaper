@@ -303,7 +303,8 @@ def test_format_table():
     cols = pd.MultiIndex.from_product([metrics, stats],
                                       names=['metric', 'stat'])
     perf_tbl_dec = pd.DataFrame(index=methods, columns=cols, dtype=object)
-    perf_tbl_dec.index.name = 'method'
+    perf_tbl_dec.index.set_names('method', inplace=True)
+    print("name", perf_tbl_dec.index.name)
 
     crap_limit_max = {}
     crap_limit_min = {}
@@ -393,7 +394,7 @@ def test_decimalize():
     cols = pd.MultiIndex.from_product([metrics, stats],
                                       names=['metric', 'stat'])
     perf_tbl = pd.DataFrame(index=methods, columns=cols, dtype=object)
-    perf_tbl.index.name = 'method'
+    perf_tbl.index.set_names('method', inplace=True)
     crap_limit_max = {}
     crap_limit_min = {}
     for metric in metrics:

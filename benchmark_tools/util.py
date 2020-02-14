@@ -4,7 +4,7 @@ from builtins import range
 from sys import version_info
 import numpy as np
 import scipy.interpolate as si
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 
 STRICT_SPACING = False
 

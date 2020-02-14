@@ -107,7 +107,7 @@ def test_boot(runs=100):
         x_grid = np.linspace(0.05, 0.95, DEFAULT_NGRID)
         fail_EB, fail_P, fail_EB2, fail_P2, fail_curve = \
             run_trial(y_true, y_score, y_score_ref,
-                      true_curve, pc.roc_curve, seeds.next(), x_grid)
+                      true_curve, pc.roc_curve, next(seeds), x_grid)
         fail[0] += fail_EB
         fail[1] += fail_P
         fail[2] += fail_EB2
@@ -117,7 +117,7 @@ def test_boot(runs=100):
         true_curve = (np.array([[0.0, 1.0]]), np.array([[p, p]]), pc.PREV)
         fail_EB, fail_P, fail_EB2, fail_P2, fail_curve = \
             run_trial(y_true, y_score, y_score_ref, true_curve,
-                      pc.recall_precision_curve, seeds.next(), x_grid)
+                      pc.recall_precision_curve, next(seeds), x_grid)
         fail[4] += fail_EB
         fail[5] += fail_P
         fail[6] += fail_EB2
@@ -129,7 +129,7 @@ def test_boot(runs=100):
                       pc.PREV)
         fail_EB, fail_P, fail_EB2, fail_P2, fail_curve = \
             run_trial(y_true, y_score, y_score_ref,
-                      true_curve, pc.prg_curve, seeds.next(), x_grid)
+                      true_curve, pc.prg_curve, next(seeds), x_grid)
         fail[8] += fail_EB
         fail[9] += fail_P
         fail[10] += fail_EB2

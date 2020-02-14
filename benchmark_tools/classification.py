@@ -4,7 +4,7 @@ from builtins import range
 from joblib import Memory
 import numpy as np
 import pandas as pd
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 from benchmark_tools.benchmark_tools import loss_summary_table
 from benchmark_tools.constants import (
     STAT, CURVE_STATS, STD_STATS, ERR_COL, PVAL_COL,
@@ -487,7 +487,7 @@ def curve_summary_table(log_pred_prob_table, y,
     col_names = pd.MultiIndex.from_product([curve_dict.keys(), STD_STATS],
                                            names=[METRIC, STAT])
     curve_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
-    curve_tbl.index.name = METHOD
+    curve_tbl.index.set_names(METHOD, inplace=True)
 
     curve_dump = {}
     for method in methods:
@@ -687,7 +687,8 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
         try:
             pred_log_prob = method_obj.predict_log_proba(X_test)
         except:  # If there is no log proba available
-            pred_log_prob = np.log(method_obj.predict_proba(X_test))
+            with np.errstate(divide='ignore'):  # Not unusual to have some p=0 cases
+                pred_log_prob = np.log(method_obj.predict_proba(X_test))
         return pred_log_prob
 
     col_names = pd.MultiIndex.from_product([methods.keys(), range(n_labels)],

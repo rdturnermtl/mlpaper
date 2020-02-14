@@ -17,7 +17,7 @@ def test_one_hot():
     assert(z0.dtype.kind == 'b' and z0.shape == (N, n_labels))
 
     if N >= 1:
-        enc = OneHotEncoder(n_values=n_labels, sparse=False, dtype=bool)
+        enc = OneHotEncoder(categories=[list(range(n_labels))], drop=None, sparse=False, dtype=bool)
         z1 = enc.fit_transform(y[:, None])
         assert(np.all(z0 == z1))
 

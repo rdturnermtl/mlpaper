@@ -6,7 +6,7 @@
 from __future__ import print_function, absolute_import, division
 import numpy as np
 from matplotlib import use
-use('pdf')
+use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sklearn.model_selection import train_test_split
@@ -139,7 +139,6 @@ for ds_cnt, ds in enumerate(datasets):
                 size=15, horizontalalignment='right')
         i += 1
 plt.tight_layout()
-plt.show()
 plt.savefig('output.png', format='png', dpi=300, pad=0)
 
 for metric in STD_BINARY_CURVES:
@@ -167,5 +166,4 @@ for metric in STD_BINARY_CURVES:
                 ax.set_title(method)
             i += 1
     plt.tight_layout(pad=0.0)
-    plt.show()
     plt.savefig(metric + '.png', format='png', dpi=300, pad=0)

@@ -512,7 +512,7 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
     col_names = pd.MultiIndex.from_product([metrics, STD_STATS],
                                            names=[METRIC, STAT])
     perf_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
-    perf_tbl.index.name = METHOD
+    perf_tbl.index.set_names(METHOD, inplace=True)
     for metric in metrics:
         lower, upper = limits.get(metric, (-np.inf, np.inf))
         assert(lower <= upper)
