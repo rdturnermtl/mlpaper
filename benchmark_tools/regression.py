@@ -250,7 +250,7 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
     assert(X_train.ndim == 2)
     assert(y_train.shape == (X_train.shape[0],))
     assert(X_test.ndim == 2 and X_test.shape[1] == X_train.shape[1])
-    assert(X_train.dtype == X_test.dtype)  # Would be weird otherwise
+    assert(X_train.dtype.kind == X_test.dtype.kind)  # Would be weird otherwise
     assert(min_std >= 0.0)
 
     memory = Memory(cachedir=checkpointdir, verbose=0)

@@ -671,12 +671,13 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
     '''
     n_test = X_test.shape[0]
     assert(n_test > 0)
-    assert(X_train.ndim == 2)
+    # Allow ndim >= 2 since some input data (e.g. images) come that way
+    assert(X_train.ndim >= 2)
     assert(y_train.shape == (X_train.shape[0],))
     assert(y_train.dtype.kind in ('b', 'i'))
     assert(0 <= y_train.min() and y_train.max() < n_labels)
-    assert(X_test.ndim == 2 and X_test.shape[1] == X_train.shape[1])
-    assert(X_train.dtype == X_test.dtype)  # Would be weird otherwise
+    assert(X_test.ndim == X_train.ndim and X_test.shape[1] == X_train.shape[1])
+    assert(X_train.dtype.kind == X_test.dtype.kind)  # Would be weird otherwise
     assert(min_log_prob < 0.0)  # Ensure is a log-prob
 
     memory = Memory(cachedir=checkpointdir, verbose=0)
