@@ -608,12 +608,17 @@ class JustNoise:
     '''Class version of iid predictor compatible with sklearn interface. Same
     as ``sklearn.dummy.DummyClassifier(strategy='prior').``'''
 
-    def __init__(self, n_labels=2):
+    def __init__(self, n_labels=2, pseudo_count=0.0):
         self.pred = np.nan + np.zeros(n_labels)
+        self.pseudo_count = pseudo_count
 
     def fit(self, X_train, y_train):
         n_labels = len(self.pred)
-        self.pred = np.log(np.mean(one_hot(y_train, n_labels), axis=0))
+        n_points, = np.shape(y_train)
+
+        counts = self.pseudo_count + np.sum(one_hot(y_train, n_labels), axis=0)
+        n_total = n_points + n_labels * self.pseudo_count
+        self.pred = np.log(counts / n_total)
         assert(self.pred.shape == (n_labels,))
 
     def predict_log_proba(self, X_test):
