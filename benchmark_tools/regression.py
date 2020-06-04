@@ -258,7 +258,11 @@ def get_gauss_pred(X_train, y_train, X_test, methods,
     @memory.cache
     def train_predict(method_obj, X_train, y_train, X_test):
         method_obj.fit(X_train, y_train)
-        mu, std = method_obj.predict(X_test, return_std=True)
+        try:
+            mu, std = method_obj.predict(X_test, return_std=True)
+        except TypeError:
+            mu = method_obj.predict(X_test)
+            std = np.ones_like(mu)
         return mu, std
 
     col_names = pd.MultiIndex.from_product([methods.keys(), ('mu', 'std')],
