@@ -7,6 +7,7 @@
 #
 -r base.txt
 coverage==5.2             # via pytest-cov
+patsy==0.5.1              # via statsmodels
 py==1.9.0                 # via pytest
 pytest==3.0.7             # via -r requirements/test.in, pytest-cov
 pytest_cov==2.5.1         # via -r requirements/test.in
