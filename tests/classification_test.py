@@ -145,8 +145,6 @@ def test_spherical_loss():
         assert np.max(np.abs(loss2 - 1.0)) <= 1e-8
 
 
-# Note: btc.curve_boot is tested in slow_tests/boot_test.py
-
 if __name__ == "__main__":
     np.random.seed(845412)
 

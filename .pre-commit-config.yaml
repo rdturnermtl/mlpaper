@@ -60,3 +60,8 @@
   rev: v0.0.11
   hooks:
     - id: yesqa
+- repo: https://github.com/myint/eradicate
+  rev: 522ed7ce2da82d33b3e2331bf50d4671c5a5af9a  # pragma: allowlist secret
+  hooks:
+    - id: eradicate
+      exclude: docs/conf.py

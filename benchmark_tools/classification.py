@@ -386,7 +386,6 @@ def curve_boot(
     assert y_grid.shape == x_grid.shape
 
     # Setup boot strap weights
-    # weight = bu.stratified_boot_weights(y, n_boot, epsilon=epsilon)
     weight = bu.boot_weights(N, n_boot, epsilon=epsilon)
 
     # Get boot strapped scores

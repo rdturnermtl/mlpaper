@@ -134,9 +134,7 @@ def _remove_chars_py3(x_str, del_chars):
     return x_str
 
 
-# The py3 versions seems to work in Py2 after using:
-# from builtins import str
-# *if* x_str is unicode => need to make sure we use unicode consistently
+# We can probably remove this soon since Py2 is dead:
 remove_chars = _remove_chars_py3 if version_info[0] >= 3 else _remove_chars_py2
 
 # ============================================================================
