@@ -1,0 +1,3 @@
+include requirements/base.in
+include LICENSE
+include README.md
