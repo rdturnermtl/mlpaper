@@ -33,7 +33,7 @@
     hooks:
     -   id: isort
         language_version: python3
-        args: [-w 120, -m 3, -tc, --project=bayesmark]
+        args: [-w 120, -m 3, -tc, --project=benchmark_tools]
 - repo: https://github.com/jumanjihouse/pre-commit-hooks
   rev: 1.11.0
   hooks:
@@ -45,11 +45,6 @@
     hooks:
     -   id: forbid-crlf
     -   id: forbid-tabs
-- repo: https://github.com/kynan/nbstripout
-  rev: fe155a55548c61e4eb53522e57921077acf82c00  # pragma: allowlist secret
-  hooks:
-    - id: nbstripout
-      exclude: ^notebooks/.*\.out\.ipynb$
 - repo: https://github.com/Yelp/detect-secrets
   rev: v0.12.5
   hooks:
@@ -64,8 +59,3 @@
   rev: v0.0.11
   hooks:
     - id: yesqa
-- repo: https://github.com/myint/eradicate
-  rev: 522ed7ce2da82d33b3e2331bf50d4671c5a5af9a  # pragma: allowlist secret
-  hooks:
-    - id: eradicate
-      exclude: docs/conf.py
