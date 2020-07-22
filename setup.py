@@ -11,6 +11,8 @@ def read_requirements(name):
 
 
 requirements = read_requirements("base")
+demo_requirements = read_requirements("demo")
+test_requirements = read_requirements("test")
 
 with open("README.md") as f:
     long_description = f.read()
@@ -25,6 +27,7 @@ setup(
     license="Apache v2",
     description="Easy benchmarking of machine learning models with sklearn interface with statistical tests built-in.",
     install_requires=requirements,
+    extras_require={"demo": demo_requirements, "test": test_requirements},
     long_description=long_description,
     long_description_content_type="text/markdown",
     platforms=["any"],
