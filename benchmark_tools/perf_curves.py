@@ -1,12 +1,13 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, absolute_import
+from __future__ import absolute_import, print_function
+
 import numpy as np
 
 EPSILON = 1e-10  # Size of pseudo-point to add to true/false positive count.
 
 # Interpolation kinds used here
-LINEAR = 'linear'
-PREV = 'previous'
+LINEAR = "linear"
+PREV = "previous"
 
 # ============================================================================
 # Create general binary count curves
@@ -37,11 +38,11 @@ def _add_pseudo_points(fps, tps):
     tps : ndarray, shape (n_boot, n_thresholds)
         If in corner case, `fps` after adding pseudo-points
     """
-    assert(fps.shape == tps.shape)
-    assert(fps.size > 0)  # Otherwise -1 index doesn't work
+    assert fps.shape == tps.shape
+    assert fps.size > 0  # Otherwise -1 index doesn't work
 
-    fps_fix = (fps[:, -1] == 0)
-    tps_fix = (tps[:, -1] == 0)
+    fps_fix = fps[:, -1] == 0
+    tps_fix = tps[:, -1] == 0
 
     if np.any(fps_fix) or np.any(tps_fix):
         fps, tps = fps.astype(float), tps.astype(float)
@@ -84,12 +85,12 @@ def _binary_clf_curve(y_true, y_score, sample_weight=None):
     thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
-    assert(y_true.ndim == 1 and y_true.dtype.kind == 'b')
-    assert(y_score.shape == y_true.shape and np.all(np.isfinite(y_score)))
-    assert(y_true.size >= 1), 'y_true.size {}'.format(y_true.size)
+    assert y_true.ndim == 1 and y_true.dtype.kind == "b"
+    assert y_score.shape == y_true.shape and np.all(np.isfinite(y_score))
+    assert y_true.size >= 1, "y_true.size {}".format(y_true.size)
 
     # sort scores and corresponding truth values
-    desc_score_indices = np.argsort(y_score, kind='mergesort')[::-1]
+    desc_score_indices = np.argsort(y_score, kind="mergesort")[::-1]
     y_score, y_true = y_score[desc_score_indices], y_true[desc_score_indices]
 
     # y_score typically has many tied values. Here we extract
@@ -101,39 +102,39 @@ def _binary_clf_curve(y_true, y_score, sample_weight=None):
     if sample_weight is None:
         tps = np.cumsum(y_true)[threshold_idxs]
         fps = 1 + threshold_idxs - tps
-        assert(fps[-1] == np.sum(~y_true) and tps[-1] == np.sum(y_true))
+        assert fps[-1] == np.sum(~y_true) and tps[-1] == np.sum(y_true)
         tps, fps = tps[None, :], fps[None, :]  # Make output 2D in either case
     else:
-        assert(sample_weight.ndim == 2)
-        assert(sample_weight.shape[1] == y_true.size)
-        assert(sample_weight.shape[0] >= 1)  # Might work at 0 anyway
-        assert(np.all(np.isfinite(sample_weight)))
+        assert sample_weight.ndim == 2
+        assert sample_weight.shape[1] == y_true.size
+        assert sample_weight.shape[0] >= 1  # Might work at 0 anyway
+        assert np.all(np.isfinite(sample_weight))
         # Negative weight makes no sense, 0 can violate assumps. of other funcs
-        assert(np.all(sample_weight > 0))
+        assert np.all(sample_weight > 0)
 
         weight = sample_weight[:, desc_score_indices]
         tps = np.cumsum(y_true[None, :] * weight, axis=1)[:, threshold_idxs]
         fps = np.cumsum(weight, axis=1)[:, threshold_idxs] - tps
-        assert(np.allclose(fps[:, -1], np.sum(weight[:, ~y_true], axis=1)))
-        assert(np.allclose(tps[:, -1], np.sum(weight[:, y_true], axis=1)))
+        assert np.allclose(fps[:, -1], np.sum(weight[:, ~y_true], axis=1))
+        assert np.allclose(tps[:, -1], np.sum(weight[:, y_true], axis=1))
 
     # Now put in the (0, 0) coord (y_score >= np.inf)
     zero_vec = np.zeros((fps.shape[0], 1), dtype=fps.dtype)
     fps, tps = np.c_[zero_vec, fps], np.c_[zero_vec, tps]
     thresholds = np.r_[np.inf, y_score[threshold_idxs]]
-    assert(thresholds.ndim == 1 and thresholds.size >= 2)
+    assert thresholds.ndim == 1 and thresholds.size >= 2
 
     # Clean up corner case
     fps, tps = _add_pseudo_points(fps, tps)
-    assert(np.all(fps[:, -1] > 0) and np.all(tps[:, -1] > 0))
-    assert(fps.dtype == tps.dtype)
+    assert np.all(fps[:, -1] > 0) and np.all(tps[:, -1] > 0)
+    assert fps.dtype == tps.dtype
 
     # Remove any decreases due to numerics
     fps = np.maximum.accumulate(fps, axis=1)
-    assert(np.all((np.diff(fps, axis=1) >= 0.0) &
-                  (np.diff(tps, axis=1) >= 0.0)))
+    assert np.all((np.diff(fps, axis=1) >= 0.0) & (np.diff(tps, axis=1) >= 0.0))
 
     return fps, tps, thresholds
+
 
 # ============================================================================
 # Convert general binary count curves to ROC, PR, PRG
@@ -170,8 +171,7 @@ def roc_curve(y_true, y_score, sample_weight=None):
     thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
-    fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
-                                             sample_weight=sample_weight)
+    fps, tps, thresholds = _binary_clf_curve(y_true, y_score, sample_weight=sample_weight)
     fpr = np.true_divide(fps, fps[:, -1:])
     tpr = np.true_divide(tps, tps[:, -1:])
     return (fpr, tpr, LINEAR), thresholds
@@ -211,13 +211,12 @@ def recall_precision_curve(y_true, y_score, sample_weight=None):
     thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
-    fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
-                                             sample_weight=sample_weight)
+    fps, tps, thresholds = _binary_clf_curve(y_true, y_score, sample_weight=sample_weight)
     recall = np.true_divide(tps, tps[:, -1:])
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         precision = np.true_divide(tps, tps + fps)
     precision[:, 0] = precision[:, 1]
-    assert(np.all(0.0 <= precision) and np.all(precision <= 1.0))
+    assert np.all(0.0 <= precision) and np.all(precision <= 1.0)
     return (recall, precision, PREV), thresholds
 
 
@@ -245,22 +244,21 @@ def prg_curve(y_true, y_score, sample_weight=None):
     thresholds : ndarray, shape (n_thresholds,)
         Decreasing score values.
     """
-    fps, tps, thresholds = _binary_clf_curve(y_true, y_score,
-                                             sample_weight=sample_weight)
+    fps, tps, thresholds = _binary_clf_curve(y_true, y_score, sample_weight=sample_weight)
     n_neg, n_pos = fps[:, -1:], tps[:, -1:]
     fns = n_pos - tps
 
     den = n_neg * tps
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         rec_gain = 1.0 - np.true_divide(n_pos * fns, den)
         prec_gain = 1.0 - np.true_divide(n_pos * fps, den)
     # interpolate backward just like in PR curve
     prec_gain[:, 0] = prec_gain[:, 1]
 
     # Bring forward most recent negative point as point at 0
-    with np.errstate(invalid='ignore'):
-        assert(not np.any(np.diff(rec_gain, axis=1) < 0.0))
+    with np.errstate(invalid="ignore"):
+        assert not np.any(np.diff(rec_gain, axis=1) < 0.0)
     rec_gain = np.maximum(0.0, rec_gain)
-    assert(np.all(rec_gain <= 1.0))
-    assert(np.all((rec_gain == 0.0) | (prec_gain <= 1.0)))
+    assert np.all(rec_gain <= 1.0)
+    assert np.all((rec_gain == 0.0) | (prec_gain <= 1.0))
     return (rec_gain, prec_gain, PREV), thresholds

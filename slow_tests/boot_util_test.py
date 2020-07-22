@@ -1,10 +1,13 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, division
+from __future__ import division, print_function
+
 from builtins import range
+
 import numpy as np
 import scipy.stats as ss
+
 import benchmark_tools.boot_util as bu
-from benchmark_tools.test_constants import MC_REPEATS_LARGE, FPR
+from benchmark_tools.test_constants import FPR, MC_REPEATS_LARGE
 
 
 def get_boot_estimate(x, estimate_f):
@@ -23,7 +26,7 @@ def test_confidence_to_percentiles():
     confidence = np.random.rand()
 
     LB, UB = bu.confidence_to_percentiles(confidence)
-    assert(np.allclose(confidence * 100, UB - LB))
+    assert np.allclose(confidence * 100, UB - LB)
 
 
 def test_percentile_significance():
@@ -35,12 +38,12 @@ def test_percentile_significance():
 
     # Test when reference is included
     pval = bu.significance(x, ref=0)
-    assert(pval > 0.0)  # Not possible with 0 included
+    assert pval > 0.0  # Not possible with 0 included
     if pval == 1.0:
         pval = np.nextafter(1.0, 0.0)
     LB, UB = bu.percentile(x, confidence=1.0 - pval)
     # Make sure this expands p-value out to where needed to hit reference
-    assert(LB == 0 or UB == 0)
+    assert LB == 0 or UB == 0
 
     # Test when reference is not included, still rounds up
     x[x == 0] = np.random.randn()
@@ -49,15 +52,15 @@ def test_percentile_significance():
         confidence = np.nextafter(1.0, 0.0)  # => coverage near 1
         LB, UB = bu.percentile(x, confidence=confidence)
         # Arguably, -inf and inf are the correct answers here
-        assert(LB == np.min(x) and UB == np.max(x))
+        assert LB == np.min(x) and UB == np.max(x)
     elif pval == 1.0:
         # => coverage near 1, but EB still rounds up
         pval = np.nextafter(1.0, 0.0)
         LB, UB = bu.percentile(x, confidence=1.0 - pval)
-        assert(LB <= 0 and 0 <= UB)
+        assert LB <= 0 and 0 <= UB
     else:
         LB, UB = bu.percentile(x, confidence=1.0 - pval)
-        assert(LB <= 0 and 0 <= UB)
+        assert LB <= 0 and 0 <= UB
 
 
 def test_percentile_ref():
@@ -71,13 +74,13 @@ def test_percentile_ref():
     y = np.random.choice(np.concatenate((x, y)), size=N, replace=True)
     pval1 = bu.significance(x, ref=y)
     pval2 = bu.significance(x - y, ref=0)
-    assert(pval1 == pval2)
+    assert pval1 == pval2
 
     # And test with scalar ref
     y = np.random.choice(y)
     pval1 = bu.significance(x, ref=y)
     pval2 = bu.significance(x - y, ref=0)
-    assert(pval1 == pval2)
+    assert pval1 == pval2
 
 
 def inner_test_boot(runs=100):
@@ -123,9 +126,7 @@ def inner_test_boot(runs=100):
         fail[6] += fail_perc
         fail[7] += fail_EB
     pvals_2side = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
-    pvals_1side = \
-        [ss.binom_test(ff, runs, 1.0 - confidence, alternative='greater')
-         for ff in fail]
+    pvals_1side = [ss.binom_test(ff, runs, 1.0 - confidence, alternative="greater") for ff in fail]
     return pvals_2side, pvals_1side
 
 
@@ -144,7 +145,7 @@ def inner_test_paired_boot(runs=100):
 
         boot = [get_boot_estimate_vec(x, est_f) for _ in range(B)]
         boot = np.asarray(boot)
-        assert(boot.shape == (B, 2))
+        assert boot.shape == (B, 2)
         delta = boot[:, 1] - boot[:, 0]
 
         LB, UB = bu.percentile(delta, confidence=confidence)
@@ -175,9 +176,7 @@ def inner_test_paired_boot(runs=100):
         fail[6] += fail_perc
         fail[7] += fail_EB
     pvals_2side = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
-    pvals_1side = \
-        [ss.binom_test(ff, runs, 1.0 - confidence, alternative='greater')
-         for ff in fail]
+    pvals_1side = [ss.binom_test(ff, runs, 1.0 - confidence, alternative="greater") for ff in fail]
     return pvals_2side, pvals_1side
 
 
@@ -196,7 +195,7 @@ def inner_test_significance(runs=100):
     def run_trial(x, est_f, true_value):
         boot = [get_boot_estimate_vec(x, est_f) for _ in range(B)]
         boot = np.asarray(boot)
-        assert(boot.shape == (B, 2))
+        assert boot.shape == (B, 2)
 
         pval = bu.significance(boot[:, 0], true_value)
         fail_P = pval < 1.0 - confidence
@@ -221,9 +220,7 @@ def inner_test_significance(runs=100):
         fail[4] += fail_P
         fail[5] += fail_P2
     pvals_2side = [ss.binom_test(ff, runs, 1.0 - confidence) for ff in fail]
-    pvals_1side = \
-        [ss.binom_test(ff, runs, 1.0 - confidence, alternative='greater')
-         for ff in fail]
+    pvals_1side = [ss.binom_test(ff, runs, 1.0 - confidence, alternative="greater") for ff in fail]
     return pvals_2side, pvals_1side
 
 
@@ -238,15 +235,13 @@ def loop_test(test_f):
     M2 = np.asarray(M2)
     M1 = np.asarray(M1)
 
-    pvals_2side = [ss.combine_pvalues(M2[:, ii])[1]
-                   for ii in range(M2.shape[1])]
-    pvals_1side = [ss.combine_pvalues(M1[:, ii])[1]
-                   for ii in range(M1.shape[1])]
+    pvals_2side = [ss.combine_pvalues(M2[:, ii])[1] for ii in range(M2.shape[1])]
+    pvals_1side = [ss.combine_pvalues(M1[:, ii])[1] for ii in range(M1.shape[1])]
 
     print(pvals_2side)
-    assert(np.min(pvals_2side) >= FPR / len(pvals_2side))
+    assert np.min(pvals_2side) >= FPR / len(pvals_2side)
     print(pvals_1side)
-    assert(np.min(pvals_1side) >= FPR / len(pvals_1side))
+    assert np.min(pvals_1side) >= FPR / len(pvals_1side)
 
 
 def test_boot():
@@ -260,7 +255,8 @@ def test_paired_boot():
 def test_paired_significance():
     loop_test(inner_test_significance)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     np.random.seed(24233)
 
     for rr in range(MC_REPEATS_LARGE):
@@ -270,4 +266,4 @@ if __name__ == '__main__':
     test_boot()
     test_paired_boot()
     test_paired_significance()
-    print('passed')
+    print("passed")

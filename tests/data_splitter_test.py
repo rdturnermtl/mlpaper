@@ -1,10 +1,13 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, division
+from __future__ import division, print_function
+
 from builtins import range
 from collections import OrderedDict
 from string import ascii_letters
+
 import numpy as np
 import pandas as pd
+
 import benchmark_tools.data_splitter as ds
 from benchmark_tools.test_constants import MC_REPEATS_LARGE
 
@@ -16,7 +19,7 @@ def unif2():
 
 def unif_subset(L, size=None):
     if len(L) == 0:
-        assert(size is None or size == 0)
+        assert size is None or size == 0
         return list(L)
     size = np.random.randint(len(L) + 1) if size is None else size
     S = list(np.random.choice(L, size, replace=False))
@@ -39,8 +42,7 @@ def test_df(high_M=6, high_N=6):
     idx = range(M)  # Will over-write anyway
 
     s_list, u_list = unif_subset(col), unif_subset(col)
-    dat = [vec_rnd(M, req_sorted=(c in s_list), req_unique=(c in u_list))
-           for c in col]
+    dat = [vec_rnd(M, req_sorted=(c in s_list), req_unique=(c in u_list)) for c in col]
     dat = np.concatenate(dat, axis=1)
 
     idx_name = col[0]
@@ -64,8 +66,7 @@ def test_splitter(seed0=10, seed1=100):
 
     col = list(df.columns)
     kk = unif_subset(col)
-    splits = {k: (np.random.choice(list(ds.SPLITTER_LIB.keys())), unif2())
-              for k in kk}
+    splits = {k: (np.random.choice(list(ds.SPLITTER_LIB.keys())), unif2()) for k in kk}
 
     for k in splits:
         split_type, _ = splits[k]
@@ -84,8 +85,7 @@ def test_splitter(seed0=10, seed1=100):
         splits2[df.index.name] = splits[ds.INDEX]
 
     np.random.seed(seed1)
-    df_train, df_test, df_unused = ds.split_df(df, splits,
-                                               assume_unique=u_list)
+    df_train, df_test, df_unused = ds.split_df(df, splits, assume_unique=u_list)
 
     # Make index a normal column and see if split gives same result
     df.reset_index(drop=False, inplace=True)
@@ -100,15 +100,16 @@ def test_splitter(seed0=10, seed1=100):
     df_test2.reset_index(drop=True, inplace=True)
     df_unused2.reset_index(drop=True, inplace=True)
 
-    assert(df_train.equals(df_train2))
-    assert(df_test.equals(df_test2))
-    assert(df_unused.equals(df_unused2))
+    assert df_train.equals(df_train2)
+    assert df_test.equals(df_test2)
+    assert df_unused.equals(df_unused2)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     np.random.seed(635463)
 
     runs = MC_REPEATS_LARGE
-    seeds = np.random.randint(low=0, high=10**6, size=(runs, 2))
+    seeds = np.random.randint(low=0, high=10 ** 6, size=(runs, 2))
     for rr in range(runs):
         test_splitter(seeds[rr, 0], seeds[rr, 1])
-    print('passed')
+    print("passed")

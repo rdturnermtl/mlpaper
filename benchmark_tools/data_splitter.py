@@ -1,15 +1,17 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, absolute_import, division
+from __future__ import absolute_import, division, print_function
+
 from builtins import range
+
 import numpy as np
 import pandas as pd
 
-RANDOM = 'random'
-ORDRED = 'ordered'
-LINEAR = 'linear'
+RANDOM = "random"
+ORDRED = "ordered"
+LINEAR = "linear"
 ORDERED = ORDRED  # Alias with extra char but correct spelling
 
-SFT_FMT = 'L%d'
+SFT_FMT = "L%d"
 INDEX = None  # Dummy variable to represent index of dataframe
 DEFAULT_SPLIT = {INDEX: (RANDOM, 0.8)}  # The ML standard for some reason
 
@@ -57,7 +59,7 @@ def build_lag_df(df, n_lags, stride=1, features=None):
     D = {(SFT_FMT % nn): df_sub.shift(stride * nn) for nn in range(1, n_lags)}
     D[SFT_FMT % 0] = df
 
-    df = pd.concat(D, axis=1, names=['lag'])
+    df = pd.concat(D, axis=1, names=["lag"])
     # Re-order the levels so there are the same as before but lag at end
     df = df.reorder_levels(range(1, len(df.columns.names)) + [0], axis=1)
     return df
@@ -104,13 +106,13 @@ def rand_subset(x, frac):
     L : ndarray, shape (m_samples,)
         Array that is subset with m_samples = ceil(frac * n_samples) samples.
     """
-    assert(0.0 <= frac and frac <= 1.0)
+    assert 0.0 <= frac and frac <= 1.0
 
     N = int(np.ceil(frac * len(x)))
-    assert(0 <= N and N <= len(x))
+    assert 0 <= N and N <= len(x)
     L = np.random.choice(x, N, replace=False)
-    assert(len(L) >= len(x) * frac)
-    assert(len(L) - 1 < len(x) * frac)
+    assert len(L) >= len(x) * frac
+    assert len(L) - 1 < len(x) * frac
     return L
 
 
@@ -134,8 +136,8 @@ def rand_mask(n_samples, frac):
     pos = rand_subset(range(n_samples), frac)
     mask = np.zeros(n_samples, dtype=bool)
     mask[pos] = True
-    assert(np.sum(mask) >= n_samples * frac)
-    assert(np.sum(mask) - 1 < n_samples * frac)
+    assert np.sum(mask) >= n_samples * frac
+    assert np.sum(mask) - 1 < n_samples * frac
     return mask
 
 
@@ -163,7 +165,7 @@ def random_split_series(S, frac, assume_sorted=False, assume_unique=False):
     train_curr : Series with values of type bool, shape (n_samples,)
         Random binary mask with index matching `S`.
     """
-    assert(not S.isnull().any())  # Ordering/comparing NaNs ambiguous
+    assert not S.isnull().any()  # Ordering/comparing NaNs ambiguous
     # Frac range checking taken care of by sub-routines
 
     if assume_unique:
@@ -200,8 +202,8 @@ def ordered_split_series(S, frac, assume_sorted=False, assume_unique=False):
     train_curr : Series with values of type bool, shape (n_samples,)
         Binary mask with index matching `S`.
     """
-    assert(not S.isnull().any())  # Ordering/comparing NaNs ambiguous
-    assert(0.0 <= frac and frac <= 1.0)
+    assert not S.isnull().any()  # Ordering/comparing NaNs ambiguous
+    assert 0.0 <= frac and frac <= 1.0
 
     # Get all cases in sorted order
     if assume_sorted and assume_unique:
@@ -212,12 +214,12 @@ def ordered_split_series(S, frac, assume_sorted=False, assume_unique=False):
         all_cases = np.unique(S.values)
 
     idx = min(int(frac * len(all_cases)), len(all_cases) - 1)
-    assert(0 <= idx)  # Should never happen due to frac check earlier
+    assert 0 <= idx  # Should never happen due to frac check earlier
     pivotal_case = all_cases[idx]
     # Check we rounded to err just on side of putting more data in train
-    assert(np.mean(all_cases <= pivotal_case) >= frac)
-    assert(idx == 0 or np.mean(all_cases <= all_cases[idx - 1]) < frac)
-    train_curr = (S <= pivotal_case)
+    assert np.mean(all_cases <= pivotal_case) >= frac
+    assert idx == 0 or np.mean(all_cases <= all_cases[idx - 1]) < frac
+    train_curr = S <= pivotal_case
     return train_curr
 
 
@@ -247,26 +249,25 @@ def linear_split_series(S, frac, assume_sorted=False, assume_unique=False):
     train_curr : Series with values of type bool, shape (n_samples,)
         Binary mask with index matching `S`.
     """
-    assert(not S.isnull().any())  # Ordering/comparing NaNs ambiguous
-    assert(0.0 <= frac and frac <= 1.0)
+    assert not S.isnull().any()  # Ordering/comparing NaNs ambiguous
+    assert 0.0 <= frac and frac <= 1.0
 
     if assume_sorted:
         start, end = S.values[0], S.values[-1]
     else:
         start, end = np.min(S.values), np.max(S.values)
-    assert(np.isfinite(start) and np.isfinite(end))
+    assert np.isfinite(start) and np.isfinite(end)
 
     pivotal_point = (1.0 - frac) * start + frac * end
     # For numerics:
     pivotal_point = np.maximum(start, np.minimum(pivotal_point, end))
-    assert(start <= pivotal_point and pivotal_point <= end)
+    assert start <= pivotal_point and pivotal_point <= end
 
-    train_curr = (S <= pivotal_point)
+    train_curr = S <= pivotal_point
     return train_curr
 
-SPLITTER_LIB = {RANDOM: random_split_series,
-                ORDRED: ordered_split_series,
-                LINEAR: linear_split_series}
+
+SPLITTER_LIB = {RANDOM: random_split_series, ORDRED: ordered_split_series, LINEAR: linear_split_series}
 
 
 def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
@@ -309,9 +310,9 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
         Subset of `df` not in training or test. This will be empty if only a
         single column is ued in `splits`.
     """
-    assert(len(splits) > 0)
-    assert(len(df) > 0)  # It is not hard to get working with len 0, but why.
-    assert(INDEX not in df)  # None repr for INDEX, col name is reserved here.
+    assert len(splits) > 0
+    assert len(df) > 0  # It is not hard to get working with len 0, but why.
+    assert INDEX not in df  # None repr for INDEX, col name is reserved here.
 
     train_series = pd.Series(index=df.index, data=True)
     test_series = pd.Series(index=df.index, data=True)
@@ -321,16 +322,16 @@ def split_df(df, splits=DEFAULT_SPLIT, assume_unique=(), assume_sorted=()):
         splitter_f = SPLITTER_LIB[split_type]
 
         S = index_to_series(df.index) if feature is INDEX else df[feature]
-        train_curr = splitter_f(S, frac,
-                                assume_sorted=(feature in assume_sorted),
-                                assume_unique=(feature in assume_unique))
+        train_curr = splitter_f(
+            S, frac, assume_sorted=(feature in assume_sorted), assume_unique=(feature in assume_unique)
+        )
 
-        assert(train_curr.dtype.kind == 'b')  # Make sure ~ does right thing
+        assert train_curr.dtype.kind == "b"  # Make sure ~ does right thing
         train_series &= train_curr
         test_series &= ~train_curr
-    assert(not (train_series & test_series).any())
+    assert not (train_series & test_series).any()
 
     df_train, df_test = df[train_series], df[test_series]
     df_unused = df[~(train_series | test_series)]
-    assert(len(df_train) + len(df_test) + len(df_unused) == len(df))
+    assert len(df_train) + len(df_test) + len(df_unused) == len(df)
     return df_train, df_test, df_unused
