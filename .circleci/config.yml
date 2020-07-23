@@ -44,7 +44,7 @@ jobs:
           name: run tests
           command: |
             export PATH=$PATH:~/.local/bin
-            python -m pytest test/ --verbose
+            python -m pytest tests/ --verbose
 
       - store_artifacts:
           path: test-reports
