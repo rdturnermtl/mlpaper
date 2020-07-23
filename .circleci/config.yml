@@ -33,7 +33,7 @@ jobs:
           name: install dependencies
           command: |
             export PATH=$PATH:~/.local/bin
-            pip install -e .[test]
+            pip install -e .[test] --user
 
       # run tests!
       # this example uses Django's built-in test-runner
