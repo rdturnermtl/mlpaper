@@ -1,11 +1,10 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import absolute_import, division, print_function
 
+import benchmark_tools.boot_util as bu
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-
-import benchmark_tools.boot_util as bu
 from benchmark_tools.constants import METHOD, METRIC, PAIRWISE_DEFAULT, STAT, STD_STATS
 from benchmark_tools.util import clip_chk
 
