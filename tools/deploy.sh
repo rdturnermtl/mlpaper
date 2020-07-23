@@ -17,9 +17,7 @@ VERSION=$4
 git push --dry-run
 
 # Check versions are there, this is a crude way to do it but it works
-grep "^$PACKAGE==$VERSION\$" requirements/self.txt
-grep '^__version__ = "'$VERSION'"$' bayesmark/__init__.py
-grep 'version="'$VERSION'",$' setup.py
+grep '^__version__ = "'$VERSION'"$' benchmark_tools/__init__.py
 
 # Where envs go
 ENVS=~/envs
@@ -41,8 +39,7 @@ test -z "$(git status --porcelain)"
 git clean -x -ff -d
 
 # Run tests locally and cleanup
-./integration_test_with_setup.sh
-./test.sh
+./local_test.sh
 git reset --hard HEAD
 git clean -x -ff -d
 test -z "$(git status --porcelain)"
@@ -51,9 +48,9 @@ test -z "$(git status --porcelain)"
 git push -u $REMOTE $BRANCH
 git diff $BRANCH $REMOTE/$BRANCH --quiet
 
-# See if tests pass remote, TODO use travis CLI
+# See if tests pass remote
 read -t 1 -n 10000 discard || true
-read -p "Travis tests pass [y/n]? " -r
+read -p "CircleCI tests pass [y/n]? " -r
 if [[ ! $REPLY =~ ^[Yy]$ ]]
 then
     exit 1
@@ -73,7 +70,7 @@ source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
 pip install $REPO_DIR/dist/*.tar.gz
 cp -r $REPO_DIR/test .
-pytest test/ -s -v --hypothesis-seed=0 --disable-pytest-warnings
+pytest test/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
 # Cleanup since we will build again
@@ -99,8 +96,7 @@ git commit -m "$REPLY"
 test -z "$(git status --porcelain)"
 
 # Run tests locally and cleanup
-./integration_test_with_setup.sh
-./test.sh
+./local_test.sh
 git reset --hard HEAD
 git clean -x -ff -d
 test -z "$(git status --porcelain)"
@@ -119,7 +115,7 @@ source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
 pip install $REPO_DIR/dist/*.tar.gz
 cp -r $REPO_DIR/test .
-pytest test/ -s -v --hypothesis-seed=0 --disable-pytest-warnings
+pytest test/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
 
@@ -140,14 +136,9 @@ cd $UUID
 virtualenv env --python=$PY
 source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
-pip install -r $REPO_DIR/requirements/ipynb.txt
 pip install $PACKAGE==$VERSION --index-url https://test.pypi.org/simple/
-cp $REPO_DIR/integration_test.sh .
-cp -r $REPO_DIR/notebooks .
-cp -r $REPO_DIR/example_opt_root .
-./integration_test.sh
 cp -r $REPO_DIR/test .
-pytest test/ -s -v --hypothesis-seed=0 --disable-pytest-warnings
+pytest test/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
 
@@ -158,9 +149,9 @@ git diff master $REMOTE/master --quiet
 # Show sha256sum in case we want to check against PyPI test, use || for Mac OS version
 sha256sum dist/* || shasum -a 256 dist/*
 
-# See if tests pass remote, TODO use travis CLI
+# See if tests pass remote
 read -t 1 -n 10000 discard || true
-read -p "Travis tests pass, and push to PyPI? This cannot be undone. [push/no]" -r
+read -p "CircleCI tests pass, and push to PyPI? This cannot be undone. [push/no]" -r
 if [[ ! $REPLY == push ]]
 then
     exit 1
@@ -183,14 +174,9 @@ cd $UUID
 virtualenv env --python=$PY
 source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
-pip install -r $REPO_DIR/requirements/ipynb.txt
 pip install $PACKAGE==$VERSION
-cp $REPO_DIR/integration_test.sh .
-cp -r $REPO_DIR/notebooks .
-cp -r $REPO_DIR/example_opt_root .
-./integration_test.sh
 cp -r $REPO_DIR/test .
-pytest test/ -s -v --hypothesis-seed=0 --disable-pytest-warnings
+pytest test/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
 
