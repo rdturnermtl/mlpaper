@@ -26,6 +26,7 @@ setup(
     author_email=("rdturnermtl@github.com"),
     license="Apache v2",
     description="Easy benchmarking of machine learning models with sklearn interface with statistical tests built-in.",
+    python_requires=">=3.5",
     install_requires=requirements,
     extras_require={"demo": demo_requirements, "test": test_requirements},
     long_description=long_description,
