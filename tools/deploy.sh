@@ -17,7 +17,7 @@ VERSION=$4
 git push --dry-run
 
 # Check versions are there, this is a crude way to do it but it works
-grep '^__version__ = "'$VERSION'"$' benchmark_tools/__init__.py
+grep '^__version__ = "'$VERSION'"$' mlpaper/__init__.py
 
 # Where envs go
 ENVS=~/envs

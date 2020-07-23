@@ -27,13 +27,13 @@
     rev: v1.2.0
     hooks:
     -   id: seed-isort-config
-        args: [--application-directories=benchmark_tools]
+        args: [--application-directories=mlpaper]
 -   repo: https://github.com/pre-commit/mirrors-isort
     rev: v4.3.4
     hooks:
     -   id: isort
         language_version: python3
-        args: [-w 120, -m 3, -tc, --project=benchmark_tools]
+        args: [-w 120, -m 3, -tc, --project=mlpaper]
 - repo: https://github.com/jumanjihouse/pre-commit-hooks
   rev: 1.11.0
   hooks:

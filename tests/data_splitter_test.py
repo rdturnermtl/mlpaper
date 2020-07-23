@@ -8,8 +8,8 @@ from string import ascii_letters
 import numpy as np
 import pandas as pd
 
-import benchmark_tools.data_splitter as ds
-from benchmark_tools.test_constants import MC_REPEATS_LARGE
+import mlpaper.data_splitter as ds
+from mlpaper.test_constants import MC_REPEATS_LARGE
 
 
 def unif2():

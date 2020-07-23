@@ -11,9 +11,9 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ExpSineSquared, WhiteKernel
 from sklearn.linear_model import BayesianRidge
 
-import benchmark_tools.regression as btr
-import benchmark_tools.sciprint as sp
-from benchmark_tools.regression import STD_REGR_LOSS
+import mlpaper.regression as btr
+import mlpaper.sciprint as sp
+from mlpaper.regression import STD_REGR_LOSS
 
 use("Agg")
 

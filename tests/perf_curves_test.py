@@ -7,9 +7,9 @@ import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics.ranking import _binary_clf_curve, precision_recall_curve, roc_curve
 
-import benchmark_tools.perf_curves as pc
-import benchmark_tools.util as util
-from benchmark_tools.test_constants import MC_REPEATS_LARGE
+import mlpaper.perf_curves as pc
+import mlpaper.util as util
+from mlpaper.test_constants import MC_REPEATS_LARGE
 
 # ============================================================================
 # Non-vectorized versions of routines in perf_curves for testing.

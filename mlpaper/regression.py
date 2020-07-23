@@ -8,8 +8,8 @@ import pandas as pd
 import scipy.stats as ss
 from joblib import Memory
 
-from benchmark_tools.benchmark_tools import PAIRWISE_DEFAULT, loss_summary_table
-from benchmark_tools.constants import METHOD, METRIC
+from mlpaper.constants import METHOD, METRIC
+from mlpaper.mlpaper import PAIRWISE_DEFAULT, loss_summary_table
 
 MOMENT = "moment"  # Don't put in constants since only needed for regression
 
