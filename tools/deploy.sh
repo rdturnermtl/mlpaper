@@ -69,7 +69,7 @@ virtualenv env --python=$PY
 source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
 pip install $REPO_DIR/dist/*.tar.gz
-cp -r $REPO_DIR/test .
+cp -r $REPO_DIR/tests .
 pytest tests/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
@@ -114,7 +114,7 @@ virtualenv env --python=$PY
 source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
 pip install $REPO_DIR/dist/*.tar.gz
-cp -r $REPO_DIR/test .
+cp -r $REPO_DIR/tests .
 pytest tests/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
@@ -137,7 +137,7 @@ virtualenv env --python=$PY
 source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
 pip install $PACKAGE==$VERSION --index-url https://test.pypi.org/simple/
-cp -r $REPO_DIR/test .
+cp -r $REPO_DIR/tests .
 pytest tests/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
@@ -175,7 +175,7 @@ virtualenv env --python=$PY
 source ./env/bin/activate
 pip install -r $REPO_DIR/requirements/test.txt
 pip install $PACKAGE==$VERSION
-cp -r $REPO_DIR/test .
+cp -r $REPO_DIR/tests .
 pytest tests/ -s -v --disable-pytest-warnings
 deactivate
 cd $REPO_DIR
