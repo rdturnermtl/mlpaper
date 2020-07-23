@@ -1,5 +1,5 @@
 -r base.in
-scikit_learn==0.20.0
+scikit_learn==0.21.0
 statsmodels==0.9.0
 pytest==3.0.7
 pytest_cov==2.5.1
