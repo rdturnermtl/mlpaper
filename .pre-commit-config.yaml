@@ -40,7 +40,6 @@
     - id: require-ascii
     - id: script-must-have-extension
     - id: forbid-binary
-      exclude: ^(doc/.*\.png)
 -   repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.1.6
     hooks:
@@ -64,4 +63,4 @@
   rev: 522ed7ce2da82d33b3e2331bf50d4671c5a5af9a  # pragma: allowlist secret
   hooks:
     - id: eradicate
-      exclude: docs/conf.py
+      exclude: ^(docs/conf.py)$
