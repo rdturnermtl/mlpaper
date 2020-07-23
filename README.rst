@@ -1,10 +1,6 @@
 The ML Paper Package (mlpaper)
 ==============================
 
-.. image:: https://circleci.com/gh/rdturnermtl/mlpaper.png?style=shield
-   :target: https://circleci.com/gh/rdturnermtl/mlpaper
-   :alt: status badge
-
 Easy benchmarking of machine learning models with sklearn interface with
 statistical tests built-in.
 
