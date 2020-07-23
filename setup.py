@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-from benchmark_tools import __version__
+from mlpaper import __version__
 
 
 def read_requirements(name):
@@ -18,10 +18,10 @@ with open("README.md") as f:
     long_description = f.read()
 
 setup(
-    name="benchmark_tools",
+    name="mlpaper",
     version=__version__,
     packages=find_packages(),
-    url="https://github.com/rdturnermtl/benchmark_tools/",
+    url="https://github.com/rdturnermtl/mlpaper/",
     author="Ryan Turner",
     author_email=("rdturnermtl@github.com"),
     license="Apache v2",

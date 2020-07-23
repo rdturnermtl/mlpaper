@@ -6,8 +6,8 @@ from builtins import range
 import numpy as np
 import scipy.stats as ss
 
-import benchmark_tools.boot_util as bu
-from benchmark_tools.test_constants import FPR, MC_REPEATS_LARGE
+import mlpaper.boot_util as bu
+from mlpaper.test_constants import FPR, MC_REPEATS_LARGE
 
 
 def get_boot_estimate(x, estimate_f):

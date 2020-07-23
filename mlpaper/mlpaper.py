@@ -1,12 +1,13 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
 from __future__ import absolute_import, division, print_function
 
-import benchmark_tools.boot_util as bu
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from benchmark_tools.constants import METHOD, METRIC, PAIRWISE_DEFAULT, STAT, STD_STATS
-from benchmark_tools.util import clip_chk
+
+import mlpaper.boot_util as bu
+from mlpaper.constants import METHOD, METRIC, PAIRWISE_DEFAULT, STAT, STD_STATS
+from mlpaper.util import clip_chk
 
 N_BOOT = 1000  # Default number of bootstrap replications
 

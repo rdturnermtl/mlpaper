@@ -22,9 +22,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
-import benchmark_tools.classification as btc
-import benchmark_tools.sciprint as sp
-from benchmark_tools.classification import STD_BINARY_CURVES, STD_CLASS_LOSS
+import mlpaper.classification as btc
+import mlpaper.sciprint as sp
+from mlpaper.classification import STD_BINARY_CURVES, STD_CLASS_LOSS
 
 use("Agg")
 

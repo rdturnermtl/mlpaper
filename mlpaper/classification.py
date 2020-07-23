@@ -8,11 +8,11 @@ import pandas as pd
 from joblib import Memory
 from scipy.special import logsumexp
 
-import benchmark_tools.boot_util as bu
-import benchmark_tools.perf_curves as pc
-from benchmark_tools.benchmark_tools import loss_summary_table
-from benchmark_tools.constants import CURVE_STATS, ERR_COL, METHOD, METRIC, PAIRWISE_DEFAULT, PVAL_COL, STAT, STD_STATS
-from benchmark_tools.util import area, interp1d, normalize, one_hot
+import mlpaper.boot_util as bu
+import mlpaper.perf_curves as pc
+from mlpaper.constants import CURVE_STATS, ERR_COL, METHOD, METRIC, PAIRWISE_DEFAULT, PVAL_COL, STAT, STD_STATS
+from mlpaper.mlpaper import loss_summary_table
+from mlpaper.util import area, interp1d, normalize, one_hot
 
 DEFAULT_NGRID = 100
 LABEL = "label"  # Don't put in constants since only needed for classification

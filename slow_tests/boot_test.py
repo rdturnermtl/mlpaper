@@ -6,12 +6,12 @@ from builtins import range
 import numpy as np
 import scipy.stats as ss
 
-import benchmark_tools.benchmark_tools as bt
-import benchmark_tools.constants as cc
-import benchmark_tools.perf_curves as pc
-from benchmark_tools.classification import DEFAULT_NGRID, curve_boot
-from benchmark_tools.test_constants import FPR
-from benchmark_tools.util import area, interp1d
+import mlpaper.constants as cc
+import mlpaper.mlpaper as bt
+import mlpaper.perf_curves as pc
+from mlpaper.classification import DEFAULT_NGRID, curve_boot
+from mlpaper.test_constants import FPR
+from mlpaper.util import area, interp1d
 
 _FPR = FPR / 3.0  # Divide by number of test funcs
 

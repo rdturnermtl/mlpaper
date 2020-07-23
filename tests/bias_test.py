@@ -6,9 +6,9 @@ from builtins import range
 import numpy as np
 import scipy.stats as ss
 
-import benchmark_tools.perf_curves as pc
-from benchmark_tools.test_constants import FPR
-from benchmark_tools.util import area
+import mlpaper.perf_curves as pc
+from mlpaper.test_constants import FPR
+from mlpaper.util import area
 
 
 def inner_test_curve(runs):

@@ -1,4 +1,4 @@
-# benchmark_tools
+# The ML Paper Package (mlpaper)
 Easy benchmarking of machine learning models with sklearn interface with statistical tests built-in.
 
 See `plot_classifier_comparison.py` for example usage. This extends the standard sklearn [classifier comparison](http://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html) but also demos the ease of benchmark tools to create a performance report.
@@ -160,7 +160,7 @@ with errorbars from bootstrap analysis, which has been vectorized for speed.
 
 Benchmark tools can also be applied to a regression problem with:
 ```python
-import benchmark_tools_regr as btr
+import mlpaper.regression as btr
 full_tbl = btr.just_benchmark(X_train, y_train, X_test, y_test,
                               regressors, STD_REGR_LOSS, 'iid',
                               pairwise_CI=True)

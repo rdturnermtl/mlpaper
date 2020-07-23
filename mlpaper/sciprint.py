@@ -8,7 +8,7 @@ from builtins import range
 import numpy as np
 import pandas as pd
 
-from benchmark_tools.constants import (
+from mlpaper.constants import (
     _PREFIX,
     _PREFIX_TEX,
     ABOVE_FMT,
@@ -24,7 +24,7 @@ from benchmark_tools.constants import (
     STAT,
     STD_STATS,
 )
-from benchmark_tools.util import remove_chars
+from mlpaper.util import remove_chars
 
 NAN_STR = str(np.nan)  # Our string rep of NaN
 # Constants of Decimal type

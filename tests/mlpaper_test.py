@@ -4,12 +4,13 @@ from __future__ import division, print_function
 from builtins import range
 from string import ascii_letters
 
-import benchmark_tools.benchmark_tools as bt
-import benchmark_tools.constants as cc
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from benchmark_tools.test_constants import FPR, MC_REPEATS_LARGE
+
+import mlpaper.constants as cc
+import mlpaper.mlpaper as bt
+from mlpaper.test_constants import FPR, MC_REPEATS_LARGE
 
 
 def close_lte(x, y):

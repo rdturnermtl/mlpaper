@@ -8,7 +8,7 @@ import scipy.interpolate as si
 from sklearn.preprocessing import OneHotEncoder, normalize
 from statsmodels.distributions.empirical_distribution import StepFunction
 
-from benchmark_tools import util
+from mlpaper import util
 
 
 def test_one_hot():
