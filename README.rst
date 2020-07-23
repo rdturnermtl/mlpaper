@@ -6,7 +6,7 @@ statistical tests built-in.
 
 See ``plot_classifier_comparison.py`` for example usage. This extends
 the standard sklearn `classifier
-comparison <http://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html>`__
+comparison <https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html>`__
 but also demos the ease of benchmark tools to create a performance
 report.
 
@@ -214,7 +214,7 @@ intervals based on the uncertainty of the loss *difference* to the
 reference method rather than a confidence interval on the actual loss.
 
 By extending the sklearn `regression
-demo <http://scikit-learn.org/stable/auto_examples/gaussian_process/plot_compare_gpr_krr.html#sphx-glr-auto-examples-gaussian-process-plot-compare-gpr-krr-py>`__
+demo <https://scikit-learn.org/stable/auto_examples/gaussian_process/plot_compare_gpr_krr.html#sphx-glr-auto-examples-gaussian-process-plot-compare-gpr-krr-py>`__
 we can make simple formatted tables:
 
 ::
