@@ -13,3 +13,4 @@ Contents:
 
    code
    authors
+   readme
