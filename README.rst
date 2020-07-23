@@ -1,7 +1,7 @@
 The ML Paper Package (mlpaper)
 ==============================
 
-.. image:: https://circleci.com/gh/rdturnermtl/mlpaper.png?style=plastic
+.. image:: https://circleci.com/gh/rdturnermtl/mlpaper.png?style=shield
    :target: https://circleci.com/gh/rdturnermtl/mlpaper
    :alt: status badge
 
