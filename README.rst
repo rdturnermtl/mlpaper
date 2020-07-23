@@ -1,6 +1,10 @@
 The ML Paper Package (mlpaper)
 ==============================
 
+.. image:: https://circleci.com/gh/rdturnermtl/mlpaper.png?style=plastic
+   :target: https://circleci.com/gh/rdturnermtl/mlpaper
+   :alt: status badge
+
 Easy benchmarking of machine learning models with sklearn interface with
 statistical tests built-in.
 
@@ -240,3 +244,20 @@ or in LaTeX:
 
 .. figure:: https://user-images.githubusercontent.com/28273671/88328364-2c391a80-ccdd-11ea-8367-2e53427c184d.png
    :alt: regression demo
+
+Installation
+============
+
+Only ``Python>=3.5`` is officially supported, but older versions of Python likely work as well.
+
+The core package itself can be installed with:
+
+.. code-block:: bash
+
+   pip install mlpaper
+
+To also get the dependencies for the demos in the README install with
+
+.. code-block:: bash
+
+   pip install mlpaper[demo]
