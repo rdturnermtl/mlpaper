@@ -26,7 +26,7 @@ the curves (e.g., ROC, PR) in ``STD_BINARY_CURVES``. ``ref_method``
 defines the model that is the reference to compare against for assessing
 statistically significant performance gains.
 
-The sciprint module formats these tables for scientific presentation.
+The `sciprint` module formats these tables for scientific presentation.
 The performance dictionaries can be converted to cleanly formatted
 tables: correct significant figures, shifting of exponent for
 compactness, thresholding huge/small (crap limit) results, and correct
@@ -174,32 +174,28 @@ DATASET 2 Results in LaTeX
 Sklearn output of classifiers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. figure:: doc/output.png
+.. figure:: https://user-images.githubusercontent.com/28273671/88328310-17f51d80-ccdd-11ea-8993-d833cb35c524.png
    :alt: sklearn
-
-   sklearn
 
 ROC curves
 ~~~~~~~~~~
 
-with errorbars from bootstrap analysis, which has been vectorized for
-speed. |ROC|
+ROC curves with errorbars from bootstrap analysis, which have been vectorized for speed.
+
+.. figure:: https://user-images.githubusercontent.com/28273671/88328302-13306980-ccdd-11ea-8862-2fd3e92239b3.png
+   :alt: ROC
 
 Precision-recall curves
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. figure:: doc/AP.png
+.. figure:: https://user-images.githubusercontent.com/28273671/88328286-0f9ce280-ccdd-11ea-815e-f3f0ce86d669.png
    :alt: PR
-
-   PR
 
 Precision-recall-gain curves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. figure:: doc/AUPRG.png
+.. figure:: https://user-images.githubusercontent.com/28273671/88328305-1592c380-ccdd-11ea-8906-79142178322f.png
    :alt: PRG
-
-   PRG
 
 Output from regression demo
 ---------------------------
@@ -242,9 +238,5 @@ or in LaTeX:
     \bottomrule
     \end{tabular}
 
-.. figure:: doc/regress.png
+.. figure:: https://user-images.githubusercontent.com/28273671/88328364-2c391a80-ccdd-11ea-8367-2e53427c184d.png
    :alt: regression demo
-
-   regression demo
-
-.. |ROC| image:: doc/AUC.png
