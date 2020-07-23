@@ -1,11 +1,14 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, division
+from __future__ import division, print_function
+
 from builtins import range
+
 import numpy as np
 import scipy.stats as ss
+
 import benchmark_tools.perf_curves as pc
-from benchmark_tools.util import area
 from benchmark_tools.test_constants import FPR
+from benchmark_tools.util import area
 
 
 def inner_test_curve(runs):
@@ -43,14 +46,15 @@ def loop_test(test_f):
     pvals = [ss.combine_pvalues(M1[:, ii])[1] for ii in range(M1.shape[1])]
 
     print(pvals)
-    assert(np.min(pvals) >= FPR / len(pvals))
+    assert np.min(pvals) >= FPR / len(pvals)
 
 
 def test_curve():
     loop_test(inner_test_curve)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     np.random.seed(7852)
 
     test_curve()
-    print('passed')
+    print("passed")

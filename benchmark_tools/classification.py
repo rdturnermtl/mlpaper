@@ -1,24 +1,25 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, absolute_import, division
+from __future__ import absolute_import, division, print_function
+
 from builtins import range
-from joblib import Memory
+
 import numpy as np
 import pandas as pd
+from joblib import Memory
 from scipy.special import logsumexp
-from benchmark_tools.benchmark_tools import loss_summary_table
-from benchmark_tools.constants import (
-    STAT, CURVE_STATS, STD_STATS, ERR_COL, PVAL_COL,
-    METHOD, METRIC, PAIRWISE_DEFAULT)
-import benchmark_tools.perf_curves as pc
-from benchmark_tools.util import one_hot, normalize, interp1d, area
+
 import benchmark_tools.boot_util as bu
+import benchmark_tools.perf_curves as pc
+from benchmark_tools.benchmark_tools import loss_summary_table
+from benchmark_tools.constants import CURVE_STATS, ERR_COL, METHOD, METRIC, PAIRWISE_DEFAULT, PVAL_COL, STAT, STD_STATS
+from benchmark_tools.util import area, interp1d, normalize, one_hot
 
 DEFAULT_NGRID = 100
-LABEL = 'label'  # Don't put in constants since only needed for classification
+LABEL = "label"  # Don't put in constants since only needed for classification
 
 
 def shape_and_validate(y, log_pred_prob):
-    '''Validate shapes and types of predictive distribution against data and
+    """Validate shapes and types of predictive distribution against data and
     return the shape information.
 
     Parameters
@@ -41,13 +42,14 @@ def shape_and_validate(y, log_pred_prob):
     Notes
     -----
     This does *not* check normalization.
-    '''
+    """
     n_samples, n_labels = log_pred_prob.shape
-    assert(n_samples >= 1)  # Otherwise min and max confused
-    assert(n_labels >= 1)  # Otherwise makes no sense
-    assert(y.shape == (n_samples,) and y.dtype.kind in ('b', 'i'))
-    assert(0 <= y.min() and y.max() < n_labels)
+    assert n_samples >= 1  # Otherwise min and max confused
+    assert n_labels >= 1  # Otherwise makes no sense
+    assert y.shape == (n_samples,) and y.dtype.kind in ("b", "i")
+    assert 0 <= y.min() and y.max() < n_labels
     return n_samples, n_labels
+
 
 # ============================================================================
 # Loss functions
@@ -55,7 +57,7 @@ def shape_and_validate(y, log_pred_prob):
 
 
 def hard_loss_decision(log_pred_prob, loss_mat):
-    '''Make Bayes' optimal action according to predictive probability
+    """Make Bayes' optimal action according to predictive probability
     distribution and loss matrix.
 
     Parameters
@@ -73,7 +75,7 @@ def hard_loss_decision(log_pred_prob, loss_mat):
     -------
     action : ndarray of type int, shape (n_samples,)
         Array of resulting Bayes' optimal action for each data point.
-    '''
+    """
     pred_prob = np.exp(log_pred_prob)
     E_loss = np.dot(pred_prob, loss_mat)
     action = np.argmin(E_loss, axis=1)
@@ -81,7 +83,7 @@ def hard_loss_decision(log_pred_prob, loss_mat):
 
 
 def hard_loss(y, log_pred_prob, loss_mat=None):
-    '''Loss function for making classification decisions from a loss matrix.
+    """Loss function for making classification decisions from a loss matrix.
 
     This function both computes the optimal action under the predictive
     distribution and the loss matrix, and then scores that decision using the
@@ -105,22 +107,22 @@ def hard_loss(y, log_pred_prob, loss_mat=None):
     -------
     loss : ndarray, shape (n_samples,)
         Array of the resulting loss for the predictions on each point in `y`.
-    '''
+    """
     n_samples, n_labels = shape_and_validate(y, log_pred_prob)
     loss_mat = (1.0 - np.eye(n_labels)) if loss_mat is None else loss_mat
-    assert(np.ndim(loss_mat) == 2 and loss_mat.shape[0] == n_labels)
-    assert(loss_mat.shape[1] >= 1)  # Must be least one action
+    assert np.ndim(loss_mat) == 2 and loss_mat.shape[0] == n_labels
+    assert loss_mat.shape[1] >= 1  # Must be least one action
 
     action = hard_loss_decision(log_pred_prob, loss_mat)
 
-    assert(action.shape == y.shape and action.dtype.kind == 'i')
+    assert action.shape == y.shape and action.dtype.kind == "i"
     loss = loss_mat[y.astype(int), action]
-    assert(loss.shape == (n_samples,))
+    assert loss.shape == (n_samples,)
     return loss
 
 
 def log_loss(y, log_pred_prob):
-    '''Compute log loss (e.g, negative log likelihood or cross-entropy).
+    """Compute log loss (e.g, negative log likelihood or cross-entropy).
 
     Parameters
     ----------
@@ -135,14 +137,14 @@ def log_loss(y, log_pred_prob):
     -------
     loss : ndarray, shape (n_samples,)
         Array of the log loss for the predictions on each data point in `y`.
-    '''
+    """
     n_samples, n_labels = shape_and_validate(y, log_pred_prob)
     nll = -log_pred_prob[np.arange(n_samples), y.astype(int)]
     return nll
 
 
 def brier_loss(y, log_pred_prob, rescale=True):
-    '''Compute (rescaled) Brier loss.
+    """Compute (rescaled) Brier loss.
 
     Parameters
     ----------
@@ -161,7 +163,7 @@ def brier_loss(y, log_pred_prob, rescale=True):
     -------
     loss : ndarray, shape (n_samples,)
         Array of the Brier loss for the predictions on each data point in `y`.
-    '''
+    """
     n_samples, n_labels = shape_and_validate(y, log_pred_prob)
 
     y_bin = one_hot(y.astype(int), n_labels)
@@ -174,7 +176,7 @@ def brier_loss(y, log_pred_prob, rescale=True):
 
 
 def spherical_loss(y, log_pred_prob, rescale=True):
-    '''Compute (rescaled) spherical loss.
+    """Compute (rescaled) spherical loss.
 
     Parameters
     ----------
@@ -193,7 +195,7 @@ def spherical_loss(y, log_pred_prob, rescale=True):
     -------
     loss : ndarray, shape (n_samples,)
         Array of the spherical loss for the predictions on each point in `y`.
-    '''
+    """
     N, n_labels = shape_and_validate(y, log_pred_prob)
 
     log_normalizer = 0.5 * logsumexp(2.0 * log_pred_prob, axis=1)
@@ -207,13 +209,14 @@ def spherical_loss(y, log_pred_prob, rescale=True):
         loss = (1.0 + loss) / c
     return loss
 
+
 # ============================================================================
 # Loss summary: the main purpose of this file.
 # ============================================================================
 
 
 def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
-    '''Compute loss table from table of probalistic predictions.
+    """Compute loss table from table of probalistic predictions.
 
     Parameters
     ----------
@@ -242,24 +245,21 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
         that is the cartesian product of loss x method. That is, the loss of
         method foo's prediction of ``y[5]`` according to loss function bar is
         stored in ``loss_tbl.loc[5, ('bar', 'foo')]``.
-    '''
+    """
     methods, labels = log_pred_prob_table.columns.levels
     n_samples, n_labels = len(log_pred_prob_table), len(labels)
-    assert(y.shape == (n_samples,))
-    assert(n_samples >= 1 and n_labels >= 1 and len(methods) >= 1)
+    assert y.shape == (n_samples,)
+    assert n_samples >= 1 and n_labels >= 1 and len(methods) >= 1
 
-    col_names = pd.MultiIndex.from_product([metrics_dict.keys(), methods],
-                                           names=[METRIC, METHOD])
-    loss_tbl = pd.DataFrame(index=log_pred_prob_table.index,
-                            columns=col_names, dtype=float)
+    col_names = pd.MultiIndex.from_product([metrics_dict.keys(), methods], names=[METRIC, METHOD])
+    loss_tbl = pd.DataFrame(index=log_pred_prob_table.index, columns=col_names, dtype=float)
     for method in methods:
         # Make sure the columns are in right order and we aren't mixing things
-        assert(list(log_pred_prob_table[method].columns) ==
-               list(range(n_labels)))
+        assert list(log_pred_prob_table[method].columns) == list(range(n_labels))
 
         log_pred_prob = log_pred_prob_table[method].values
-        assert(log_pred_prob.shape == (n_samples, n_labels))
-        assert(not np.any(np.isnan(log_pred_prob)))  # Would let method cheat
+        assert log_pred_prob.shape == (n_samples, n_labels)
+        assert not np.any(np.isnan(log_pred_prob))  # Would let method cheat
 
         if not assume_normalized:
             log_pred_prob = normalize(log_pred_prob)
@@ -268,13 +268,14 @@ def loss_table(log_pred_prob_table, y, metrics_dict, assume_normalized=False):
             loss_tbl.loc[:, (metric, method)] = metric_f(y, log_pred_prob)
     return loss_tbl
 
+
 # ============================================================================
 # Use and summarize performance curves
 # ============================================================================
 
 
 def check_curve(result, x_grid=None):
-    '''Check performance curve output matches expected format and return the
+    """Check performance curve output matches expected format and return the
     curve after validation.
 
     Parameters
@@ -291,28 +292,29 @@ def check_curve(result, x_grid=None):
     curve : tuple of (ndarray, ndarray, str)
         Returns same object passed in after some input checks. Each of the
         ndarrays have shape (n_boot, n_thresholds).
-    '''
+    """
     curve, _ = result  # Skipping tholds (2nd arg) since not used here
     x_curve, y_curve, kind = curve
 
     # Check shape
-    assert(x_curve.ndim == 2 and y_curve.ndim == 2)
-    assert(x_curve.shape == y_curve.shape)
-    assert(x_curve.shape[1] >= 2)  # Otherwise not curve
+    assert x_curve.ndim == 2 and y_curve.ndim == 2
+    assert x_curve.shape == y_curve.shape
+    assert x_curve.shape[1] >= 2  # Otherwise not curve
 
     # Check values
-    assert(np.all(np.isfinite(x_curve)))
-    assert(np.all(y_curve < np.inf))  # PRG can be -inf, but all curves < inf
-    assert(np.all(np.diff(x_curve, axis=1) >= 0.0))  # also check is sorted
+    assert np.all(np.isfinite(x_curve))
+    assert np.all(y_curve < np.inf)  # PRG can be -inf, but all curves < inf
+    assert np.all(np.diff(x_curve, axis=1) >= 0.0)  # also check is sorted
     if x_grid is not None:  # Make sure we won't need to extrapolate for grid
-        assert(np.all(x_curve[:, 0] <= x_grid[0]))
-        assert(np.all(x_grid[-1] <= x_curve[:, -1]))
+        assert np.all(x_curve[:, 0] <= x_grid[0])
+        assert np.all(x_grid[-1] <= x_curve[:, -1])
     return curve
 
 
-def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
-               n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95):
-    '''Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
+def curve_boot(
+    y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None, n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95
+):
+    """Perform boot strap analysis of performance curve, e.g., ROC or prec-rec.
     For binary classification only.
 
     Parameters
@@ -357,19 +359,19 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
         DataFrame containing four columns: `x_grid`, the curve value, the lower
         end of confidence envelope, and the upper end of the confidence
         envelope.
-    '''
+    """
     N, n_labels = shape_and_validate(y, log_pred_prob)
-    assert(n_labels == 2)
-    assert(np.ndim(ref) == 0 or ref.shape == log_pred_prob.shape)
-    assert(not np.any(np.isnan(ref)))
-    assert(n_boot >= 1)
-    assert(not np.any(np.isnan(log_pred_prob)))  # Would let method cheat
+    assert n_labels == 2
+    assert np.ndim(ref) == 0 or ref.shape == log_pred_prob.shape
+    assert not np.any(np.isnan(ref))
+    assert n_boot >= 1
+    assert not np.any(np.isnan(log_pred_prob))  # Would let method cheat
 
     # Setup constants
     epsilon = 1e-10  # Min bootstrap weight since 0 weight can cause problems
     pos_label = 1  # Label=1 of [0,1] is considered a positive case
     x_grid = np.linspace(0.0, 1.0, DEFAULT_NGRID) if x_grid is None else x_grid
-    assert(np.ndim(x_grid) == 1)
+    assert np.ndim(x_grid) == 1
 
     # Put everything into a vector of right type for binary classification
     y = y.astype(bool)
@@ -379,49 +381,57 @@ def curve_boot(y, log_pred_prob, ref, curve_f=pc.roc_curve, x_grid=None,
     # curve, but this is more consistent with bootstrap version below.
     curve = check_curve(curve_f(y, log_pred_prob), x_grid)
     auc, = area(*curve)
-    assert(auc.ndim == 0)
+    assert auc.ndim == 0
     y_grid, = interp1d(x_grid, *curve)
-    assert(y_grid.shape == x_grid.shape)
+    assert y_grid.shape == x_grid.shape
 
     # Setup boot strap weights
-    # weight = bu.stratified_boot_weights(y, n_boot, epsilon=epsilon)
     weight = bu.boot_weights(N, n_boot, epsilon=epsilon)
 
     # Get boot strapped scores
     curve_boot_ = check_curve(curve_f(y, log_pred_prob, weight), x_grid)
     auc_boot = area(*curve_boot_)
-    assert(auc_boot.shape == (n_boot,))
+    assert auc_boot.shape == (n_boot,)
     y_grid_boot = interp1d(x_grid, *curve_boot_)
-    assert(y_grid_boot.shape == (n_boot, x_grid.size))
+    assert y_grid_boot.shape == (n_boot, x_grid.size)
 
     # Repeat area boot strap with reference predictor (if provided)
     ref_boot = ref
     if np.ndim(ref) == 2:  # Note dim must be 0 or 2
         ref_boot = area(*check_curve(curve_f(y, ref[:, pos_label], weight)))
-        assert(ref_boot.shape == (n_boot,))
+        assert ref_boot.shape == (n_boot,)
         ref, = area(*check_curve(curve_f(y, ref[:, pos_label])))
-    assert(np.ndim(ref) == 0)
+    assert np.ndim(ref) == 0
 
     # Pack up standard numeric summary triple
-    EB = bu.error_bar(auc_boot - ref_boot, auc - ref, confidence=confidence) \
-        if pairwise_CI else bu.error_bar(auc_boot, auc, confidence=confidence)
+    EB = (
+        bu.error_bar(auc_boot - ref_boot, auc - ref, confidence=confidence)
+        if pairwise_CI
+        else bu.error_bar(auc_boot, auc, confidence=confidence)
+    )
     pval = bu.significance(auc_boot, ref_boot)
     summary = (auc, EB, pval)
 
     # Pack up data frame with graphical summaries (performance curves)
     # Could also try bu.basic and see which works better
     y_LB, y_UB = bu.percentile(y_grid_boot, confidence)
-    curve = pd.DataFrame(data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1),
-                         index=range(x_grid.size), columns=CURVE_STATS,
-                         dtype=float)
+    curve = pd.DataFrame(
+        data=np.stack((x_grid, y_grid, y_LB, y_UB), axis=1), index=range(x_grid.size), columns=CURVE_STATS, dtype=float
+    )
     return summary, curve
 
 
-def curve_summary_table(log_pred_prob_table, y,
-                        curve_dict, ref_method, x_grid=None,
-                        n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT,
-                        confidence=0.95):
-    '''Build table with mean and error bars of curve summaries from a table of
+def curve_summary_table(
+    log_pred_prob_table,
+    y,
+    curve_dict,
+    ref_method,
+    x_grid=None,
+    n_boot=1000,
+    pairwise_CI=PAIRWISE_DEFAULT,
+    confidence=0.95,
+):
+    """Build table with mean and error bars of curve summaries from a table of
     probalistic predictions.
 
     Parameters
@@ -469,37 +479,41 @@ def curve_summary_table(log_pred_prob_table, y,
         a pandas dataframe with the performance curve, which has four columns:
         `x_grid`, the curve value, the lower end of confidence envelope,
         and the upper end of the confidence envelope.
-    '''
+    """
     methods, labels = log_pred_prob_table.columns.levels
     N, n_labels = len(log_pred_prob_table), len(labels)
-    assert(y.shape == (N,))
-    assert(ref_method in methods)  # ==> len(methods) >= 1
-    assert(N >= 1 and n_labels >= 1 and len(curve_dict) >= 1)
+    assert y.shape == (N,)
+    assert ref_method in methods  # ==> len(methods) >= 1
+    assert N >= 1 and n_labels >= 1 and len(curve_dict) >= 1
 
-    assert(list(log_pred_prob_table[ref_method].columns) ==
-           list(range(n_labels)))
+    assert list(log_pred_prob_table[ref_method].columns) == list(range(n_labels))
     log_pred_prob_ref = log_pred_prob_table[ref_method].values
-    assert(log_pred_prob_ref.shape == (N, n_labels))
+    assert log_pred_prob_ref.shape == (N, n_labels)
     # Note: Most curve methods are rank based and so normalization is not
     # needed to prevent cheating. However, if we expect non-normalized methods
     # they should be normalized before to keep consistency with loss metrics.
 
-    col_names = pd.MultiIndex.from_product([curve_dict.keys(), STD_STATS],
-                                           names=[METRIC, STAT])
+    col_names = pd.MultiIndex.from_product([curve_dict.keys(), STD_STATS], names=[METRIC, STAT])
     curve_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
     curve_tbl.index.set_names(METHOD, inplace=True)
 
     curve_dump = {}
     for method in methods:
-        assert(list(log_pred_prob_table[method].columns) ==
-               list(range(n_labels)))
+        assert list(log_pred_prob_table[method].columns) == list(range(n_labels))
         log_pred_prob = log_pred_prob_table[method].values
-        assert(log_pred_prob.shape == (N, n_labels))
+        assert log_pred_prob.shape == (N, n_labels)
 
         for curve_name, curve_f in curve_dict.items():
-            R = curve_boot(y, log_pred_prob, ref=log_pred_prob_ref,
-                           curve_f=curve_f, x_grid=x_grid, n_boot=n_boot,
-                           pairwise_CI=pairwise_CI, confidence=confidence)
+            R = curve_boot(
+                y,
+                log_pred_prob,
+                ref=log_pred_prob_ref,
+                curve_f=curve_f,
+                x_grid=x_grid,
+                n_boot=n_boot,
+                pairwise_CI=pairwise_CI,
+                confidence=confidence,
+            )
             curve_summary, curr_curve = R
             curve_tbl.loc[method, curve_name] = curve_summary
             if pairwise_CI and method == ref_method:
@@ -510,11 +524,20 @@ def curve_summary_table(log_pred_prob_table, y,
     return curve_tbl, curve_dump
 
 
-def summary_table(log_pred_prob_table, y,
-                  loss_dict, curve_dict, ref_method, x_grid=None,
-                  n_boot=1000, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95,
-                  method_EB='t', limits={}):
-    '''Build table with mean and error bars of both loss and curve summaries
+def summary_table(
+    log_pred_prob_table,
+    y,
+    loss_dict,
+    curve_dict,
+    ref_method,
+    x_grid=None,
+    n_boot=1000,
+    pairwise_CI=PAIRWISE_DEFAULT,
+    confidence=0.95,
+    method_EB="t",
+    limits={},
+):
+    """Build table with mean and error bars of both loss and curve summaries
     from a table of probalistic predictions.
 
     Parameters
@@ -573,40 +596,43 @@ def summary_table(log_pred_prob_table, y,
         `x_grid`, the curve value, the lower end of confidence envelope,
         and the upper end of the confidence envelope. Only metrics from
         `curve_dict` and *not* from `loss_dict` are found here.
-    '''
+    """
     # Do the curve metrics
-    curve_summary, dump_tbl = \
-        curve_summary_table(log_pred_prob_table, y, curve_dict, ref_method,
-                            x_grid=x_grid,
-                            n_boot=n_boot, pairwise_CI=pairwise_CI,
-                            confidence=confidence)
+    curve_summary, dump_tbl = curve_summary_table(
+        log_pred_prob_table,
+        y,
+        curve_dict,
+        ref_method,
+        x_grid=x_grid,
+        n_boot=n_boot,
+        pairwise_CI=pairwise_CI,
+        confidence=confidence,
+    )
 
     # Do loss based metrics
     loss_tbl = loss_table(log_pred_prob_table, y, loss_dict)
-    loss_summary = loss_summary_table(loss_tbl, ref_method,
-                                      pairwise_CI=pairwise_CI,
-                                      confidence=confidence,
-                                      method_EB=method_EB, limits=limits)
+    loss_summary = loss_summary_table(
+        loss_tbl, ref_method, pairwise_CI=pairwise_CI, confidence=confidence, method_EB=method_EB, limits=limits
+    )
 
     # Return the combo
     full_tbl = pd.concat((loss_summary, curve_summary), axis=1)
     return full_tbl, dump_tbl
+
 
 # ============================================================================
 # Variables and functions to make getting results from sklearn objects easy
 # ============================================================================
 
 # Pre-build some standard metric dicts for the user
-STD_CLASS_LOSS = {'NLL': log_loss, 'Brier': brier_loss,
-                  'sphere': spherical_loss, 'zero_one': hard_loss}
+STD_CLASS_LOSS = {"NLL": log_loss, "Brier": brier_loss, "sphere": spherical_loss, "zero_one": hard_loss}
 
-STD_BINARY_CURVES = {'AUC': pc.roc_curve, 'AP': pc.recall_precision_curve,
-                     'AUPRG': pc.prg_curve}
+STD_BINARY_CURVES = {"AUC": pc.roc_curve, "AP": pc.recall_precision_curve, "AUPRG": pc.prg_curve}
 
 
 class JustNoise:
-    '''Class version of iid predictor compatible with sklearn interface. Same
-    as ``sklearn.dummy.DummyClassifier(strategy='prior').``'''
+    """Class version of iid predictor compatible with sklearn interface. Same
+    as ``sklearn.dummy.DummyClassifier(strategy='prior').``"""
 
     def __init__(self, n_labels=2, pseudo_count=0.0):
         self.pred = np.nan + np.zeros(n_labels)
@@ -619,7 +645,7 @@ class JustNoise:
         counts = self.pseudo_count + np.sum(one_hot(y_train, n_labels), axis=0)
         n_total = n_points + n_labels * self.pseudo_count
         self.pred = np.log(counts / n_total)
-        assert(self.pred.shape == (n_labels,))
+        assert self.pred.shape == (n_labels,)
 
     def predict_log_proba(self, X_test):
         n_samples = X_test.shape[0]
@@ -627,9 +653,10 @@ class JustNoise:
         return pred_log_prob
 
 
-def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
-                      min_log_prob=-np.inf, verbose=False, checkpointdir=None):
-    '''Get the predictive probability tables for each test point on a
+def get_pred_log_prob(
+    X_train, y_train, X_test, n_labels, methods, min_log_prob=-np.inf, verbose=False, checkpointdir=None
+):
+    """Get the predictive probability tables for each test point on a
     collection of classification methods.
 
     Parameters
@@ -673,17 +700,17 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
     -----
     If a train/test operation is loaded from a checkpoint file, the estimator
     object in methods will not be in a fit state.
-    '''
+    """
     n_test = X_test.shape[0]
-    assert(n_test > 0)
+    assert n_test > 0
     # Allow ndim >= 2 since some input data (e.g. images) come that way
-    assert(X_train.ndim >= 2)
-    assert(y_train.shape == (X_train.shape[0],))
-    assert(y_train.dtype.kind in ('b', 'i'))
-    assert(0 <= y_train.min() and y_train.max() < n_labels)
-    assert(X_test.ndim == X_train.ndim and X_test.shape[1] == X_train.shape[1])
-    assert(X_train.dtype.kind == X_test.dtype.kind)  # Would be weird otherwise
-    assert(min_log_prob < 0.0)  # Ensure is a log-prob
+    assert X_train.ndim >= 2
+    assert y_train.shape == (X_train.shape[0],)
+    assert y_train.dtype.kind in ("b", "i")
+    assert 0 <= y_train.min() and y_train.max() < n_labels
+    assert X_test.ndim == X_train.ndim and X_test.shape[1] == X_train.shape[1]
+    assert X_train.dtype.kind == X_test.dtype.kind  # Would be weird otherwise
+    assert min_log_prob < 0.0  # Ensure is a log-prob
 
     memory = Memory(cachedir=checkpointdir, verbose=0)
 
@@ -692,31 +719,41 @@ def get_pred_log_prob(X_train, y_train, X_test, n_labels, methods,
         method_obj.fit(X_train, y_train)
         try:
             pred_log_prob = method_obj.predict_log_proba(X_test)
-        except:  # If there is no log proba available
-            with np.errstate(divide='ignore'):  # Not unusual to have some p=0 cases
+        except:  # noqa: E722 If there is no log proba available
+            # TODO add exception type
+            with np.errstate(divide="ignore"):  # Not unusual to have some p=0 cases
                 pred_log_prob = np.log(method_obj.predict_proba(X_test))
         return pred_log_prob
 
-    col_names = pd.MultiIndex.from_product([methods.keys(), range(n_labels)],
-                                           names=[METHOD, LABEL])
-    log_pred_prob_table = pd.DataFrame(index=range(n_test), columns=col_names,
-                                       dtype=float)
+    col_names = pd.MultiIndex.from_product([methods.keys(), range(n_labels)], names=[METHOD, LABEL])
+    log_pred_prob_table = pd.DataFrame(index=range(n_test), columns=col_names, dtype=float)
     for method_name, method_obj in methods.items():
         if verbose:
-            print('Running fit/predict for {}'.format(method_name))
+            print("Running fit/predict for {}".format(method_name))
         pred_log_prob = train_predict(method_obj, X_train, y_train, X_test)
-        assert(pred_log_prob.shape == (n_test, n_labels))
+        assert pred_log_prob.shape == (n_test, n_labels)
 
         pred_log_prob = normalize(np.maximum(min_log_prob, pred_log_prob))
         log_pred_prob_table.loc[:, method_name] = pred_log_prob
     return log_pred_prob_table
 
 
-def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
-                   methods, loss_dict, curve_dict, ref_method,
-                   min_pred_log_prob=-np.inf, pairwise_CI=PAIRWISE_DEFAULT,
-                   method_EB='t', limits={}):
-    '''Simplest one-call interface to this package. Just pass it data and
+def just_benchmark(
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    n_labels,
+    methods,
+    loss_dict,
+    curve_dict,
+    ref_method,
+    min_pred_log_prob=-np.inf,
+    pairwise_CI=PAIRWISE_DEFAULT,
+    method_EB="t",
+    limits={},
+):
+    """Simplest one-call interface to this package. Just pass it data and
     method objects and a performance summary DataFrame is returned.
 
     Parameters
@@ -782,11 +819,10 @@ def just_benchmark(X_train, y_train, X_test, y_test, n_labels,
         `x_grid`, the curve value, the lower end of confidence envelope,
         and the upper end of the confidence envelope. Only metrics from
         `curve_dict` and *not* from `loss_dict` are found here.
-    '''
-    assert(y_train.dtype == y_test.dtype)  # Would be weird otherwise
-    pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels,
-                                 methods, min_log_prob=min_pred_log_prob)
-    full_tbl, dump = summary_table(pred_tbl, y_test, loss_dict, curve_dict,
-                                   ref_method, pairwise_CI=pairwise_CI,
-                                   method_EB=method_EB, limits=limits)
+    """
+    assert y_train.dtype == y_test.dtype  # Would be weird otherwise
+    pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels, methods, min_log_prob=min_pred_log_prob)
+    full_tbl, dump = summary_table(
+        pred_tbl, y_test, loss_dict, curve_dict, ref_method, pairwise_CI=pairwise_CI, method_EB=method_EB, limits=limits
+    )
     return full_tbl, dump

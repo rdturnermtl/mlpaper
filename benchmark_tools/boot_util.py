@@ -3,7 +3,7 @@ import numpy as np
 
 
 def boot_weights(N, n_boot, epsilon=0):
-    '''Sample weights for data points that makes it equivalent to bootstrap
+    """Sample weights for data points that makes it equivalent to bootstrap
     resampling of data points.
 
     Parameters
@@ -20,18 +20,18 @@ def boot_weights(N, n_boot, epsilon=0):
     -------
     weight : ndarray, shape (n_boot, N)
         Weights equivalent to resampling for bootstrap algorithm.
-    '''
-    assert(N >= 1)
-    assert(n_boot >= 1)
+    """
+    assert N >= 1
+    assert n_boot >= 1
 
     p_BS = np.ones(N) / N
     weight = np.maximum(epsilon, np.random.multinomial(N, p_BS, size=n_boot))
-    assert(weight.shape == (n_boot, N))
+    assert weight.shape == (n_boot, N)
     return weight
 
 
 def confidence_to_percentiles(confidence):
-    '''Convert confidence level to percentiles in sampling distribution to
+    """Convert confidence level to percentiles in sampling distribution to
     build confidence interval.
 
     Parameters
@@ -50,8 +50,8 @@ def confidence_to_percentiles(confidence):
     --------
     >>> confidence_to_percentiles(0.95)
     (2.5, 97.5)
-    '''
-    assert(np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0)
+    """
+    assert np.ndim(confidence) == 0 and 0.0 < confidence and confidence < 1.0
 
     alpha = 0.5 * (1.0 - confidence)
     LB, UB = 100.0 * alpha, 100.0 * (1.0 - alpha)
@@ -59,7 +59,7 @@ def confidence_to_percentiles(confidence):
 
 
 def percentile(boot_estimates, confidence=0.95):
-    '''Build confidence interval using percentile boostrap method.
+    """Build confidence interval using percentile boostrap method.
 
     Parameters
     ----------
@@ -74,9 +74,9 @@ def percentile(boot_estimates, confidence=0.95):
         Lower end of confidence interval.
     UB : ndarray, shape (...)
         Upper end of confidence interval.
-    '''
-    assert(boot_estimates.ndim >= 1)
-    assert(not np.any(np.isnan(boot_estimates)))  # NaN ordering is arbitrary
+    """
+    assert boot_estimates.ndim >= 1
+    assert not np.any(np.isnan(boot_estimates))  # NaN ordering is arbitrary
 
     LB_perc, UB_perc = confidence_to_percentiles(confidence)
     # Expand upward to bigger interval for round off. Also, important for
@@ -84,15 +84,15 @@ def percentile(boot_estimates, confidence=0.95):
     # TODO np.percentile does not exactly correspond to mathematical definition
     # of the quantile function wrt jump locations. And hence may not exactly be
     # inverse of the ECDF used in significance(). File bug report with numpy.
-    LB = np.percentile(boot_estimates, LB_perc, axis=0, interpolation='lower')
-    UB = np.percentile(boot_estimates, UB_perc, axis=0, interpolation='higher')
-    assert(LB.shape == boot_estimates.shape[1:])
-    assert(LB.shape == UB.shape)
+    LB = np.percentile(boot_estimates, LB_perc, axis=0, interpolation="lower")
+    UB = np.percentile(boot_estimates, UB_perc, axis=0, interpolation="higher")
+    assert LB.shape == boot_estimates.shape[1:]
+    assert LB.shape == UB.shape
     return LB, UB
 
 
 def basic(boot_estimates, original_estimate, confidence=0.95):
-    '''Build confidence interval using basic boostrap method.
+    """Build confidence interval using basic boostrap method.
 
     Parameters
     ----------
@@ -109,9 +109,9 @@ def basic(boot_estimates, original_estimate, confidence=0.95):
         Lower end of confidence interval.
     UB : ndarray, shape (...)
         Upper end of confidence interval.
-    '''
-    assert(boot_estimates.ndim >= 1)
-    assert(boot_estimates.shape[1:] == np.shape(original_estimate))
+    """
+    assert boot_estimates.ndim >= 1
+    assert boot_estimates.shape[1:] == np.shape(original_estimate)
 
     LB, UB = percentile(boot_estimates, confidence)
     LB, UB = 2 * original_estimate - UB, 2 * original_estimate - LB
@@ -119,7 +119,7 @@ def basic(boot_estimates, original_estimate, confidence=0.95):
 
 
 def error_bar(boot_estimates, original_estimate, confidence=0.95):
-    '''Build error bar using boostrap method. The results is the same
+    """Build error bar using boostrap method. The results is the same
     regardless of whether the percentile or basic boostrap is used for CIs.
 
     Parameters
@@ -135,21 +135,21 @@ def error_bar(boot_estimates, original_estimate, confidence=0.95):
     -------
     EB : float
         Error bar around the original estimate.
-    '''
-    assert(boot_estimates.ndim == 1)
-    assert(np.ndim(original_estimate) == 0)
+    """
+    assert boot_estimates.ndim == 1
+    assert np.ndim(original_estimate) == 0
 
     LB, UB = percentile(boot_estimates, confidence)
     # This actually ends up the same whether we use basic or percentile
     EB = np.fmax(UB - original_estimate, original_estimate - LB)
-    assert(not np.any(EB < 0.0))  # Allows nans
+    assert not np.any(EB < 0.0)  # Allows nans
     # NaN EB only ever occurs when ref is infinite and so are some samples
-    assert(np.all(np.isfinite(original_estimate) <= ~np.isnan(EB)))
+    assert np.all(np.isfinite(original_estimate) <= ~np.isnan(EB))
     return EB
 
 
 def significance(boot_estimates, ref):
-    '''Perform a two-sided bootstrap based hypothesis test on whether the
+    """Perform a two-sided bootstrap based hypothesis test on whether the
     unknown quantity is equal to some reference.
 
     Parameters
@@ -165,14 +165,13 @@ def significance(boot_estimates, ref):
     -------
     pval : float
         Resulting p-value of hypothesis test in (0,1).
-    '''
-    assert(boot_estimates.ndim == 1)
-    assert(np.ndim(ref) == 0 or ref.shape == boot_estimates.shape)
-    assert(not np.any(np.isnan(boot_estimates)))  # NaN ordering is arbitrary
-    assert(not np.any(np.isnan(ref)))  # NaN ordering is arbitrary
+    """
+    assert boot_estimates.ndim == 1
+    assert np.ndim(ref) == 0 or ref.shape == boot_estimates.shape
+    assert not np.any(np.isnan(boot_estimates))  # NaN ordering is arbitrary
+    assert not np.any(np.isnan(ref))  # NaN ordering is arbitrary
 
-    pval = 2.0 * np.minimum(np.mean(boot_estimates <= ref),
-                            np.mean(ref <= boot_estimates))
+    pval = 2.0 * np.minimum(np.mean(boot_estimates <= ref), np.mean(ref <= boot_estimates))
     # Only needed when some boot_estimates == ref exactly:
     pval = np.minimum(1.0, pval)
     return pval

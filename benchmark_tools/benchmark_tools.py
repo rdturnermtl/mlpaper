@@ -1,11 +1,12 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, absolute_import, division
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
-from benchmark_tools.constants import (
-    METHOD, METRIC, STAT, STD_STATS, PAIRWISE_DEFAULT)
+
 import benchmark_tools.boot_util as bu
+from benchmark_tools.constants import METHOD, METRIC, PAIRWISE_DEFAULT, STAT, STD_STATS
 from benchmark_tools.util import clip_chk
 
 N_BOOT = 1000  # Default number of bootstrap replications
@@ -16,7 +17,7 @@ N_BOOT = 1000  # Default number of bootstrap replications
 
 
 def clip_EB(mu, EB, lower=-np.inf, upper=np.inf, min_EB=0.0):
-    '''Clip error bars to both a minimum uncertainty level and a maximum level
+    """Clip error bars to both a minimum uncertainty level and a maximum level
     determined by trivial error bars from the a prior known limits of the
     unknown parameter `theta`. Similar to `np.clip`, but for error bars.
 
@@ -42,30 +43,28 @@ def clip_EB(mu, EB, lower=-np.inf, upper=np.inf, min_EB=0.0):
     -------
     EB : float
         Error bar after possible clipping.
-    '''
-    assert(np.ndim(mu) == 0 and np.ndim(EB) == 0)
-    assert(np.ndim(lower) == 0 and np.ndim(upper) == 0)
-    assert(upper - lower >= 0.0)  # Also catch (inf, inf) or nans
-    assert(np.ndim(min_EB) == 0)
-    assert(0.0 <= min_EB and min_EB < np.inf)
+    """
+    assert np.ndim(mu) == 0 and np.ndim(EB) == 0
+    assert np.ndim(lower) == 0 and np.ndim(upper) == 0
+    assert upper - lower >= 0.0  # Also catch (inf, inf) or nans
+    assert np.ndim(min_EB) == 0
+    assert 0.0 <= min_EB and min_EB < np.inf
 
     # Note: These conditions are designed to pass when NaNs are supplied.
     if lower > mu or mu > upper:
-        raise ValueError('mu %f outside of given limits (%f, %f)' %
-                         (mu, lower, upper))
+        raise ValueError("mu %f outside of given limits (%f, %f)" % (mu, lower, upper))
     if 2 * min_EB > upper - lower:
-        raise ValueError('min error bar %f too small for limits (%f, %f)' %
-                         (min_EB, lower, upper))
+        raise ValueError("min error bar %f too small for limits (%f, %f)" % (min_EB, lower, upper))
 
-    with np.errstate(invalid='ignore'):  # expect non-finite here
+    with np.errstate(invalid="ignore"):  # expect non-finite here
         EB_trivial = np.fmax(upper - mu, mu - lower)
-    assert(not (min_EB > EB_trivial))  # Let NaNs pass
+    assert not (min_EB > EB_trivial)  # Let NaNs pass
     EB = np.clip(EB, min_EB, EB_trivial)
     return EB
 
 
 def t_test(x):
-    '''Perform a standard t-test to test if the values in `x` are sampled from
+    """Perform a standard t-test to test if the values in `x` are sampled from
     a distribution with a zero mean.
 
     Parameters
@@ -77,8 +76,8 @@ def t_test(x):
     -------
     pval : float
         p-value (in [0,1]) from t-test on `x`.
-    '''
-    assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
+    """
+    assert np.ndim(x) == 1 and (not np.any(np.isnan(x)))
 
     if (len(x) <= 1) or (not np.all(np.isfinite(x))):
         return 1.0  # Can't say anything about scale => p=1
@@ -86,16 +85,16 @@ def t_test(x):
     _, pval = ss.ttest_1samp(x, 0.0)
     if np.isnan(pval):
         # Should only be possible if scale underflowed to zero:
-        assert(np.var(x, ddof=1) <= 1e-100)
+        assert np.var(x, ddof=1) <= 1e-100
         # It is debatable if the condition should be ``np.mean(x) == 0.0`` or
         # ``np.all(x == 0.0)``. Should not matter in practice.
         pval = np.float(np.mean(x) == 0.0)
-    assert(0.0 <= pval and pval <= 1.0)
+    assert 0.0 <= pval and pval <= 1.0
     return pval
 
 
 def t_EB(x, confidence=0.95):
-    '''Get t statistic based error bars on mean of `x`.
+    """Get t statistic based error bars on mean of `x`.
 
     Parameters
     ----------
@@ -110,10 +109,10 @@ def t_EB(x, confidence=0.95):
     EB : float
         Size of error bar on mean (>= 0). The confidence interval is
         ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) <= 1``.
-    '''
-    assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
-    assert(np.ndim(confidence) == 0)
-    assert(0.0 < confidence and confidence < 1.0)
+    """
+    assert np.ndim(x) == 1 and (not np.any(np.isnan(x)))
+    assert np.ndim(confidence) == 0
+    assert 0.0 < confidence and confidence < 1.0
 
     N = len(x)
     if (N <= 1) or (not np.all(np.isfinite(x))):
@@ -121,15 +120,15 @@ def t_EB(x, confidence=0.95):
 
     # loc cancels out when we just want EB anyway
     LB, UB = ss.t.interval(confidence, N - 1, loc=0.0, scale=1.0)
-    assert(not (LB > UB))
+    assert not (LB > UB)
     # Just multiplying scale=ss.sem(x) is better for when scale=0
     EB = 0.5 * ss.sem(x) * (UB - LB)
-    assert(np.ndim(EB) == 0 and EB >= 0.0)
+    assert np.ndim(EB) == 0 and EB >= 0.0
     return EB
 
 
 def bernstein_test(x, lower, upper):
-    '''Perform Bernstein bound-based test to test if the values in `x` are
+    """Perform Bernstein bound-based test to test if the values in `x` are
     sampled from a distribution with a zero mean. This test makes no
     distributional or central limit theorem assumption on `x`.
 
@@ -152,12 +151,12 @@ def bernstein_test(x, lower, upper):
     -------
     pval : float
         p-value (in [0,1]) from t-test on `x`.
-    '''
-    assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
-    assert(np.ndim(lower) == 0 and np.ndim(upper) == 0)
+    """
+    assert np.ndim(x) == 1 and (not np.any(np.isnan(x)))
+    assert np.ndim(lower) == 0 and np.ndim(upper) == 0
     range_ = upper - lower
-    assert(range_ >= 0.0)  # Also catch (inf, inf) or nans
-    assert(np.all(lower <= x) and np.all(x <= upper))
+    assert range_ >= 0.0  # Also catch (inf, inf) or nans
+    assert np.all(lower <= x) and np.all(x <= upper)
 
     if (len(x) <= 1) or (not np.all(np.isfinite(x))):
         return 1.0  # Can't say anything about scale => p=1
@@ -174,25 +173,25 @@ def bernstein_test(x, lower, upper):
     std = np.std(x, ddof=0)
 
     coef = [(3.0 * range_) / N, std * np.sqrt(2.0 / N), -np.abs(mu)]
-    assert(np.all(np.isfinite(coef)))  # Should have caught non-finite cases
+    assert np.all(np.isfinite(coef))  # Should have caught non-finite cases
     coef_roots = np.roots(coef)
-    assert(len(coef_roots) == 2)
-    assert(coef_roots.dtype.kind == 'f')  # Appears roots are always real
+    assert len(coef_roots) == 2
+    assert coef_roots.dtype.kind == "f"  # Appears roots are always real
     # Appears to always be one neg and one pos root, but we looking for square
     # root so the positive one is the correct one. The roots can be zero.
-    assert(np.sum(coef_roots <= 0.0) >= 1)
-    assert(np.sum(coef_roots >= 0.0) >= 1)
+    assert np.sum(coef_roots <= 0.0) >= 1
+    assert np.sum(coef_roots >= 0.0) >= 1
     B = np.max(coef_roots) ** 2  # Bernstein test statistic
     # Sampling CDF is bounded by exponential for any true distn on x.
     delta = 3.0 * np.exp(-B)
 
     pval = np.minimum(1.0, delta)  # Can cap at 1 to make p-value
-    assert(0.0 <= pval and pval <= 1.0)
+    assert 0.0 <= pval and pval <= 1.0
     return pval
 
 
 def bernstein_EB(x, lower, upper, confidence=0.95):
-    '''Get Bernstein bound based error bars on mean of `x`. This error bar
+    """Get Bernstein bound based error bars on mean of `x`. This error bar
     makes no distributional or central limit theorem assumption on `x`.
 
     Parameters
@@ -227,14 +226,14 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     Audibert, Jean-Yves, Remi Munos, and Csaba Szepesvari.
     "Exploration-exploitation tradeoff using variance estimates in multi-armed
     bandits." Theoretical Computer Science 410.19 (2009): 1876-1902.
-    '''
-    assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
-    assert(np.ndim(lower) == 0 and np.ndim(upper) == 0)
+    """
+    assert np.ndim(x) == 1 and (not np.any(np.isnan(x)))
+    assert np.ndim(lower) == 0 and np.ndim(upper) == 0
     range_ = upper - lower
-    assert(range_ >= 0.0)  # Also catch (inf, inf) or nans
-    assert(np.all(lower <= x) and np.all(x <= upper))
-    assert(np.ndim(confidence) == 0)
-    assert(0.0 < confidence and confidence < 1.0)
+    assert range_ >= 0.0  # Also catch (inf, inf) or nans
+    assert np.all(lower <= x) and np.all(x <= upper)
+    assert np.ndim(confidence) == 0
+    assert 0.0 < confidence and confidence < 1.0
 
     N = x.size
     if (N <= 1) or (not np.all(np.isfinite(x))):
@@ -244,16 +243,15 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     delta = 1.0 - confidence
     A = np.log(3.0 / delta)
     EB = np.std(x, ddof=0) * np.sqrt((2.0 * A) / N) + (3.0 * A * range_) / N
-    assert(np.ndim(EB) == 0 and EB >= 0.0)
+    assert np.ndim(EB) == 0 and EB >= 0.0
     return EB
 
 
-def _boot_EB_and_test(x, confidence=0.95, n_boot=N_BOOT,
-                      return_EB=True, return_test=True, return_CI=False):
-    '''Internal helper function to compute both bootstrap EB and significance
+def _boot_EB_and_test(x, confidence=0.95, n_boot=N_BOOT, return_EB=True, return_test=True, return_CI=False):
+    """Internal helper function to compute both bootstrap EB and significance
     using the same random bootstrap weights, which saves computation and
-    guarantees the results are coherent with each other.'''
-    assert(np.ndim(x) == 1 and (not np.any(np.isnan(x))))
+    guarantees the results are coherent with each other."""
+    assert np.ndim(x) == 1 and (not np.any(np.isnan(x)))
     # confidence is checked by bu.error_bar
 
     N = x.size
@@ -278,7 +276,7 @@ def _boot_EB_and_test(x, confidence=0.95, n_boot=N_BOOT,
 
 
 def boot_test(x, n_boot=N_BOOT):
-    '''Perform a bootstrap-based test to test if the values in `x` are sampled
+    """Perform a bootstrap-based test to test if the values in `x` are sampled
     from a distribution with a zero mean.
 
     Parameters
@@ -292,15 +290,14 @@ def boot_test(x, n_boot=N_BOOT):
     -------
     pval : float
         p-value (in [0,1]) from t-test on `x`.
-    '''
-    _, pval, _ = _boot_EB_and_test(x, n_boot=n_boot,
-                                   return_EB=False, return_test=True)
-    assert(0.0 <= pval and pval <= 1.0)
+    """
+    _, pval, _ = _boot_EB_and_test(x, n_boot=n_boot, return_EB=False, return_test=True)
+    assert 0.0 <= pval and pval <= 1.0
     return pval
 
 
 def boot_EB(x, confidence=0.95, n_boot=N_BOOT):
-    '''Get bootstrap bound based error bars on mean of `x`.
+    """Get bootstrap bound based error bars on mean of `x`.
 
     Parameters
     ----------
@@ -317,16 +314,14 @@ def boot_EB(x, confidence=0.95, n_boot=N_BOOT):
     EB : float
         Size of error bar on mean (>= 0). The confidence interval is
         ``[mean(x) - EB, mean(x) + EB]``. `EB` is inf when ``len(x) <= 1``.
-    '''
-    EB, _, _ = _boot_EB_and_test(x, confidence=confidence, n_boot=n_boot,
-                                 return_EB=True, return_test=False)
-    assert(np.ndim(EB) == 0 and EB >= 0.0)
+    """
+    EB, _, _ = _boot_EB_and_test(x, confidence=confidence, n_boot=n_boot, return_EB=True, return_test=False)
+    assert np.ndim(EB) == 0 and EB >= 0.0
     return EB
 
 
-def get_mean_and_EB(x, confidence=0.95, min_EB=0.0,
-                    lower=-np.inf, upper=np.inf, method='t'):
-    '''Get mean loss and estimated error bar.
+def get_mean_and_EB(x, confidence=0.95, min_EB=0.0, lower=-np.inf, upper=np.inf, method="t"):
+    """Get mean loss and estimated error bar.
 
     Parameters
     ----------
@@ -352,17 +347,17 @@ def get_mean_and_EB(x, confidence=0.95, min_EB=0.0,
     EB : float
         Size of error bar on mean of `x` (``EB > 0``). The confidence interval
         is ``[mu - EB, mu + EB]``.
-    '''
-    assert(np.all(lower <= x) and np.all(x <= upper))
+    """
+    assert np.all(lower <= x) and np.all(x <= upper)
 
-    if method == 't':
+    if method == "t":
         EB = t_EB(x, confidence=confidence)
-    elif method == 'bernstein':
+    elif method == "bernstein":
         EB = bernstein_EB(x, lower, upper, confidence=confidence)
-    elif method == 'boot':
+    elif method == "boot":
         EB = boot_EB(x, confidence=confidence)
     else:
-        assert(False)
+        assert False
 
     # EB subroutines already validated x for shape and nans
     mu = clip_chk(np.mean(x), lower, upper)
@@ -370,8 +365,8 @@ def get_mean_and_EB(x, confidence=0.95, min_EB=0.0,
     return mu, EB
 
 
-def get_test(x, lower=-np.inf, upper=np.inf, method='t'):
-    '''Perform a statistical test to determine if the values in `x` are sampled
+def get_test(x, lower=-np.inf, upper=np.inf, method="t"):
+    """Perform a statistical test to determine if the values in `x` are sampled
     from a distribution with a zero mean.
 
     Parameters
@@ -391,21 +386,20 @@ def get_test(x, lower=-np.inf, upper=np.inf, method='t'):
     -------
     pval : float
         p-value (in [0,1]) from statistical test on `x`.
-    '''
-    if method == 't':
+    """
+    if method == "t":
         pval = t_test(x)
-    elif method == 'bernstein':
+    elif method == "bernstein":
         pval = bernstein_test(x, lower, upper)
-    elif method == 'boot':
+    elif method == "boot":
         pval = boot_test(x)
     else:
-        assert(False)
+        assert False
     return pval
 
 
-def get_mean_EB_test(x, confidence=0.95, min_EB=0.0,
-                     lower=-np.inf, upper=np.inf, method='t'):
-    '''Get mean loss and estimated error bar. Also, perform a statistical test
+def get_mean_EB_test(x, confidence=0.95, min_EB=0.0, lower=-np.inf, upper=np.inf, method="t"):
+    """Get mean loss and estimated error bar. Also, perform a statistical test
     to determine if the values in `x` are sampled from a distribution with a
     zero mean.
 
@@ -435,19 +429,19 @@ def get_mean_EB_test(x, confidence=0.95, min_EB=0.0,
         is ``[mu - EB, mu + EB]``.
     pval : float
         p-value (in [0,1]) from statistical test on `x`.
-    '''
-    assert(np.all(lower <= x) and np.all(x <= upper))
+    """
+    assert np.all(lower <= x) and np.all(x <= upper)
 
-    if method == 't':
+    if method == "t":
         EB = t_EB(x, confidence=confidence)
         pval = t_test(x)
-    elif method == 'bernstein':
+    elif method == "bernstein":
         EB = bernstein_EB(x, lower, upper, confidence=confidence)
         pval = bernstein_test(x, lower, upper)
-    elif method == 'boot':
+    elif method == "boot":
         EB, pval, _ = _boot_EB_and_test(x, confidence=confidence)
     else:
-        assert(False)
+        assert False
 
     # EB subroutines already validated x for shape and nans
     mu = clip_chk(np.mean(x), lower, upper)
@@ -460,9 +454,8 @@ def get_mean_EB_test(x, confidence=0.95, min_EB=0.0,
 # ============================================================================
 
 
-def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
-                       confidence=0.95, method_EB='t', limits={}):
-    '''Build table with mean and error bar summaries from a loss table that
+def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT, confidence=0.95, method_EB="t", limits={}):
+    """Build table with mean and error bar summaries from a loss table that
     contains losses on a per data point basis.
 
     Parameters
@@ -502,50 +495,44 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT,
         The statistical significance is a p-value from a two-sided hypothesis
         test on the hypothesis H0 that foo has the same mean loss as the
         reference method `ref_method`.
-    '''
-    assert(loss_table.columns.names == (METRIC, METHOD))
+    """
+    assert loss_table.columns.names == (METRIC, METHOD)
     metrics, methods = loss_table.columns.levels
-    assert(ref_method in methods)  # ==> len(methods) >= 1
-    assert(len(loss_table) >= 1 and len(metrics) >= 1)
+    assert ref_method in methods  # ==> len(methods) >= 1
+    assert len(loss_table) >= 1 and len(metrics) >= 1
     # Could also test these are cartesian product if we wanted to be exhaustive
 
-    col_names = pd.MultiIndex.from_product([metrics, STD_STATS],
-                                           names=[METRIC, STAT])
+    col_names = pd.MultiIndex.from_product([metrics, STD_STATS], names=[METRIC, STAT])
     perf_tbl = pd.DataFrame(index=methods, columns=col_names, dtype=float)
     perf_tbl.index.set_names(METHOD, inplace=True)
     for metric in metrics:
         lower, upper = limits.get(metric, (-np.inf, np.inf))
-        assert(lower <= upper)
+        assert lower <= upper
         loss_ref = loss_table.loc[:, (metric, ref_method)].values
-        assert(loss_ref.ndim == 1)  # Weird stuff happens if names not unique
-        assert(not np.any(np.isnan(loss_ref)))  # Would let method cheat
-        assert(np.all(lower <= loss_ref) and np.all(loss_ref <= upper))
+        assert loss_ref.ndim == 1  # Weird stuff happens if names not unique
+        assert not np.any(np.isnan(loss_ref))  # Would let method cheat
+        assert np.all(lower <= loss_ref) and np.all(loss_ref <= upper)
         for method in methods:
             loss = loss_table.loc[:, (metric, method)].values
-            assert(loss.ndim == 1)  # Weird stuff happens if names not unique
-            assert(not np.any(np.isnan(loss)))  # Would let method cheat
-            assert(np.all(lower <= loss) and np.all(loss <= upper))
+            assert loss.ndim == 1  # Weird stuff happens if names not unique
+            assert not np.any(np.isnan(loss))  # Would let method cheat
+            assert np.all(lower <= loss) and np.all(loss <= upper)
 
             mu = np.mean(loss)  # This is the same in all cases
 
             deltas = loss - loss_ref
             range_ = upper - lower
-            self_comparison = (method == ref_method)
+            self_comparison = method == ref_method
 
             EB, pval = np.nan, np.nan
             if pairwise_CI:
                 if not self_comparison:  # Otherwise leave both as nan
-                    _, EB, pval = get_mean_EB_test(deltas, confidence,
-                                                   lower=-range_, upper=range_,
-                                                   method=method_EB)
+                    _, EB, pval = get_mean_EB_test(deltas, confidence, lower=-range_, upper=range_, method=method_EB)
             else:
-                mu_, EB = get_mean_and_EB(loss, confidence=confidence,
-                                          lower=lower, upper=upper,
-                                          method=method_EB)
-                assert(mu_ == mu)
+                mu_, EB = get_mean_and_EB(loss, confidence=confidence, lower=lower, upper=upper, method=method_EB)
+                assert mu_ == mu
                 if not self_comparison:  # Otherwise pval as nan
-                    pval = get_test(deltas, lower=-range_, upper=range_,
-                                    method=method_EB)
+                    pval = get_test(deltas, lower=-range_, upper=range_, method=method_EB)
 
             # This is two-sided, could include one-sided option too.
             perf_tbl.loc[method, metric] = (mu, EB, pval)

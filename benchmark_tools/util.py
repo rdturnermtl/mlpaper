@@ -1,7 +1,9 @@
 # Ryan Turner (turnerry@iro.umontreal.ca)
-from __future__ import print_function, absolute_import, division
+from __future__ import absolute_import, division, print_function
+
 from builtins import range
 from sys import version_info
+
 import numpy as np
 import scipy.interpolate as si
 from scipy.special import logsumexp
@@ -12,12 +14,12 @@ STRICT_SPACING = False
 def clip_chk(a, a_min, a_max):
     a_clip = np.clip(a, a_min, a_max)
     # Check that clipping was small effect
-    assert(np.all((a == a_clip) | np.isclose(a, a_min) | np.isclose(a, a_max)))
+    assert np.all((a == a_clip) | np.isclose(a, a_min) | np.isclose(a, a_max))
     return a_clip
 
 
 def one_hot(y, n_labels):
-    '''Same functionality `sklearn.preprocessing.OneHotEncoder` but avoids
+    """Same functionality `sklearn.preprocessing.OneHotEncoder` but avoids
     extra dependency.
 
     Parameters
@@ -32,11 +34,11 @@ def one_hot(y, n_labels):
     -------
     y_bin : ndarray of type bool, shape (n_samples, n_labels)
         One hot encoding of `y`, with size ``(len(y), n_labels)``
-    '''
+    """
     N, = y.shape
-    assert(n_labels >= 1)
-    assert(y.dtype.kind == 'i')  # bool would confuse np indexing
-    assert(np.all(0 <= y) and np.all(y < n_labels))
+    assert n_labels >= 1
+    assert y.dtype.kind == "i"  # bool would confuse np indexing
+    assert np.all(0 <= y) and np.all(y < n_labels)
 
     y_bin = np.zeros((N, n_labels), dtype=bool)
     y_bin[range(N), y] = True
@@ -44,7 +46,7 @@ def one_hot(y, n_labels):
 
 
 def normalize(log_pred_prob):
-    '''Normalize log probability distributions for classification.
+    """Normalize log probability distributions for classification.
 
     Parameters
     ----------
@@ -58,9 +60,9 @@ def normalize(log_pred_prob):
     log_pred_prob : ndarray, shape (n_samples, n_labels)
         A row-wise normalized (``exp(log_pred_prob)`` sums to 1 on each row)
         version of the input.
-    '''
-    assert(log_pred_prob.ndim == 2)
-    assert(log_pred_prob.shape[1] >= 1)  # Otherwise, can't make it sum to 1
+    """
+    assert log_pred_prob.ndim == 2
+    assert log_pred_prob.shape[1] >= 1  # Otherwise, can't make it sum to 1
 
     normalizer = logsumexp(log_pred_prob, axis=1, keepdims=True)
     log_pred_prob = log_pred_prob - normalizer
@@ -68,7 +70,7 @@ def normalize(log_pred_prob):
 
 
 def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
-    '''Add a small amount of noise to a vector such that the output vector has
+    """Add a small amount of noise to a vector such that the output vector has
     all unique values. The ordering of the resutiling vector remains the
     same: ``argsort(output) = argsort(input)`` if input values are unique.
 
@@ -87,17 +89,18 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
         Noise correupted version of input. All values are unique with
         probability 1. The ordering is the same as the input if the inputs
         values are all unique.
-    '''
-    assert(x.ndim == 1)
-    assert(np.all(np.isfinite(x)))
+    """
+    assert x.ndim == 1
+    assert np.all(np.isfinite(x))
 
     u_x = np.unique(x)
     delta = default_epsilon if len(u_x) <= 1 else np.min(np.diff(u_x))
     delta = np.minimum(max_epsilon, delta)
-    assert(0.0 < delta and delta <= max_epsilon)
+    assert 0.0 < delta and delta <= max_epsilon
 
     x = x + delta * (np.random.rand(len(x)) - 0.5)
     return x
+
 
 # ============================================================================
 # Area for annoying routines where we need use version_info and write
@@ -106,13 +109,13 @@ def epsilon_noise(x, default_epsilon=1e-10, max_epsilon=1.0):
 
 
 def _remove_chars_py2(x_str, del_chars):
-    '''See `_remove_chars_py3`.'''
+    """See `_remove_chars_py3`."""
     x_str = x_str.translate(None, del_chars)
     return x_str
 
 
 def _remove_chars_py3(x_str, del_chars):
-    '''Utility to remove specified characters from string.
+    """Utility to remove specified characters from string.
 
     Parameters
     ----------
@@ -125,14 +128,13 @@ def _remove_chars_py3(x_str, del_chars):
     -------
     x_str : str
         Generic input string after removing characters in `del_chars`.
-    '''
-    translator = str.maketrans('', '', del_chars)
+    """
+    translator = str.maketrans("", "", del_chars)
     x_str = x_str.translate(translator)
     return x_str
 
-# The py3 versions seems to work in Py2 after using:
-# from builtins import str
-# *if* x_str is unicode => need to make sure we use unicode consistently
+
+# We can probably remove this soon since Py2 is dead:
 remove_chars = _remove_chars_py3 if version_info[0] >= 3 else _remove_chars_py2
 
 # ============================================================================
@@ -167,14 +169,14 @@ def unique_take_last(xp, yp=None):
     yp : ndarray, shape (m_samples,)
         Input `yp` after removing extra points. m_samples <= n_samples.
     """
-    assert(xp.ndim == 1)
-    assert(not np.any(np.isnan(xp)))
-    assert(yp is None or xp.shape == yp.shape)
-    assert(yp is None or (not np.any(np.isnan(xp))))
+    assert xp.ndim == 1
+    assert not np.any(np.isnan(xp))
+    assert yp is None or xp.shape == yp.shape
+    assert yp is None or (not np.any(np.isnan(xp)))
 
     # Get deltas to determine unique points, and check pre-sorted exactly
     deltas = np.diff(xp)
-    assert(np.all(deltas >= 0))
+    assert np.all(deltas >= 0)
 
     idx = [] if xp.size == 0 else np.concatenate((deltas > 0, [True]))
     xp = xp[idx]
@@ -183,7 +185,7 @@ def unique_take_last(xp, yp=None):
 
 
 def cummax_strict(x, copy=True):
-    '''Minimally increase array elements to make the array strictly increasing.
+    """Minimally increase array elements to make the array strictly increasing.
 
     Parameters
     ----------
@@ -198,19 +200,18 @@ def cummax_strict(x, copy=True):
         A list of points that are now *strictly* sorted. If `x` was already
         sorted then the new points will be as miniminally changed as the
         floating point representation allows.
-    '''
-    assert(x.ndim == 1)
+    """
+    assert x.ndim == 1
 
     x = np.copy(x) if copy else x
     for ii in range(1, len(x)):
         x[ii] = np.maximum(np.nextafter(x[ii - 1], np.inf), x[ii])
-    assert(np.all(np.diff(x) > 0))
+    assert np.all(np.diff(x) > 0)
     return x
 
 
-def eval_step_func(x_grid, xp, yp, ival=None,
-                   assume_sorted=False, skip_unique_chk=False):
-    '''Evaluate a stepwise function. Based on the ECDF class in statsmodels.
+def eval_step_func(x_grid, xp, yp, ival=None, assume_sorted=False, skip_unique_chk=False):
+    """Evaluate a stepwise function. Based on the ECDF class in statsmodels.
     The function is assumed to cadlag (like a CDF function).
 
     This is a non-OOP equivalent to class:
@@ -241,31 +242,31 @@ def eval_step_func(x_grid, xp, yp, ival=None,
     y_grid : ndarray, shape (n_grid,)
         Step function defined by `xp` and `yp` evaluated at the points in
         `x_grid`.
-    '''
-    assert(x_grid.ndim == 1)
-    assert(xp.ndim == 1 and xp.shape == yp.shape)
+    """
+    assert x_grid.ndim == 1
+    assert xp.ndim == 1 and xp.shape == yp.shape
 
     if not assume_sorted:
         idx = np.argsort(xp)
         xp, yp = xp[idx], yp[idx]
 
     # Step function not well defined if xp grid has duplicates
-    assert(skip_unique_chk or np.all(np.diff(xp) > 0.0))
+    assert skip_unique_chk or np.all(np.diff(xp) > 0.0)
 
     if ival is None:
         # This will have error if xp is empty
-        assert(len(x_grid) == 0 or np.all(xp[0] <= x_grid))
+        assert len(x_grid) == 0 or np.all(xp[0] <= x_grid)
     else:
-        assert(np.ndim(ival) == 0.0)
+        assert np.ndim(ival) == 0.0
         xp = np.concatenate(([-np.inf], xp))
         yp = np.concatenate(([ival], yp))
 
-    idx = np.searchsorted(xp, x_grid, side='right') - 1
+    idx = np.searchsorted(xp, x_grid, side="right") - 1
     y_grid = yp[idx]
     return y_grid
 
 
-def _interp1d(x_grid, xp, yp, kind='linear'):
+def _interp1d(x_grid, xp, yp, kind="linear"):
     """Wrap `scipy.interpolate.interp1d` so it can handle ``'previous'`` like
     MATLAB's `interp1` function. ``'next'`` may be added here in the future.
 
@@ -290,17 +291,17 @@ def _interp1d(x_grid, xp, yp, kind='linear'):
     y_grid : ndarray, shape (n_grid,)
         Interpolation `xp` and `yp` evaluated at the points in `x_grid`.
     """
-    assert(x_grid.ndim == 1)
-    assert(xp.ndim == 1 and xp.shape == yp.shape)
-    assert(xp.size >= 2)  # at least 2 points need to do area
-    assert(np.all(np.diff(xp) >= 0))
+    assert x_grid.ndim == 1
+    assert xp.ndim == 1 and xp.shape == yp.shape
+    assert xp.size >= 2  # at least 2 points need to do area
+    assert np.all(np.diff(xp) >= 0)
 
-    if kind == 'previous':
+    if kind == "previous":
         # eval_step_func does not work when x points overlap so need to call
         # unique_take_last to get final one.
         xp, yp = unique_take_last(xp, yp)
         y_grid = eval_step_func(x_grid, xp, yp, assume_sorted=True)
-    elif kind == 'next':
+    elif kind == "next":
         # It would be easy to modify eval_step_func to handle this case, but we
         # don't have any need for it right now.
         raise NotImplementedError
@@ -313,9 +314,9 @@ def _interp1d(x_grid, xp, yp, kind='linear'):
         y_grid = f(x_grid)
     return y_grid
 
+
 # Make a version of interp1d that supprts vectorized inputs:
-interp1d = np.vectorize(_interp1d, otypes=(float,), excluded=('kind', 3),
-                        signature='(n),(m),(m)->(n)')
+interp1d = np.vectorize(_interp1d, otypes=(float,), excluded=("kind", 3), signature="(n),(m),(m)->(n)")
 
 
 def area(x_curve, y_curve, kind):
@@ -337,17 +338,17 @@ def area(x_curve, y_curve, kind):
         Area under curve. Has same length as `x_curve` has columns.
     """
     # Note: has some tests in perf_curves_test in addition to util_test.
-    assert(x_curve.ndim == 2)
-    assert(x_curve.shape[1] >= 2)  # at least 2 points need to do area
-    assert(not np.any(np.isnan(x_curve)))
-    assert(y_curve.shape == x_curve.shape)
-    assert(not np.any(np.isnan(y_curve)))
+    assert x_curve.ndim == 2
+    assert x_curve.shape[1] >= 2  # at least 2 points need to do area
+    assert not np.any(np.isnan(x_curve))
+    assert y_curve.shape == x_curve.shape
+    assert not np.any(np.isnan(y_curve))
 
-    if kind == 'previous':
-        with np.errstate(invalid='ignore'):
+    if kind == "previous":
+        with np.errstate(invalid="ignore"):
             # Use nansum so we consider inf y_curve for 0 width as 0 area
             auc = np.nansum(y_curve[:, :-1] * np.diff(x_curve, axis=1), axis=1)
-    elif kind == 'linear':
+    elif kind == "linear":
         auc = np.trapz(y_curve, x_curve, axis=1)
     else:
         # 'next' could easily be added, but others would be a pain. We could
@@ -355,5 +356,5 @@ def area(x_curve, y_curve, kind):
         raise NotImplementedError
 
     # Make sure we have legit area, this could happen with inf & -inf in curves
-    assert(not np.any(np.isnan(auc)))
+    assert not np.any(np.isnan(auc))
     return auc

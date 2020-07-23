@@ -1,6 +1,0 @@
-# Only basic requirements to run the code, 2nd-order deps not included
-future>=0.16.0
-joblib>=0.11
-numpy>=1.12.0
-pandas>=0.19.2
-scipy>=0.18.1
