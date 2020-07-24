@@ -1,10 +1,14 @@
+******************************
 The ML Paper Package (mlpaper)
-==============================
+******************************
 
 Easy benchmarking of machine learning models with sklearn interface with
 statistical tests built-in.
 
-First we consider the ``plot_classifier_comparison.py`` demo file. This extends
+Usage for classification problems
+=================================
+
+First, we consider the ``plot_classifier_comparison.py`` demo file. This extends
 the standard sklearn `classifier
 comparison <https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html>`__
 but also demos the ease of `mlpaper` to create a performance
@@ -85,8 +89,11 @@ to export the results in plain text, or for LaTeX we use:
         )
     )
 
+Output
+------
+
 DATASET 0 Results
------------------
+"""""""""""""""""
 
 ::
 
@@ -104,7 +111,7 @@ DATASET 0 Results
     iid                0.53(16)       N/A  0.5(0)         N/A  0(0)         N/A  1.004(22)      N/A  0.695(11)      N/A  1.005(27)      N/A  0.53(17)       N/A
 
 DATASET 0 Results in LaTeX
---------------------------
+""""""""""""""""""""""""""
 
 ::
 
@@ -127,7 +134,7 @@ DATASET 0 Results in LaTeX
     \end{tabular}
 
 DATASET 1 Results
------------------
+"""""""""""""""""
 
 ::
 
@@ -145,7 +152,7 @@ DATASET 1 Results
     iid                0.60(16)        N/A  0.5(0)         N/A  0(0)           N/A  1.071(85)      N/A  0.729(43)      N/A  1.08(11)       N/A  0.60(16)       N/A
 
 DATASET 1 Results in LaTeX
---------------------------
+""""""""""""""""""""""""""
 
 ::
 
@@ -168,7 +175,7 @@ DATASET 1 Results in LaTeX
     \end{tabular}
 
 DATASET 2 Results
------------------
+"""""""""""""""""
 
 ::
 
@@ -186,7 +193,7 @@ DATASET 2 Results
     iid                0.55(16)       N/A  0.5(0)         N/A  0(0)           N/A  1.018(43)      N/A  0.702(22)      N/A  1.021(52)      N/A  0.55(17)       N/A
 
 DATASET 2 Results in LaTeX
---------------------------
+""""""""""""""""""""""""""
 
 ::
 
@@ -209,7 +216,7 @@ DATASET 2 Results in LaTeX
     \end{tabular}
 
 ROC curves
-~~~~~~~~~~
+""""""""""
 
 The `just_benchmark` routines also produces ROC curves with error bars from bootstrap analysis, which have been vectorized for speed:
 
@@ -217,19 +224,19 @@ The `just_benchmark` routines also produces ROC curves with error bars from boot
    :alt: ROC
 
 Precision-recall curves
-~~~~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""""""
 
 .. figure:: https://user-images.githubusercontent.com/28273671/88328286-0f9ce280-ccdd-11ea-815e-f3f0ce86d669.png
    :alt: PR
 
 Precision-recall-gain curves
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+""""""""""""""""""""""""""""
 
 .. figure:: https://user-images.githubusercontent.com/28273671/88328305-1592c380-ccdd-11ea-8906-79142178322f.png
    :alt: PRG
 
-Output from regression demo
----------------------------
+Usage for regression problems
+=============================
 
 The `mlpaper` package can also be applied to a regression problem with:
 
@@ -242,6 +249,9 @@ The `mlpaper` package can also be applied to a regression problem with:
 Here we have used ``pairwise_CI=True`` which makes the confidence
 intervals based on the uncertainty of the loss *difference* to the
 reference method rather than a confidence interval on the actual loss.
+
+Output
+------
 
 By extending the sklearn `regression
 demo <https://scikit-learn.org/stable/auto_examples/gaussian_process/plot_compare_gpr_krr.html#sphx-glr-auto-examples-gaussian-process-plot-compare-gpr-krr-py>`__
