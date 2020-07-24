@@ -353,7 +353,7 @@ To rebuild the requirements, we can run:
    # Get py files from notebooks to analyze
    pipreqs mlpaper/ --savepath requirements/base.in
    pipreqs tests/ --savepath requirements/test.in
-
+   pipreqs demos/ --savepath requirements/demo.in
    pipreqs docs/ --savepath requirements/docs.in
    # Regenerate the .txt files from .in files
    pip-compile-multi --no-upgrade
