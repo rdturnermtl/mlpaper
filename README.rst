@@ -403,6 +403,7 @@ The tests for this package can be run with:
    ./local_test.sh
 
 The script creates an environment using the requirements found in ``requirements/test.txt``.
+A code coverage report will also be produced in ``$GIT/mlpaper/htmlcov/index.html``.
 
 Deployment
 ----------

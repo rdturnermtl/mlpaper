@@ -158,7 +158,7 @@ for ds_cnt, ds in enumerate(datasets):
         ax.text(xx.max() - 0.3, yy.min() + 0.3, ("%.2f" % score).lstrip("0"), size=15, horizontalalignment="right")
         i += 1
 plt.tight_layout()
-plt.savefig("output.png", format="png", dpi=300, pad=0)
+plt.savefig("output.png", format="png", dpi=300)
 
 for metric in STD_BINARY_CURVES:
     figure = plt.figure(figsize=(3 * (len(classifiers) - 1), 5))
@@ -184,4 +184,4 @@ for metric in STD_BINARY_CURVES:
                 ax.set_title(method)
             i += 1
     plt.tight_layout(pad=0.0)
-    plt.savefig(metric + ".png", format="png", dpi=300, pad=0)
+    plt.savefig(metric + ".png", format="png", dpi=300)

@@ -40,6 +40,7 @@ git clean -x -ff -d
 
 # Run tests locally and cleanup
 ./local_test.sh
+./integration_test.sh
 git reset --hard HEAD
 git clean -x -ff -d
 test -z "$(git status --porcelain)"
@@ -97,6 +98,7 @@ test -z "$(git status --porcelain)"
 
 # Run tests locally and cleanup
 ./local_test.sh
+./integration_test.sh
 git reset --hard HEAD
 git clean -x -ff -d
 test -z "$(git status --porcelain)"
