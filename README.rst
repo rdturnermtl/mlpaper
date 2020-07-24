@@ -92,7 +92,7 @@ to export the results in plain text, or for LaTeX we use:
 Output
 ------
 
-DATASET 0 Results
+Dataset 0 (Moons)
 """""""""""""""""
 
 ::
@@ -110,7 +110,7 @@ DATASET 0 Results
     Random Forest      0.965(82)  <0.0001  0.949(84)  <0.0001  0.92147  <0.0001  0.31(26)   <0.0001  0.52(70)    0.6099  0.28(24)   <0.0001  0.100(98)  <0.0001
     iid                0.53(16)       N/A  0.5(0)         N/A  0(0)         N/A  1.004(22)      N/A  0.695(11)      N/A  1.005(27)      N/A  0.53(17)       N/A
 
-DATASET 0 Results in LaTeX
+Dataset 0 (Moons) in LaTeX
 """"""""""""""""""""""""""
 
 ::
@@ -133,8 +133,8 @@ DATASET 0 Results in LaTeX
     \bottomrule
     \end{tabular}
 
-DATASET 1 Results
-"""""""""""""""""
+Dataset 1 (Circles)
+"""""""""""""""""""
 
 ::
 
@@ -151,8 +151,8 @@ DATASET 1 Results
     Random Forest      0.90(13)    <0.0001  0.85(16)   <0.0001  0.64512     0.0021  0.65(30)    0.0070  0.48(19)    0.0094  0.62(31)    0.0047  0.23(14)    0.0006
     iid                0.60(16)        N/A  0.5(0)         N/A  0(0)           N/A  1.071(85)      N/A  0.729(43)      N/A  1.08(11)       N/A  0.60(16)       N/A
 
-DATASET 1 Results in LaTeX
-""""""""""""""""""""""""""
+Dataset 1 (Circles) in LaTeX
+""""""""""""""""""""""""""""
 
 ::
 
@@ -174,8 +174,8 @@ DATASET 1 Results in LaTeX
     \bottomrule
     \end{tabular}
 
-DATASET 2 Results
-"""""""""""""""""
+Dataset 2 (Linear)
+""""""""""""""""""
 
 ::
 
@@ -192,8 +192,8 @@ DATASET 2 Results
     Random Forest      0.990(25)  <0.0001  0.968(58)  <0.0001  0.981(73)  <0.0001  0.25(25)   <0.0001  0.47(70)    0.5055  0.23(23)   <0.0001  0.075(86)  <0.0001
     iid                0.55(16)       N/A  0.5(0)         N/A  0(0)           N/A  1.018(43)      N/A  0.702(22)      N/A  1.021(52)      N/A  0.55(17)       N/A
 
-DATASET 2 Results in LaTeX
-""""""""""""""""""""""""""
+Dataset 2 (Linear) in LaTeX
+"""""""""""""""""""""""""""
 
 ::
 
@@ -360,11 +360,13 @@ To rebuild the requirements, we can run:
 .. code-block:: bash
 
    cd $GIT/mlpaper
-   # Get py files from notebooks to analyze
-   pipreqs mlpaper/ --savepath requirements/base.in
-   pipreqs tests/ --savepath requirements/test.in
-   pipreqs demos/ --savepath requirements/demo.in
-   pipreqs docs/ --savepath requirements/docs.in
+
+   # Check if there any discrepancies in the .in files
+   pipreqs mlpaper/ --diff requirements/base.in
+   pipreqs tests/ --diff requirements/test.in
+   pipreqs demos/ --diff requirements/demo.in
+   pipreqs docs/ --diff requirements/docs.in
+
    # Regenerate the .txt files from .in files
    pip-compile-multi --no-upgrade
 
