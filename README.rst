@@ -4,13 +4,21 @@ The ML Paper Package (mlpaper)
 Easy benchmarking of machine learning models with sklearn interface with
 statistical tests built-in.
 
-See ``plot_classifier_comparison.py`` for example usage. This extends
+First we consider the ``plot_classifier_comparison.py`` demo file. This extends
 the standard sklearn `classifier
 comparison <https://scikit-learn.org/stable/auto_examples/classification/plot_classifier_comparison.html>`__
-but also demos the ease of benchmark tools to create a performance
+but also demos the ease of `mlpaper` to create a performance
 report.
 
-Pandas tables with the performance results of all the models can be
+In this demo, we use the example of the three toy data sets and ten classifiers from the sklearn example:
+
+.. figure:: https://user-images.githubusercontent.com/28273671/88328310-17f51d80-ccdd-11ea-8993-d833cb35c524.png
+   :alt: sklearn
+
+The `mlpaper` package can benchmark all of the of these methods and created a properly formatted LaTeX table (with error bars) in a few commands.
+This generates a results table for copy-and-paste into a ML paper `.tex` file in a few commands.
+
+Pandas tables with the performance results of all the methods can be
 built by:
 
 .. code:: python
@@ -22,7 +30,7 @@ built by:
 This benchmarks all the models in classifiers on the data (``X_train``,
 ``y_train``, ``X_test``, ``y_test``) for 2-class classification. It uses
 the loss function described in the dictionaries ``STD_CLASS_LOSS``, and
-the curves (e.g., ROC, PR) in ``STD_BINARY_CURVES``. ``ref_method``
+the curves (e.g., ROC, PR) in ``STD_BINARY_CURVES``. The ``ref_method``
 defines the model that is the reference to compare against for assessing
 statistically significant performance gains.
 
@@ -171,16 +179,10 @@ DATASET 2 Results in LaTeX
     \bottomrule
     \end{tabular}
 
-Sklearn output of classifiers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. figure:: https://user-images.githubusercontent.com/28273671/88328310-17f51d80-ccdd-11ea-8993-d833cb35c524.png
-   :alt: sklearn
-
 ROC curves
 ~~~~~~~~~~
 
-ROC curves with errorbars from bootstrap analysis, which have been vectorized for speed.
+The `just_benchmark` routines also produces ROC curves with error bars from bootstrap analysis, which have been vectorized for speed:
 
 .. figure:: https://user-images.githubusercontent.com/28273671/88328302-13306980-ccdd-11ea-8862-2fd3e92239b3.png
    :alt: ROC
@@ -200,7 +202,7 @@ Precision-recall-gain curves
 Output from regression demo
 ---------------------------
 
-Benchmark tools can also be applied to a regression problem with:
+The `mlpaper` package can also be applied to a regression problem with:
 
 .. code:: python
 
