@@ -287,3 +287,131 @@ To also get the dependencies for the demos in the README install with
 .. code-block:: bash
 
    pip install mlpaper[demo]
+
+Contributing
+============
+
+The following instructions have been tested with Python 3.7.4 on Mac OS (10.14.6).
+
+Install in editable mode
+------------------------
+
+First, define the variables for the paths we will use:
+
+.. code-block:: bash
+
+   GIT=/path/to/where/you/put/repos
+   ENVS=/path/to/where/you/put/virtualenvs
+
+Then clone the repo in your git directory ``$GIT``:
+
+.. code-block:: bash
+
+   cd $GIT
+   git clone https://github.com/rdturnermtl/mlpaper.git
+
+Inside your virtual environments folder ``$ENVS``, make the environment:
+
+.. code-block:: bash
+
+   cd $ENVS
+   virtualenv mlpaper --python=python3.7
+   source $ENVS/mlpaper/bin/activate
+
+Now we can install the pip dependencies. Move back into your git directory and run
+
+.. code-block:: bash
+
+   cd $GIT/mlpaper
+   pip install -r requirements/base.txt
+   pip install -e .  # Install the package itself
+
+Contributor tools
+-----------------
+
+First, we need to setup some needed tools:
+
+.. code-block:: bash
+
+   cd $ENVS
+   virtualenv mlpaper_tools --python=python3.7
+   source $ENVS/mlpaper_tools/bin/activate
+   pip install -r $GIT/mlpaper/requirements/tools.txt
+
+To install the pre-commit hooks for contributing run (in the ``mlpaper_tools`` environment):
+
+.. code-block:: bash
+
+   cd $GIT/mlpaper
+   pre-commit install
+
+To rebuild the requirements, we can run:
+
+.. code-block:: bash
+
+   cd $GIT/mlpaper
+   # Get py files from notebooks to analyze
+   pipreqs mlpaper/ --savepath requirements/base.in
+   pipreqs tests/ --savepath requirements/test.in
+
+   pipreqs docs/ --savepath requirements/docs.in
+   # Regenerate the .txt files from .in files
+   pip-compile-multi --no-upgrade
+
+Generating the documentation
+----------------------------
+
+First setup the environment for building with ``Sphinx``:
+
+.. code-block:: bash
+
+   cd $ENVS
+   virtualenv mlpaper_docs --python=python3.7
+   source $ENVS/mlpaper_docs/bin/activate
+   pip install -r $GIT/mlpaper/requirements/docs.txt
+
+Then we can do the build:
+
+.. code-block:: bash
+
+   cd $GIT/mlpaper/docs
+   make all
+   open _build/html/index.html
+
+Documentation will be available in all formats in ``Makefile``. Use ``make html`` to only generate the HTML documentation.
+
+Running the tests
+-----------------
+
+The tests for this package can be run with:
+
+.. code-block:: bash
+
+   cd $GIT/mlpaper
+   ./local_test.sh
+
+The script creates an environment using the requirements found in ``requirements/test.txt``.
+
+Deployment
+----------
+
+The wheel (tar ball) for deployment as a pip installable package can be built using the script:
+
+.. code-block:: bash
+
+   cd $GIT/mlpaper/
+   ./build_wheel.sh
+
+Links
+=====
+
+The `source <https://github.com/rdturnermtl/mlpaper/>`_ is hosted on GitHub.
+
+The `documentation <https://mlpaper.readthedocs.io/en/latest/>`_ is hosted at Read the Docs.
+
+Installable from `PyPI <https://pypi.org/project/mlpaper/>`_.
+
+License
+=======
+
+This project is licensed under the Apache 2 License - see the LICENSE file for details.
