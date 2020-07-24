@@ -23,9 +23,20 @@ built by:
 
 .. code:: python
 
-        performance_df, performance_curves_dict = \
-            btc.just_benchmark(X_train, y_train, X_test, y_test, 2, classifiers,
-                               STD_CLASS_LOSS, STD_BINARY_CURVES, ref_method)
+    import mlpaper.classification as btc
+    from mlpaper.classification import STD_BINARY_CURVES, STD_CLASS_LOSS
+
+    performance_df, performance_curves_dict = btc.just_benchmark(
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+        2,
+        classifiers,
+        STD_CLASS_LOSS,
+        STD_BINARY_CURVES,
+        ref_method,
+    )
 
 This benchmarks all the models in classifiers on the data (``X_train``,
 ``y_train``, ``X_test``, ``y_test``) for 2-class classification. It uses
@@ -42,19 +53,37 @@ alignment of decimal points, units in headers, etc. Here we use:
 
 .. code:: python
 
-        print sp.just_format_it(performance_df, shift_mod=3, unit_dict={'NLL': 'nats'},
-                                crap_limit_min={'AUPRG': -1},
-                                EB_limit={'AUPRG': -1},
-                                non_finite_fmt={sp.NAN_STR: 'N/A'}, use_tex=False)
+    import mlpaper.sciprint as sp
+
+    print(
+        sp.just_format_it(
+            performance_df,
+            shift_mod=3,
+            unit_dict={"NLL": "nats"},
+            crap_limit_min={"AUPRG": -1},
+            EB_limit={"AUPRG": -1},
+            non_finite_fmt={sp.NAN_STR: "N/A"},
+            use_tex=False,
+        )
+    )
 
 to export the results in plain text, or for LaTeX we use:
 
 .. code:: python
 
-        print sp.just_format_it(performance_df, shift_mod=3, unit_dict={'NLL': 'nats'},
-                                crap_limit_min={'AUPRG': -1},
-                                EB_limit={'AUPRG': -1},
-                                non_finite_fmt={sp.NAN_STR: '{--}'}, use_tex=True)
+    import mlpaper.sciprint as sp
+
+    print(
+        sp.just_format_it(
+            performance_df,
+            shift_mod=3,
+            unit_dict={"NLL": "nats"},
+            crap_limit_min={"AUPRG": -1},
+            EB_limit={"AUPRG": -1},
+            non_finite_fmt={sp.NAN_STR: "{--}"},
+            use_tex=True,
+        )
+    )
 
 DATASET 0 Results
 -----------------
@@ -207,9 +236,8 @@ The `mlpaper` package can also be applied to a regression problem with:
 .. code:: python
 
     import mlpaper.regression as btr
-    full_tbl = btr.just_benchmark(X_train, y_train, X_test, y_test,
-                                  regressors, STD_REGR_LOSS, 'iid',
-                                  pairwise_CI=True)
+
+    full_tbl = btr.just_benchmark(X_train, y_train, X_test, y_test, regressors, STD_REGR_LOSS, "iid", pairwise_CI=True)
 
 Here we have used ``pairwise_CI=True`` which makes the confidence
 intervals based on the uncertainty of the loss *difference* to the
