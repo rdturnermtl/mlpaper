@@ -14,7 +14,7 @@ requirements = read_requirements("base")
 demo_requirements = read_requirements("demo")
 test_requirements = read_requirements("test")
 
-with open("README.md") as f:
+with open("README.rst") as f:
     long_description = f.read()
 
 setup(
@@ -30,6 +30,6 @@ setup(
     install_requires=requirements,
     extras_require={"demo": demo_requirements, "test": test_requirements},
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     platforms=["any"],
 )

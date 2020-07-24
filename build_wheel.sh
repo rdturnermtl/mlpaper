@@ -4,15 +4,15 @@ set -ex
 set -o pipefail
 
 # Display what version is being used for logging
-python --version
+python3 --version
 
 # Fail if untracked files so we don't delete them in next step
 test -z "$(git status --porcelain)"
 
 # Build from clean repo, delete all ignored files
-git clean -x -f -d
+git clean -x -ff -d
 
-# Get everything in place to put inside the wheel
+# Log the git version inside of the wheel file
 SHA_LONG=$(git rev-parse HEAD)
 echo VERSION=\"$SHA_LONG\" >version.log
 
