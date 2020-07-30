@@ -5,6 +5,25 @@ The ML Paper Package (mlpaper)
 Easy benchmarking of machine learning models with sklearn interface with
 statistical tests built-in.
 
+Installation
+============
+
+Only ``Python>=3.5`` is officially supported, but older versions of Python likely work as well.
+
+The core package itself can be installed with:
+
+.. code-block:: bash
+
+   pip install mlpaper
+
+To also get the dependencies for the demos in the README install with
+
+.. code-block:: bash
+
+   pip install mlpaper[demo]
+
+See the `GitHub <https://github.com/rdturnermtl/mlpaper/>`_, `PyPI <https://pypi.org/project/mlpaper/>`_, and `Read the Docs <https://mlpaper.readthedocs.io/en/latest/>`_.
+
 Usage for classification problems
 =================================
 
@@ -14,7 +33,8 @@ comparison <https://scikit-learn.org/stable/auto_examples/classification/plot_cl
 but also demos the ease of `mlpaper` to create a performance
 report.
 
-In this demo, we use the example of the three toy data sets and ten classifiers from the sklearn example:
+The `mlpaper` package is meant to benchmark any model with any provided data set.
+However, in this demo, we use the example of the three toy data sets and ten classifiers from the sklearn example:
 
 .. figure:: https://user-images.githubusercontent.com/28273671/88328310-17f51d80-ccdd-11ea-8993-d833cb35c524.png
    :alt: sklearn
@@ -280,23 +300,6 @@ or in LaTeX:
 
 .. figure:: https://user-images.githubusercontent.com/28273671/88328364-2c391a80-ccdd-11ea-8367-2e53427c184d.png
    :alt: regression demo
-
-Installation
-============
-
-Only ``Python>=3.5`` is officially supported, but older versions of Python likely work as well.
-
-The core package itself can be installed with:
-
-.. code-block:: bash
-
-   pip install mlpaper
-
-To also get the dependencies for the demos in the README install with
-
-.. code-block:: bash
-
-   pip install mlpaper[demo]
 
 Contributing
 ============
