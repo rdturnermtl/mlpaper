@@ -5,6 +5,10 @@ The ML Paper Package (mlpaper)
 Easy benchmarking of machine learning models with sklearn interface with
 statistical tests built-in.
 
+Train, test, and evaluate models on multiple loss functions.
+Full result tables with error bars and significance tests are a one-liner for sklearn compatible objects.
+The design is documented in a workshop `paper <https://github.com/rdturnermtl/mlpaper/files/5009654/mlpaper_paper.pdf>`_ and `poster <https://github.com/rdturnermtl/mlpaper/files/5009653/mlpaper_poster.pdf>`_.
+
 Installation
 ============
 
@@ -23,6 +27,51 @@ To also get the dependencies for the demos in the README install with
    pip install mlpaper[demo]
 
 See the `GitHub <https://github.com/rdturnermtl/mlpaper/>`_, `PyPI <https://pypi.org/project/mlpaper/>`_, and `Read the Docs <https://mlpaper.readthedocs.io/en/latest/>`_.
+
+Executive summary
+=================
+
+* Classification uses `mlpaper.classification <https://mlpaper.readthedocs.io/en/latest/code.html#module-mlpaper.classification>`_
+* Regression uses `mlpaper.regression <https://mlpaper.readthedocs.io/en/latest/code.html#module-mlpaper.regression>`_
+* We use Bayes' decision rule to convert a predictive distribution to an *action* for each loss function
+* Objects just support methods ``fit`` and ``predict_log_proba`` (sklearn interface)
+
+Modular pieces:
+
+* The "do-it-all" `just_benchmark <https://mlpaper.readthedocs.io/en/latest/code.html#mlpaper.classification.just_benchmark>`_ calls 3 modular routines
+* `get_pred_log_prob <https://mlpaper.readthedocs.io/en/latest/code.html#mlpaper.classification.get_pred_log_prob>`_: predictive distributions on each test point and model
+* `loss_table <https://mlpaper.readthedocs.io/en/latest/code.html#mlpaper.classification.loss_table>`_: the losses for each prediction
+* `loss_summary_table <https://mlpaper.readthedocs.io/en/latest/code.html#mlpaper.mlpaper.loss_summary_table>`_: mean loss for each method and error bars/p-values
+
+`Sciprint <https://mlpaper.readthedocs.io/en/latest/code.html#module-mlpaper.sciprint>`_:
+
+* Publishable results: format a results dataframe for (LaTeX) publication
+* Cleanly formatted: correct significant figures, shifting of exponent for compactness, and correct alignment of decimal points, units in headers
+
+`Data splitter <https://mlpaper.readthedocs.io/en/latest/code.html#mlpaper.data_splitter.split_df>`_:
+
+* Supports random, ordinal, or temporal splitting across features in pandas dataframes
+* Jointly splitting across multiple features to test difficult generalization cases
+
+Evaluation framework:
+
+* Two metric types: *loss functions* and *curve summaries*
+* Curve summaries: AUC for ROC, PR, and PRG
+* Built-in *proper scoring rules*: log loss, Brier loss, spherical loss
+* General loss matrices, and new metrics are easily added
+* Non-probabilistic methods usable by pipelining a *calibrator*
+
+Error bars and significance tests:
+
+* Place confidence interval (CI) on mean loss of infinite test set from the same distribution
+* Three options for CI in ``loss_summary_table``: t-test, bootstrap, and Bernstein bound
+* The p-values are designed to match the error bars (via the 3 methods)
+
+Error bars on curves:
+
+* CI on raw curves (for plotting) and AUC (for tables) via bootstrap
+* Vectorized bootstrap: reweight data points via multinomial distribution
+* Avoids re-creating the data sets in memory (very slow)
 
 Usage for classification problems
 =================================
