@@ -295,6 +295,38 @@ def test_boot_EB_and_test():
         assert CI[0] <= 0.0 and 0.0 <= CI[1]
 
 
+def test_boot_EB_and_test_custom_f():
+    def take_col(x):
+        return x[:, 0]
+
+    seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
+    for seed in seed_iter:
+        N = np.random.randint(1, 20)
+        x = np.random.randn(N)
+        x[0] = 0
+        x = np.random.choice(x, size=N, replace=True)
+        x[0] = 0  # At least one, maybe more zeros
+        confidence = np.random.rand()
+
+        n_boot = 10
+
+        np.random.seed(seed)
+        EB, pval, CI = bt._boot_EB_and_test(x, confidence=confidence, return_CI=True, n_boot=n_boot)
+
+        np.random.seed(seed)
+        EB_, pval_, CI_ = bt._boot_EB_and_test(
+            x[:, None], f=take_col, confidence=confidence, return_CI=True, n_boot=n_boot
+        )
+
+        assert np.allclose(EB, EB_)
+        assert np.allclose(pval, pval_)
+        assert np.allclose(CI, CI_)
+
+
+# TODO test func version is the same if use np.average
+#    can also add linear transform version
+
+
 def test_get_mean_EB_test():
     seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
     for seed in seed_iter:
@@ -343,6 +375,41 @@ def test_get_mean_EB_test():
         else:
             pval_ = bt.boot_test(x)
         assert pval_ == pval
+
+
+def test_get_func_mean_EB_test():
+    def take_col(x):
+        return x[:, 0]
+
+    seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
+    for seed in seed_iter:
+        N = np.random.randint(1, 20)
+        x = np.random.randn(N)
+        x[0] = 0
+        x = np.random.choice(x, size=N, replace=True)
+        confidence = np.random.rand()
+
+        lower = np.min(x) - np.maximum(0.0, fp_rnd())
+        upper = np.max(x) + np.maximum(0.0, fp_rnd())
+        min_EB = np.clip(np.random.randn(), 0.0, 0.5 * (upper - lower))
+        method = np.random.choice(["boot"])
+
+        np.random.seed(seed)
+        mu, EB, pval = bt.get_func_mean_EB_test(
+            x[:, None], f=take_col, confidence=confidence, min_EB=min_EB, lower=lower, upper=upper, method=method
+        )
+
+        np.random.seed(seed)
+        mu_, EB_, pval_ = bt.get_mean_EB_test(
+            x, confidence=confidence, min_EB=min_EB, lower=lower, upper=upper, method=method
+        )
+        assert np.allclose(mu, mu_)
+        assert np.allclose(EB, EB_)
+        assert np.allclose(pval, pval_)
+
+
+# TODO test func version is the same if use np.average
+#    can also add linear transform version
 
 
 def test_loss_summary_table():

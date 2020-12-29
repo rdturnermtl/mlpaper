@@ -247,25 +247,38 @@ def bernstein_EB(x, lower, upper, confidence=0.95):
     return EB
 
 
-def _boot_EB_and_test(x, confidence=0.95, n_boot=N_BOOT, return_EB=True, return_test=True, return_CI=False):
+def _boot_EB_and_test(x, *, f=None, confidence=0.95, n_boot=N_BOOT, return_EB=True, return_test=True, return_CI=False):
     """Internal helper function to compute both bootstrap EB and significance
     using the same random bootstrap weights, which saves computation and
     guarantees the results are coherent with each other."""
-    assert np.ndim(x) == 1 and (not np.any(np.isnan(x)))
+    assert np.ndim(x) >= 1 and (not np.any(np.isnan(x)))
     # confidence is checked by bu.error_bar
 
-    N = x.size
+    N = x.shape[0]
     if (N <= 1) or (not np.all(np.isfinite(x))):
         return np.inf, 1.0, (-np.inf, np.inf)
 
     weight = bu.boot_weights(N, n_boot)
-    mu_boot = np.mean(x * weight, axis=1)
+    if f is None:
+        assert np.ndim(x) == 1
+        mu = np.mean(x).item()
+        mu_boot = np.mean(x * weight, axis=1)
+    else:
+        assert np.ndim(x) == 2
+        _, n_stat = x.shape
+        mu = f(np.mean(x, axis=0, keepdims=True)).item()
+        # TODO is this a matmul??
+        mu_boot = np.mean(x[None, :, :] * weight[:, :, None], axis=1)
+        assert mu_boot.shape == (n_boot, n_stat)
+        mu_boot = f(mu_boot)
+    assert isinstance(mu, float)
+    assert mu_boot.shape == (n_boot,)
+    assert not np.any(np.isnan(mu_boot))
 
     pval = bu.significance(mu_boot, ref=0.0) if return_test else 1.0
 
     EB = np.inf
     if return_EB:
-        mu = np.mean(x)
         EB = bu.error_bar(mu_boot, mu, confidence=confidence)
 
     # Useful in test:
@@ -445,6 +458,52 @@ def get_mean_EB_test(x, confidence=0.95, min_EB=0.0, lower=-np.inf, upper=np.inf
 
     # EB subroutines already validated x for shape and nans
     mu = clip_chk(np.mean(x), lower, upper)
+    EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
+    return mu, EB, pval
+
+
+def get_func_mean_EB_test(x, f, confidence=0.95, min_EB=0.0, lower=-np.inf, upper=np.inf, method="boot"):
+    """Get a metric and estimated error bar. Also, perform a statistical test
+    to determine if the metric is zero.
+
+    Parameters
+    ----------
+    x : ndarray, shape (n_samples, n_stat)
+        Array of independent observations. The mean of each column is given to `f` to compute the final metric.
+    f : callable
+        TODO describe
+    confidence : float
+        Confidence probability (in (0, 1)) to construct error bar.
+    min_EB : float
+        Minimum size of resulting error bar regardless of the data in `x`.
+    lower : float
+        A priori known theoretical lower limit on metric.
+    upper : float
+        A priori known theoretical upper limit on metric.
+    method : {'boot'}
+        Method to use for building error bar.
+
+    Returns
+    -------
+    mu : float
+        Estimated metric.
+    EB : float
+        Size of error bar on metric (``EB > 0``). The confidence interval
+        is ``[mu - EB, mu + EB]``.
+    pval : float
+        p-value (in [0,1]) from statistical test on `x`.
+    """
+    sample_size, _ = x.shape
+
+    if method == "boot":
+        EB, pval, _ = _boot_EB_and_test(x, f=f, confidence=confidence)
+    else:
+        # More methods will be added later, just bootstrap for now
+        assert False
+
+    # EB subroutines already validated x for shape and nans
+    raw_mu = f(np.mean(x, axis=0, keepdims=True)).item()
+    mu = clip_chk(raw_mu, lower, upper)
     EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
     return mu, EB, pval
 
