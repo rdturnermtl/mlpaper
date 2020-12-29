@@ -323,8 +323,30 @@ def test_boot_EB_and_test_custom_f():
         assert np.allclose(CI, CI_)
 
 
-# TODO test func version is the same if use np.average
-#    can also add linear transform version
+def test_boot_EB_and_test_custom_f_mv():
+    def wmean(x):
+        _, d = x.shape
+        w = 1 + np.arange(d)
+        r = np.mean(x * w[None, :], axis=1)
+        return r
+
+    seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
+    for seed in seed_iter:
+        N = np.random.randint(1, 20)
+        x = np.random.randn(N, 5)
+        confidence = np.random.rand()
+
+        n_boot = 10
+
+        np.random.seed(seed)
+        EB, pval, CI = bt._boot_EB_and_test(wmean(x), confidence=confidence, return_CI=True, n_boot=n_boot)
+
+        np.random.seed(seed)
+        EB_, pval_, CI_ = bt._boot_EB_and_test(x, f=wmean, confidence=confidence, return_CI=True, n_boot=n_boot)
+
+        assert np.allclose(EB, EB_)
+        assert np.allclose(pval, pval_)
+        assert np.allclose(CI, CI_)
 
 
 def test_get_mean_EB_test():
@@ -408,8 +430,27 @@ def test_get_func_mean_EB_test():
         assert np.allclose(pval, pval_)
 
 
-# TODO test func version is the same if use np.average
-#    can also add linear transform version
+def test_get_func_mean_EB_test_mv():
+    def wmean(x):
+        _, d = x.shape
+        w = 1 + np.arange(d)
+        r = np.mean(x * w[None, :], axis=1)
+        return r
+
+    seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
+    for seed in seed_iter:
+        N = np.random.randint(1, 20)
+        x = np.random.randn(N, 5)
+        confidence = np.random.rand()
+
+        np.random.seed(seed)
+        mu, EB, pval = bt.get_func_mean_EB_test(x, f=wmean, confidence=confidence, method="boot")
+
+        np.random.seed(seed)
+        mu_, EB_, pval_ = bt.get_mean_EB_test(wmean(x), confidence=confidence, method="boot")
+        assert np.allclose(mu, mu_)
+        assert np.allclose(EB, EB_)
+        assert np.allclose(pval, pval_)
 
 
 def test_loss_summary_table():
