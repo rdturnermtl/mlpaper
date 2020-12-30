@@ -472,7 +472,8 @@ def get_func_mean_EB_test(x, f, confidence=0.95, min_EB=0.0, lower=-np.inf, uppe
     x : ndarray, shape (n_samples, n_stat)
         Array of independent observations. The mean of each column is given to `f` to compute the final metric.
     f : callable
-        TODO describe
+        The function we are putting error bars on is ``f(sum(x), n_samples)``. It must have signature:
+        ``(n_case,n_stat),()->(n_case)``. We use `n_case` for vectorization. For only a single estimation ``n_case=1``.
     confidence : float
         Confidence probability (in (0, 1)) to construct error bar.
     min_EB : float
@@ -617,7 +618,8 @@ def metric_summary_table(metric_table, f, *, confidence=0.95, method_EB="boot", 
         tests. This is usually some some of baseline method. `ref_method` must
         be found in the 2nd level of the columns of `loss_tbl`.
     f : callable
-        TODO
+        The function we are putting error bars on is ``f(sum(x), n_samples)``. It must have signature:
+        ``(n_case,n_stat),()->(n_case)``. We use `n_case` for vectorization. For only a single estimation ``n_case=1``.
     confidence : float
         Confidence probability (in (0, 1)) to construct error bar.
     method_EB : {'boot'}
