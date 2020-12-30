@@ -265,12 +265,12 @@ def _boot_EB_and_test(x, *, f=None, confidence=0.95, n_boot=N_BOOT, return_EB=Tr
         mu_boot = np.mean(x * weight, axis=1)
     else:
         assert np.ndim(x) == 2
-        _, n_stat = x.shape
-        mu = f(np.mean(x, axis=0, keepdims=True)).item()
+        n_sample, n_stat = x.shape
+        mu = f(np.sum(x, axis=0, keepdims=True), n_sample).item()
         # TODO is this a matmul??
-        mu_boot = np.mean(x[None, :, :] * weight[:, :, None], axis=1)
+        mu_boot = np.sum(x[None, :, :] * weight[:, :, None], axis=1)
         assert mu_boot.shape == (n_boot, n_stat)
-        mu_boot = f(mu_boot)
+        mu_boot = f(mu_boot, n_sample)
     assert isinstance(mu, float)
     assert mu_boot.shape == (n_boot,)
     assert not np.any(np.isnan(mu_boot))
@@ -502,7 +502,7 @@ def get_func_mean_EB_test(x, f, confidence=0.95, min_EB=0.0, lower=-np.inf, uppe
         assert False
 
     # EB subroutines already validated x for shape and nans
-    raw_mu = f(np.mean(x, axis=0, keepdims=True)).item()
+    raw_mu = f(np.sum(x, axis=0, keepdims=True), sample_size).item()
     mu = clip_chk(raw_mu, lower, upper)
     EB = clip_EB(mu, EB, lower, upper, min_EB=min_EB)
     return mu, EB, pval

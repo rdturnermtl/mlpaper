@@ -296,8 +296,8 @@ def test_boot_EB_and_test():
 
 
 def test_boot_EB_and_test_custom_f():
-    def take_col(x):
-        return x[:, 0]
+    def take_col(x, n):
+        return x[:, 0] / n
 
     seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
     for seed in seed_iter:
@@ -324,10 +324,10 @@ def test_boot_EB_and_test_custom_f():
 
 
 def test_boot_EB_and_test_custom_f_mv():
-    def wmean(x):
+    def wmean(x, n):
         _, d = x.shape
         w = 1 + np.arange(d)
-        r = np.mean(x * w[None, :], axis=1)
+        r = np.mean(x * w[None, :], axis=1) / n
         return r
 
     seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
@@ -339,7 +339,7 @@ def test_boot_EB_and_test_custom_f_mv():
         n_boot = 10
 
         np.random.seed(seed)
-        EB, pval, CI = bt._boot_EB_and_test(wmean(x), confidence=confidence, return_CI=True, n_boot=n_boot)
+        EB, pval, CI = bt._boot_EB_and_test(wmean(x, N), confidence=confidence, return_CI=True, n_boot=n_boot)
 
         np.random.seed(seed)
         EB_, pval_, CI_ = bt._boot_EB_and_test(x, f=wmean, confidence=confidence, return_CI=True, n_boot=n_boot)
@@ -400,8 +400,8 @@ def test_get_mean_EB_test():
 
 
 def test_get_func_mean_EB_test():
-    def take_col(x):
-        return x[:, 0]
+    def take_col(x, n):
+        return x[:, 0] / n
 
     seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
     for seed in seed_iter:
@@ -431,10 +431,10 @@ def test_get_func_mean_EB_test():
 
 
 def test_get_func_mean_EB_test_mv():
-    def wmean(x):
+    def wmean(x, n):
         _, d = x.shape
         w = 1 + np.arange(d)
-        r = np.mean(x * w[None, :], axis=1)
+        r = np.mean(x * w[None, :], axis=1) / n
         return r
 
     seed_iter = np.random.randint(0, 10 ** 6, size=MC_REPEATS_LARGE)
@@ -447,7 +447,7 @@ def test_get_func_mean_EB_test_mv():
         mu, EB, pval = bt.get_func_mean_EB_test(x, f=wmean, confidence=confidence, method="boot")
 
         np.random.seed(seed)
-        mu_, EB_, pval_ = bt.get_mean_EB_test(wmean(x), confidence=confidence, method="boot")
+        mu_, EB_, pval_ = bt.get_mean_EB_test(wmean(x, N), confidence=confidence, method="boot")
         assert np.allclose(mu, mu_)
         assert np.allclose(EB, EB_)
         assert np.allclose(pval, pval_)
@@ -535,6 +535,10 @@ def test_loss_summary_table():
                 pval_ = bt.get_test(x - ref_x, lower=-range_, upper=range_, method=method_EB)
                 assert pval == pval_p
                 assert pval == pval_
+
+
+# TODO test metric summary table
+#    check each element against individual
 
 
 if __name__ == "__main__":

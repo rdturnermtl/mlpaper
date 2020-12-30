@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from scipy.stats import entropy
 from sklearn.metrics import brier_score_loss, log_loss, zero_one_loss
 
 import mlpaper.classification as btc
@@ -144,6 +145,53 @@ def test_spherical_loss():
         loss2 = btc.spherical_loss(y, util.normalize(np.zeros((N, n_labels))), rescale=True)
         assert np.max(np.abs(loss2 - 1.0)) <= 1e-8
 
+
+def test_rce():
+    n_labels = np.random.randint(low=1, high=10)
+    N = np.random.randint(low=2, high=10)
+
+    y = np.random.randint(low=0, high=n_labels, size=N)
+    y_pred = util.normalize(np.random.randn(N, n_labels))
+
+    stat = btc.rce_stat(y, y_pred)
+    stat_sum = np.sum(stat, axis=0)
+    rce = btc.rce_agg(stat_sum[None, :], N)
+    rce = rce.item()
+
+    y_one_hot = util.one_hot(y, n_labels)
+
+    loss = -np.mean(np.sum(y_pred * y_one_hot, axis=1))
+    baseline = entropy(np.mean(y_one_hot, axis=0))
+    rce_ = 100.0 * (1.0 - np.true_divide(loss, baseline))
+    rce_ = rce_.item()
+
+    assert np.isclose(rce, rce_)
+
+
+def test_dawid():
+    n_labels = 2
+    N = np.random.randint(low=2, high=10)
+
+    y = np.random.randint(low=0, high=n_labels, size=N)
+    y_pred = util.normalize(np.random.randn(N, n_labels))
+
+    stat = btc.dawid_stat(y, y_pred)
+    stat_sum = np.sum(stat, axis=0)
+    Z = btc.dawid_agg(stat_sum[None, :], N)
+    Z = Z.item()
+
+    yp = np.exp(y_pred)
+    Z_ = np.sum(yp[:, 1] - y) / np.sqrt(np.sum(yp[:, 0] * yp[:, 1]))
+    Z_ = Z_.item()
+
+    assert np.isclose(Z, Z_)
+
+
+# TODO test (stat, agg) combo against integrated
+# test all vectorize
+
+# TODO metric_summary
+# test index names, shape
 
 if __name__ == "__main__":
     np.random.seed(845412)

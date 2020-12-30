@@ -242,10 +242,16 @@ def rce_stat(y, log_pred_prob):
     return stat
 
 
-def rce_agg(stat_mean):
-    n_sample, _ = stat_mean.shape
+def rce_agg(stat_sum, n):
+    n_sample, _ = stat_sum.shape
+    assert np.isscalar(n)
 
-    nll_mean, freq = stat_mean[:, 0], stat_mean[:, 1:]
+    nll_sum, label_cnt = stat_sum[:, 0], stat_sum[:, 1:]
+
+    n_ = np.sum(label_cnt, axis=1)
+    assert np.all(n_ == n)
+    nll_mean = nll_sum / n
+    freq = label_cnt / n
 
     assert np.allclose(np.sum(freq, axis=1), 1.0)
     baseline = entropy(freq.T)
@@ -262,15 +268,16 @@ def dawid_stat(y, log_pred_prob):
     pred_prob = np.exp(log_pred_prob)
     bias = pred_prob[:, 1] - y
     var = pred_prob[:, 0] * pred_prob[:, 1]
-    stat = np.stack((bias, var))
+    stat = np.stack((bias, var), axis=1)
     assert stat.shape == (n_samples, 2)
     return stat
 
 
-def dawid_agg(stat_mean):
-    n_sample, _ = stat_mean.shape
+def dawid_agg(stat_sum, n):
+    n_sample, _ = stat_sum.shape
+    assert np.isscalar(n)
 
-    bias, var = stat_mean[:, 0], stat_mean[:, 1]
+    bias, var = stat_sum[:, 0], stat_sum[:, 1]
     Z = bias / np.sqrt(var)
     assert Z.shape == (n_sample,)
     return Z
