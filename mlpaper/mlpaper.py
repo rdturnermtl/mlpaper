@@ -606,17 +606,9 @@ def metric_summary_table(metric_table, f, *, confidence=0.95, method_EB="boot", 
 
     Parameters
     ----------
-    loss_tbl : DataFrame, shape (n_samples, n_metrics * n_methods)
-        DataFrame with loss of each method according to each loss function on
-        each data point. The rows are the data points in `y` (that is the index
-        matches `log_pred_prob_table`). The columns are a hierarchical index
-        that is the cartesian product of loss x method. That is, the loss of
-        method foo's prediction of ``y[5]`` according to loss function bar is
-        stored in ``loss_tbl.loc[5, ('bar', 'foo')]``.
-    ref_method : str
-        Name of method that is used as reference point in paired statistical
-        tests. This is usually some some of baseline method. `ref_method` must
-        be found in the 2nd level of the columns of `loss_tbl`.
+    metric_table : DataFrame, shape (n_samples, n_method * n_stat)
+        DataFrame with sufficient statistics for metrics of each method according to each metrics function on each data
+        point.
     f : callable
         The function we are putting error bars on is ``f(sum(x), n_samples)``. It must have signature:
         ``(n_case,n_stat),()->(n_case)``. We use `n_case` for vectorization. For only a single estimation ``n_case=1``.
@@ -625,22 +617,16 @@ def metric_summary_table(metric_table, f, *, confidence=0.95, method_EB="boot", 
     method_EB : {'boot'}
         Method to use for building error bar.
     limits : dict of str to (float, float)
-        Dictionary mapping metric name to tuple with (lower, upper) which are
-        the theoretical limits on the mean loss. For instance, zero-one loss
-        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
+        Reserved for future use.
+    lower : float
+        Lower theoretical limit on the metric.
+    upper : float
+        Upper theoretical limit on the metric.
 
     Returns
     -------
-    perf_tbl : DataFrame, shape (n_methods, n_metrics * 3)
-        DataFrame with mean loss of each method according to each loss
-        function. The rows are the methods. The columns are a hierarchical
-        index that is the cartesian product of
-        loss x (mean, error bar, p-value). That is,
-        ``perf_tbl.loc['foo', 'bar']`` is a pandas series with
-        (mean loss of foo on bar, corresponding error bar, statistical sig)
-        The statistical significance is a p-value from a two-sided hypothesis
-        test on the hypothesis H0 that foo has the same mean loss as the
-        reference method `ref_method`.
+    perf_tbl : DataFrame, shape (n_methods, 3)
+        DataFrame summarizing the statistics for the metric on each method.
     """
     assert metric_table.columns.names == (METHOD, METRIC)
     methods, metrics = metric_table.columns.levels
