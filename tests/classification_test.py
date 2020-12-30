@@ -187,12 +187,6 @@ def test_dawid():
     assert np.isclose(Z, Z_)
 
 
-# TODO test (stat, agg) combo against integrated
-# test all vectorize
-
-# TODO metric_summary
-# test index names, shape
-
 if __name__ == "__main__":
     np.random.seed(845412)
 

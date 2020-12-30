@@ -537,10 +537,6 @@ def test_loss_summary_table():
                 assert pval == pval_
 
 
-# TODO test metric summary table
-#    check each element against individual
-
-
 if __name__ == "__main__":
     np.random.seed(85634)
 
