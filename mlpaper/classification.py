@@ -7,11 +7,12 @@ import numpy as np
 import pandas as pd
 from joblib import Memory
 from scipy.special import logsumexp
+from scipy.stats import entropy
 
 import mlpaper.boot_util as bu
 import mlpaper.perf_curves as pc
 from mlpaper.constants import CURVE_STATS, ERR_COL, METHOD, METRIC, PAIRWISE_DEFAULT, PVAL_COL, STAT, STD_STATS
-from mlpaper.mlpaper import loss_summary_table
+from mlpaper.mlpaper import loss_summary_table, metric_summary_table
 from mlpaper.util import area, interp1d, normalize, one_hot
 
 DEFAULT_NGRID = 100
@@ -208,6 +209,71 @@ def spherical_loss(y, log_pred_prob, rescale=True):
         c = 1.0 - 1.0 / np.sqrt(n_labels) if n_labels > 1 else 1.0
         loss = (1.0 + loss) / c
     return loss
+
+
+# ============================================================================
+# More general metrics
+# ============================================================================
+
+
+def rce_stat(y, log_pred_prob):
+    """Compute log loss (e.g, negative log likelihood or cross-entropy).
+
+    Parameters
+    ----------
+    y : ndarray of type int or bool, shape (n_samples,)
+        True labels for each classication data point.
+    log_pred_prob : ndarray, shape (n_samples, n_labels)
+        Array of shape ``(len(y), n_labels)``. Each row corresponds to a
+        categorical distribution with *normalized* probabilities in log scale.
+        Therefore, the number of columns must be at least 1.
+
+    Returns
+    -------
+    loss : ndarray, shape (n_samples,)
+        Array of the log loss for the predictions on each data point in `y`.
+    """
+    n_samples, n_labels = shape_and_validate(y, log_pred_prob)
+
+    nll = log_loss(y, log_pred_prob)
+    y_bin = one_hot(y.astype(int), n_labels)
+
+    stat = np.concatenate((nll[:, None], y_bin), axis=1)
+    return stat
+
+
+def rce_agg(stat_mean):
+    n_sample, _ = stat_mean.shape
+
+    nll_mean, freq = stat_mean[:, 0], stat_mean[:, 1:]
+
+    assert np.allclose(np.sum(freq, axis=1), 1.0)
+    baseline = entropy(freq.T)
+    assert baseline.shape == (n_sample,)
+    rce = 100.0 * (1.0 - np.true_divide(nll_mean, baseline))
+    assert rce.shape == (n_sample,)
+    return rce
+
+
+def dawid_stat(y, log_pred_prob):
+    n_samples, n_labels = shape_and_validate(y, log_pred_prob)
+    assert n_labels == 2, "Only binary supported now for Dawid metric"
+
+    pred_prob = np.exp(log_pred_prob)
+    bias = pred_prob[:, 1] - y
+    var = pred_prob[:, 0] * pred_prob[:, 1]
+    stat = np.stack((bias, var))
+    assert stat.shape == (n_samples, 2)
+    return stat
+
+
+def dawid_agg(stat_mean):
+    n_sample, _ = stat_mean.shape
+
+    bias, var = stat_mean[:, 0], stat_mean[:, 1]
+    Z = bias / np.sqrt(var)
+    assert Z.shape == (n_sample,)
+    return Z
 
 
 # ============================================================================
@@ -524,12 +590,31 @@ def curve_summary_table(
     return curve_tbl, curve_dump
 
 
+def metric_summary(log_pred_prob_table, y, stat_f):
+    methods, labels = log_pred_prob_table.columns.levels
+    n_samples, n_labels = len(log_pred_prob_table), len(labels)
+    assert y.shape == (n_samples,)
+    assert n_samples >= 1 and n_labels >= 1 and len(methods) >= 1
+
+    df_dict = {}
+    for method in methods:
+        log_pred_prob = log_pred_prob_table[method].values
+        assert log_pred_prob.shape == (n_samples, n_labels)
+        stat = rce_stat(y, log_pred_prob)
+        # Would be cleaner to also get column names
+        df_dict[method] = pd.DataFrame(data=stat, columns=np.arange(stat.shape[1]), dtype=float)
+    metric_tbl = pd.concat(df_dict, axis=1, names=[METHOD, METRIC])
+    return metric_tbl
+
+
 def summary_table(
     log_pred_prob_table,
     y,
     loss_dict,
     curve_dict,
     ref_method,
+    *,
+    metric_dict={},
     x_grid=None,
     n_boot=1000,
     pairwise_CI=PAIRWISE_DEFAULT,
@@ -615,8 +700,18 @@ def summary_table(
         loss_tbl, ref_method, pairwise_CI=pairwise_CI, confidence=confidence, method_EB=method_EB, limits=limits
     )
 
+    # Do the general metrics
+    all_metric_tbl = {}
+    for metric_name, (stat_f, summary_f) in metric_dict.items():
+        metric_tbl = metric_summary(log_pred_prob_table, y, stat_f)
+        # For now require boot as method, but make it flexible later
+        all_metric_tbl[metric_name] = metric_summary_table(
+            metric_tbl, summary_f, confidence=confidence, method_EB="boot", lower=-np.inf, upper=np.inf
+        )
+    all_metric_tbl = pd.concat(all_metric_tbl, axis=1, names=[METRIC, STAT])
+
     # Return the combo
-    full_tbl = pd.concat((loss_summary, curve_summary), axis=1)
+    full_tbl = pd.concat((loss_summary, curve_summary, all_metric_tbl), axis=1)
     return full_tbl, dump_tbl
 
 
@@ -628,6 +723,8 @@ def summary_table(
 STD_CLASS_LOSS = {"NLL": log_loss, "Brier": brier_loss, "sphere": spherical_loss, "zero_one": hard_loss}
 
 STD_BINARY_CURVES = {"AUC": pc.roc_curve, "AP": pc.recall_precision_curve, "AUPRG": pc.prg_curve}
+
+STD_BINARY_METRICS = {"RCE": (rce_stat, rce_agg), "Dawid": (dawid_stat, dawid_agg)}
 
 
 class JustNoise:
@@ -748,6 +845,8 @@ def just_benchmark(
     loss_dict,
     curve_dict,
     ref_method,
+    *,
+    metric_dict={},
     min_pred_log_prob=-np.inf,
     pairwise_CI=PAIRWISE_DEFAULT,
     method_EB="t",
@@ -823,6 +922,14 @@ def just_benchmark(
     assert y_train.dtype == y_test.dtype  # Would be weird otherwise
     pred_tbl = get_pred_log_prob(X_train, y_train, X_test, n_labels, methods, min_log_prob=min_pred_log_prob)
     full_tbl, dump = summary_table(
-        pred_tbl, y_test, loss_dict, curve_dict, ref_method, pairwise_CI=pairwise_CI, method_EB=method_EB, limits=limits
+        pred_tbl,
+        y_test,
+        loss_dict,
+        curve_dict,
+        ref_method,
+        metric_dict=metric_dict,
+        pairwise_CI=pairwise_CI,
+        method_EB=method_EB,
+        limits=limits,
     )
     return full_tbl, dump

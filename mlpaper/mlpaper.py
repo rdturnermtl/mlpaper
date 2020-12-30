@@ -6,7 +6,7 @@ import pandas as pd
 import scipy.stats as ss
 
 import mlpaper.boot_util as bu
-from mlpaper.constants import METHOD, METRIC, PAIRWISE_DEFAULT, STAT, STD_STATS
+from mlpaper.constants import ERR_COL, MEAN_COL, METHOD, METRIC, PAIRWISE_DEFAULT, PVAL_COL, STAT, STD_STATS
 from mlpaper.util import clip_chk
 
 N_BOOT = 1000  # Default number of bootstrap replications
@@ -595,4 +595,67 @@ def loss_summary_table(loss_table, ref_method, pairwise_CI=PAIRWISE_DEFAULT, con
 
             # This is two-sided, could include one-sided option too.
             perf_tbl.loc[method, metric] = (mu, EB, pval)
+    return perf_tbl
+
+
+def metric_summary_table(metric_table, f, *, confidence=0.95, method_EB="boot", limits={}, lower=-np.inf, upper=np.inf):
+    """Build table with mean and error bar summaries from a loss table that
+    contains losses on a per data point basis.
+
+    Parameters
+    ----------
+    loss_tbl : DataFrame, shape (n_samples, n_metrics * n_methods)
+        DataFrame with loss of each method according to each loss function on
+        each data point. The rows are the data points in `y` (that is the index
+        matches `log_pred_prob_table`). The columns are a hierarchical index
+        that is the cartesian product of loss x method. That is, the loss of
+        method foo's prediction of ``y[5]`` according to loss function bar is
+        stored in ``loss_tbl.loc[5, ('bar', 'foo')]``.
+    ref_method : str
+        Name of method that is used as reference point in paired statistical
+        tests. This is usually some some of baseline method. `ref_method` must
+        be found in the 2nd level of the columns of `loss_tbl`.
+    f : callable
+        TODO
+    confidence : float
+        Confidence probability (in (0, 1)) to construct error bar.
+    method_EB : {'boot'}
+        Method to use for building error bar.
+    limits : dict of str to (float, float)
+        Dictionary mapping metric name to tuple with (lower, upper) which are
+        the theoretical limits on the mean loss. For instance, zero-one loss
+        should be ``(0.0, 1.0)``. If entry missing, (-inf, inf) is used.
+
+    Returns
+    -------
+    perf_tbl : DataFrame, shape (n_methods, n_metrics * 3)
+        DataFrame with mean loss of each method according to each loss
+        function. The rows are the methods. The columns are a hierarchical
+        index that is the cartesian product of
+        loss x (mean, error bar, p-value). That is,
+        ``perf_tbl.loc['foo', 'bar']`` is a pandas series with
+        (mean loss of foo on bar, corresponding error bar, statistical sig)
+        The statistical significance is a p-value from a two-sided hypothesis
+        test on the hypothesis H0 that foo has the same mean loss as the
+        reference method `ref_method`.
+    """
+    assert metric_table.columns.names == (METHOD, METRIC)
+    methods, metrics = metric_table.columns.levels
+    assert len(methods) >= 1
+    assert len(metric_table) >= 1 and len(metrics) >= 1
+    assert lower <= upper
+    # Could also test these are cartesian product if we wanted to be exhaustive
+
+    perf_tbl = pd.DataFrame(index=methods, columns=STD_STATS, dtype=float)
+    perf_tbl.index.set_names(METHOD, inplace=True)
+    for method in methods:
+        x = metric_table[method].values
+        assert x.ndim == 2
+        assert not np.any(np.isnan(x))  # Would let method cheat
+
+        mu, EB, pval = get_func_mean_EB_test(x, f, confidence=confidence, lower=lower, upper=upper, method=method_EB)
+
+        perf_tbl.loc[method, MEAN_COL] = mu
+        perf_tbl.loc[method, ERR_COL] = EB
+        perf_tbl.loc[method, PVAL_COL] = pval
     return perf_tbl

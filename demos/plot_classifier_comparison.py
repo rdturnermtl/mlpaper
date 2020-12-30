@@ -24,7 +24,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 import mlpaper.classification as btc
 import mlpaper.sciprint as sp
-from mlpaper.classification import STD_BINARY_CURVES, STD_CLASS_LOSS
+from mlpaper.classification import STD_BINARY_CURVES, STD_BINARY_METRICS, STD_CLASS_LOSS
 
 use("Agg")
 
@@ -99,6 +99,7 @@ for ds_cnt, ds in enumerate(datasets):
         STD_CLASS_LOSS,
         STD_BINARY_CURVES,
         ref_method,
+        metric_dict=STD_BINARY_METRICS,
         min_pred_log_prob=min_pred_log_prob,
     )
     print("-" * 20)
