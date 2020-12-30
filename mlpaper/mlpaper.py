@@ -267,9 +267,10 @@ def _boot_EB_and_test(x, *, f=None, confidence=0.95, n_boot=N_BOOT, return_EB=Tr
         assert np.ndim(x) == 2
         n_sample, n_stat = x.shape
         mu = f(np.sum(x, axis=0, keepdims=True), n_sample).item()
-        # TODO is this a matmul??
-        mu_boot = np.sum(x[None, :, :] * weight[:, :, None], axis=1)
+        mu_boot = np.matmul(weight, x)
         assert mu_boot.shape == (n_boot, n_stat)
+        # Perhaps more intuitively expressed as below. We can remove once we are confident in correctness here.
+        assert np.allclose(mu_boot, np.sum(x[None, :, :] * weight[:, :, None], axis=1))
         mu_boot = f(mu_boot, n_sample)
     assert isinstance(mu, float)
     assert mu_boot.shape == (n_boot,)
