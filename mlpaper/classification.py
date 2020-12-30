@@ -217,7 +217,7 @@ def spherical_loss(y, log_pred_prob, rescale=True):
 
 
 def rce_stat(y, log_pred_prob):
-    """Compute log loss (e.g, negative log likelihood or cross-entropy).
+    """Compute sufficient statistics for RCE.
 
     Parameters
     ----------
@@ -230,8 +230,8 @@ def rce_stat(y, log_pred_prob):
 
     Returns
     -------
-    loss : ndarray, shape (n_samples,)
-        Array of the log loss for the predictions on each data point in `y`.
+    stat : ndarray, shape (n_samples, n_labels + 1)
+        Sufficient statistics for RCE calculation.
     """
     n_samples, n_labels = shape_and_validate(y, log_pred_prob)
 
@@ -243,6 +243,21 @@ def rce_stat(y, log_pred_prob):
 
 
 def rce_agg(stat_sum, n):
+    """Compute RCE from sum of sufficient statistics.
+
+    Parameters
+    ----------
+    stat_sum : ndarray of type int or bool, shape (n_case, n_stat)
+        Summed sufficient statistics for RCE calculation. We use `n_case` for vectorization. For only a single
+        estimation ``n_case=1``.
+    n : int
+        Number of data points used to compute the sum of sufficient statistics.
+
+    Returns
+    -------
+    rce : ndarray, shape (n_case,)
+        The RCE for each case.
+    """
     n_sample, _ = stat_sum.shape
     assert np.isscalar(n)
 
@@ -262,6 +277,22 @@ def rce_agg(stat_sum, n):
 
 
 def dawid_stat(y, log_pred_prob):
+    """Compute sufficient statistics for Dawid statistic.
+
+    Parameters
+    ----------
+    y : ndarray of type int or bool, shape (n_samples,)
+        True labels for each classication data point.
+    log_pred_prob : ndarray, shape (n_samples, 2)
+        Array of shape ``(len(y), n_labels)``. Each row corresponds to a
+        categorical distribution with *normalized* probabilities in log scale.
+        Therefore, the number of columns must be at least 1.
+
+    Returns
+    -------
+    stat : ndarray, shape (n_samples, 2)
+        Sufficient statistics for Dawid statistic.
+    """
     n_samples, n_labels = shape_and_validate(y, log_pred_prob)
     assert n_labels == 2, "Only binary supported now for Dawid metric"
 
@@ -274,7 +305,23 @@ def dawid_stat(y, log_pred_prob):
 
 
 def dawid_agg(stat_sum, n):
-    n_sample, _ = stat_sum.shape
+    """Compute Dawid statistic from sum of sufficient statistics.
+
+    Parameters
+    ----------
+    stat_sum : ndarray of type int or bool, shape (n_case, n_stat)
+        Summed sufficient statistics for Dawid statistic calculation. We use `n_case` for vectorization. For only a
+        single estimation ``n_case=1``.
+    n : int
+        Number of data points used to compute the sum of sufficient statistics.
+
+    Returns
+    -------
+    rce : ndarray, shape (n_case,)
+        The Dawid statistic for each case.
+    """
+    n_sample, n_stat = stat_sum.shape
+    assert n_stat == 2
     assert np.isscalar(n)
 
     bias, var = stat_sum[:, 0], stat_sum[:, 1]
@@ -598,6 +645,27 @@ def curve_summary_table(
 
 
 def metric_summary(log_pred_prob_table, y, stat_f):
+    """Compute metric sufficient statistics from `stat_f`.
+
+    Parameters
+    ----------
+    log_pred_prob_table : DataFrame, shape (n_samples, n_methods * n_labels)
+        DataFrame with predictive distributions. Each row is a data point.
+        The columns should be hierarchical index that is the cartesian product
+        of methods x labels. For example, ``log_pred_prob_table.loc[5, 'foo']``
+        is the categorical distribution (in log scale) prediction that method
+        foo places on ``y[5]``.
+    y : ndarray of type int or bool, shape (n_samples,)
+        True labels for each classication data point. Must be of same length as
+        DataFrame `log_pred_prob_table`.
+    stat_f : Callable
+        The sufficient statistics function with signature ``(n_samples,),(n_samples,n_labels)->(n_samples,n_stat)``.
+
+    Returns
+    -------
+    metric_tbl : DataFrame, shape (n_samples, n_methods * n_metrics)
+        Dataframe with sufficient statistics for each metric.
+    """
     methods, labels = log_pred_prob_table.columns.levels
     n_samples, n_labels = len(log_pred_prob_table), len(labels)
     assert y.shape == (n_samples,)
@@ -607,7 +675,7 @@ def metric_summary(log_pred_prob_table, y, stat_f):
     for method in methods:
         log_pred_prob = log_pred_prob_table[method].values
         assert log_pred_prob.shape == (n_samples, n_labels)
-        stat = rce_stat(y, log_pred_prob)
+        stat = stat_f(y, log_pred_prob)
         # Would be cleaner to also get column names
         df_dict[method] = pd.DataFrame(data=stat, columns=np.arange(stat.shape[1]), dtype=float)
     metric_tbl = pd.concat(df_dict, axis=1, names=[METHOD, METRIC])
@@ -653,6 +721,9 @@ def summary_table(
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
         be found in the 1st level of the columns of `log_pred_prob_table`.
+    metric_dict : dict of str to (callable, callable)
+        Dictionary mapping metric function name to function that computes sufficient statistics and aggregation, e.g.,
+        `RCE`, `Dawid`, ...
     x_grid : None or ndarray of shape (n_grid,)
         Grid of points to evaluate curve in results. If `None`, defaults to
         linear grid on [0,1].
@@ -894,6 +965,9 @@ def just_benchmark(
         Name of method that is used as reference point in paired statistical
         tests. This is usually some some of baseline method. `ref_method` must
         be found in `methods` dictionary.
+    metric_dict : dict of str to (callable, callable)
+        Dictionary mapping metric function name to function that computes sufficient statistics and aggregation, e.g.,
+        `RCE`, `Dawid`, ...
     min_log_prob : float
         Minimum value to floor the predictive log probabilities (while still
         normalizing). Must be < 0. Useful to prevent inf log loss penalties.
