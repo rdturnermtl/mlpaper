@@ -339,7 +339,7 @@ def test_boot_EB_and_test_custom_f_mv():
         n_boot = 10
 
         np.random.seed(seed)
-        EB, pval, CI = bt._boot_EB_and_test(wmean(x, N), confidence=confidence, return_CI=True, n_boot=n_boot)
+        EB, pval, CI = bt._boot_EB_and_test(wmean(x, 1), confidence=confidence, return_CI=True, n_boot=n_boot)
 
         np.random.seed(seed)
         EB_, pval_, CI_ = bt._boot_EB_and_test(x, f=wmean, confidence=confidence, return_CI=True, n_boot=n_boot)
@@ -447,7 +447,7 @@ def test_get_func_mean_EB_test_mv():
         mu, EB, pval = bt.get_func_mean_EB_test(x, f=wmean, confidence=confidence, method="boot")
 
         np.random.seed(seed)
-        mu_, EB_, pval_ = bt.get_mean_EB_test(wmean(x, N), confidence=confidence, method="boot")
+        mu_, EB_, pval_ = bt.get_mean_EB_test(wmean(x, 1), confidence=confidence, method="boot")
         assert np.allclose(mu, mu_)
         assert np.allclose(EB, EB_)
         assert np.allclose(pval, pval_)
